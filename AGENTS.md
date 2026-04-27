@@ -200,13 +200,29 @@ Recommended machine split:
 
 - big Linux machine:
   - build `.xo` / `.xclbin`
-  - optionally build host app
+  - optionally build host app if XRT development headers/libs are installed
 - Linux machine attached to real U55C:
   - run XRT
   - load `.xclbin`
   - execute host app
 
 The current repo guidance and work both point toward Linux for real FPGA bring-up.
+
+Build-machine-specific note:
+
+- the build machine does not need a physically attached U55C card to compile the
+  kernel objects or link the final `.xclbin`
+- it does need Vitis plus the matching U55C platform `.xpfm`
+- it only needs XRT if the host app will also be compiled there
+- the target machine attached to the card needs XRT even if Vitis is absent
+
+Current user environment note:
+
+- the user later found that XRT likely cannot be installed on the large build
+  machine
+- as a result, the practical next path is to do the full build and run flow on
+  the target Linux machine attached to the U55C, assuming it has enough local
+  tool support and disk space
 
 ## What Has NOT Been Confirmed Yet
 
