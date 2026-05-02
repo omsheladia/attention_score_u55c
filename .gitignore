@@ -1,7 +1,39 @@
-model/__pycache__/
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Native local simulation binaries
 sim/tb_attention_score
 sim/tb_causal_mask
 sim/tb_score_scale
 sim/tb_softmax
-build/
 
+# Vitis/XRT build outputs
+build/
+hls/build/
+_x/
+.run/
+*.xo
+*.xclbin
+*.ltx
+*.link_summary
+*.compile_summary
+*.xclbin.info
+emconfig.json
+emulation_debug.log
+
+# Vitis/Vivado/HLS logs and journals
+*.log
+*.jou
+*.str
+*.wdb
+*.wcfg
+
+# Vitis analyzer/report databases and packaged artifacts
+*.pb
+*.xpe
+*.xsa
+*.xclbin.package_summary
+
+# Local preservation backups
+backups/

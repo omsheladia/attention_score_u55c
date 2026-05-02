@@ -1,6 +1,0 @@
-ii  xilinx-cmc-u55                             1.5.25-3395704                       all          Xilinx xilinx-cmc-u55 deployment package.
-ii  xilinx-sc-fw-u55                           7.1.17-1.f7275be                     all          Xilinx xilinx-sc-fw-u55 deployment package.
-ii  xilinx-u55c-gen3x16-xdma-3-202210-1-dev    1-3514517                            all          Xilinx Inc xilinx-u55c-gen3x16-xdma-3-202210-1-dev development package.
-ii  xilinx-u55c-gen3x16-xdma-base              3-3494559                            all          Xilinx Inc xilinx-u55c-gen3x16-xdma-base deployment package.
-ii  xilinx-u55c-gen3x16-xdma-validate          3-3506150                            all          Xilinx Inc xilinx-u55c-gen3x16-xdma-validate validate package.
-ii  xrt                                        2.14.354                             amd64        Xilinx RunTime stack for use with Xilinx FPGA platforms

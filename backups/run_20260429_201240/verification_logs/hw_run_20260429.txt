@@ -1,6 +1,0 @@
-Opening device 0
-Running attention score kernel
-Running causal mask kernel
-Running score scale kernel
-Running softmax kernel
-XRT chain verification PASSED

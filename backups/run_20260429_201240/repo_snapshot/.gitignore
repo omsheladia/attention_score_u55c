@@ -1,7 +1,0 @@
-model/__pycache__/
-sim/tb_attention_score
-sim/tb_causal_mask
-sim/tb_score_scale
-sim/tb_softmax
-build/
-

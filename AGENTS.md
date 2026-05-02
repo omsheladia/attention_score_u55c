@@ -169,6 +169,11 @@ platform path, vector export parameters, local C++ checks, HLS csim/csynth
 commands, hw_emu build/run commands, real hardware build/run commands, HBM bank
 mapping, and current benchmark scope.
 
+On 2026-05-01, the top-level `README.md` was refreshed to describe the current
+verified four-kernel U55C demo instead of the earlier score-kernel prototype.
+It now points to `docs/fpga_run_commands.md`, documents the real-card run helper
+and verification scope, and lists benchmark/HBM follow-up work.
+
 ### HW Emulation Verification
 
 On 2026-04-28, after full Vitis 2022.2 was added, `host/build_xclbin.sh hw_emu`
