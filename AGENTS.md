@@ -101,6 +101,52 @@ Important ordering conclusion:
 - real TinyLlama Q/K/V input export is useful after the synthetic full attention
   block is working
 
+On 2026-05-01, Track A Steps 1-2 were started in code:
+
+- `hls/attention_score/attention_score_core_hls.cpp` now uses
+  `#pragma HLS UNROLL factor=16` and matching 16-way local array partitioning
+- a new merged kernel lives under `hls/mask_and_scale/`
+- `host/attention_score_chain_xrt.cpp`, `host/vpp_link.cfg`, and
+  `host/build_xclbin.sh` now target a 3-kernel chain:
+  `attention_score -> mask_scale -> softmax`
+- local g++ file-driven benches passed for:
+  - `tb_attention_score.cpp`
+  - `tb_mask_scale.cpp`
+- Vitis HLS 2023.2 reruns now also pass on this Windows machine for:
+  - `hls/attention_score/run_hls.tcl`
+  - `hls/mask_and_scale/run_hls.tcl`
+- fresh HLS results from those reruns:
+  - `attention_score_u55c_kernel`: `csim PASS`, `csynth PASS`,
+    estimated `342.47 MHz`, `32 DSP`, `7 BRAM_18K`
+  - `mask_scale_u55c_kernel`: `csim PASS`, `csynth PASS`,
+    estimated `330.91 MHz`, `3 DSP`, `6 BRAM_18K`
+- important synthesis note:
+  - under Vitis HLS 2023.2, the Step 1 source change to
+    `#pragma HLS UNROLL factor=16` did **not** change the synthesized score
+    kernel DSP count from the earlier ~`32 DSP` snapshot
+  - the HLS log reports the inner dot-product loop as effectively completely
+    unrolled under the surrounding pipeline, so the checklist's simple
+    expected-DSP table does not directly describe the current synthesized result
+- on 2026-05-01, a contained score-kernel bandwidth optimization was then added
+  without changing the Track A task ordering:
+  - `attention_score_u55c_kernel` now uses 64-bit packed external memory words
+    for Q, K, and raw-score traffic while keeping the same functional tile math
+  - this does **not** start Track A Step 3 tiling, Track A Step 4
+    double-buffering, or Track A Step 5 full-kernel dataflow fusion
+- fresh HLS results after the 64-bit packed-I/O score-kernel change:
+  - `attention_score_u55c_kernel`: `csim PASS`, `csynth PASS`,
+    estimated `342.47 MHz`, `32 DSP`, `13 BRAM_18K`
+  - kernel latency improved from about `5153 cycles` to about `1312 cycles`
+  - stage-level latency moved from roughly:
+    - Q load: `515 -> 67`
+    - K load: `4099 -> 515`
+    - score store: `516 -> 259`
+  - this confirms the main bottleneck was external memory beat width, not GEMM
+    MAC count
+- `v++` exists locally, but no U55C `.xpfm` platform file was found under the
+  checked local Vitis 2023.2 platform directories, so rebuilt `xclbin` / XRT
+  verification for the new 3-kernel chain remains pending
+
 ## Tile And Sequence-Length Model
 
 The hardware tile shape remains fixed:
@@ -149,6 +195,7 @@ Key subfolders:
 
 - `model/`
 - `hls/attention_score/`
+- `hls/mask_and_scale/`
 - `hls/causal_mask/`
 - `hls/score_scale/`
 - `hls/softmax/`
@@ -191,6 +238,8 @@ Planned vector/export additions from `docs/implementation_checklist.md`:
 
 - score GEMM:
   - `hls/attention_score/attention_score_core_hls.cpp`
+- merged mask + scale:
+  - `hls/mask_and_scale/mask_scale_core_hls.cpp`
 - causal mask:
   - `hls/causal_mask/causal_mask_core_hls.cpp`
 - score scale:
@@ -432,7 +481,7 @@ Not yet confirmed:
 - full-sequence host tiling over `S = 8, 64, 128, 256, 512`
 - synthetic Track A regression through multiple vector directories
 - full-row softmax kernel/design for `S > 64`
-- merged mask-and-scale kernel
+- merged mask-and-scale kernel end-to-end `xclbin` / XRT verification
 - `softmax @ V` / V weighted-sum stage
 - real TinyLlama `Q_rot` / `K_rot` extraction, V extraction, and INT8 Q/K export
 - CPU/GPU/FPGA baseline comparison for acceleration claims
@@ -447,11 +496,14 @@ full sequence-length attention accelerator or a full TinyLlama hardware runtime.
 Best next practical steps are Track A from
 `docs/implementation_checklist.md`:
 
-1. increase the GEMM unroll factor and re-synthesize
-2. merge causal mask and score scale into one kernel and verify locally/HLS
-3. add Python full-sequence tiling with `softmax_full_rows(logits)`
-4. add the matching XRT host tiling loop for `S = 8, 64, 128, 256, 512`
-5. add a full-row softmax kernel/design for `S > 64`
+1. rebuild the `xclbin` and rerun the XRT host flow for the new 3-kernel chain
+   once a matching U55C platform `.xpfm` path is available to `v++`
+2. add Python full-sequence tiling with `softmax_full_rows(logits)`
+3. add the matching XRT host tiling loop for `S = 8, 64, 128, 256, 512`
+4. add a full-row softmax kernel/design for `S > 64`
+5. if more score-kernel speed is needed after that, prefer wider packing or
+   on-chip fusion before chasing higher GEMM unroll, because the 64-bit packed
+   interface produced the first material latency drop
 
 ## After That
 

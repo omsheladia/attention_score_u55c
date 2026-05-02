@@ -205,8 +205,6 @@ int main(int argc, char** argv) {
     const auto k_tile = read_text_vector<std::int8_t>(args.vector_dir + "/k_tile.txt", kKTileElems);
     const auto score_raw_expected =
         read_text_vector<std::int32_t>(args.vector_dir + "/score_raw.txt", kScoreTileElems);
-    const auto score_masked_expected =
-        read_text_vector<std::int32_t>(args.vector_dir + "/score_masked.txt", kScoreTileElems);
     const auto score_scaled_expected =
         read_text_vector<float>(args.vector_dir + "/score_scaled.txt", kScoreTileElems);
     const auto score_softmax_expected =
@@ -218,18 +216,15 @@ int main(int argc, char** argv) {
     auto uuid = device.load_xclbin(args.xclbin_path);
 
     auto score_kernel = xrt::kernel(device, uuid, "attention_score_u55c_kernel");
-    auto mask_kernel = xrt::kernel(device, uuid, "causal_mask_u55c_kernel");
-    auto scale_kernel = xrt::kernel(device, uuid, "score_scale_u55c_kernel");
+    auto mask_scale_kernel = xrt::kernel(device, uuid, "mask_scale_u55c_kernel");
     auto softmax_kernel = xrt::kernel(device, uuid, "softmax_u55c_kernel");
 
     auto q_bo = xrt::bo(device, sizeof(std::int8_t) * q_tile.size(), score_kernel.group_id(0));
     auto k_bo = xrt::bo(device, sizeof(std::int8_t) * k_tile.size(), score_kernel.group_id(1));
     auto raw_score_bo =
         xrt::bo(device, sizeof(std::int32_t) * score_raw_expected.size(), score_kernel.group_id(2));
-    auto masked_score_bo =
-        xrt::bo(device, sizeof(std::int32_t) * score_masked_expected.size(), mask_kernel.group_id(1));
     auto scaled_score_bo =
-        xrt::bo(device, sizeof(float) * score_scaled_expected.size(), scale_kernel.group_id(1));
+        xrt::bo(device, sizeof(float) * score_scaled_expected.size(), mask_scale_kernel.group_id(1));
     auto softmax_prob_bo =
         xrt::bo(device, sizeof(float) * score_softmax_expected.size(), softmax_kernel.group_id(1));
 
@@ -252,18 +247,15 @@ int main(int argc, char** argv) {
                             meta.key_col_count);
                       })});
 
-    timings.push_back({"causal_mask_u55c_kernel", run_timed("causal mask kernel", [&]() {
-                        return mask_kernel(
+    timings.push_back({"mask_scale_u55c_kernel", run_timed("mask+scale kernel", [&]() {
+                        return mask_scale_kernel(
                             raw_score_bo,
-                            masked_score_bo,
+                            scaled_score_bo,
                             meta.query_pos_base,
                             meta.key_pos_base,
                             meta.query_row_count,
-                            meta.key_col_count);
-                      })});
-
-    timings.push_back({"score_scale_u55c_kernel", run_timed("score scale kernel", [&]() {
-                        return scale_kernel(masked_score_bo, scaled_score_bo, meta.total_scale);
+                            meta.key_col_count,
+                            meta.total_scale);
                       })});
 
     timings.push_back({"softmax_u55c_kernel", run_timed("softmax kernel", [&]() {
@@ -279,22 +271,18 @@ int main(int argc, char** argv) {
         std::chrono::duration<double, std::milli>(chain_stop - chain_start).count();
 
     raw_score_bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-    masked_score_bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
     scaled_score_bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
     softmax_prob_bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
 
     std::vector<std::int32_t> score_raw_got(score_raw_expected.size());
-    std::vector<std::int32_t> score_masked_got(score_masked_expected.size());
     std::vector<float> score_scaled_got(score_scaled_expected.size());
     std::vector<float> score_softmax_got(score_softmax_expected.size());
 
     raw_score_bo.read(score_raw_got.data());
-    masked_score_bo.read(score_masked_got.data());
     scaled_score_bo.read(score_scaled_got.data());
     softmax_prob_bo.read(score_softmax_got.data());
 
     compare_exact(score_raw_got, score_raw_expected, "score_raw");
-    compare_exact(score_masked_got, score_masked_expected, "score_masked");
     compare_float(score_scaled_got, score_scaled_expected, "score_scaled", 1.0e-4f);
     compare_float(score_softmax_got, score_softmax_expected, "score_softmax", 1.0e-4f);
 

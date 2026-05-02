@@ -33,6 +33,7 @@ constexpr int kScoreColsPerTile = 64;
 using act_int8_t = ap_int<8>;
 using accum_int32_t = ap_int<32>;
 using word32_t = ap_uint<32>;
+using word64_t = ap_uint<64>;
 
 }  // namespace hls_common
 }  // namespace attention_score_u55c

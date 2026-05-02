@@ -45,6 +45,7 @@ docs/       offload design notes
 | Python reference | [model/attention_score_ref.py](model/attention_score_ref.py) |
 | Vector export | [model/export_attention_score_vectors.py](model/export_attention_score_vectors.py) |
 | Score GEMM HLS | [hls/attention_score/attention_score_core_hls.cpp](hls/attention_score/attention_score_core_hls.cpp) |
+| Mask+scale HLS | [hls/mask_and_scale/mask_scale_core_hls.cpp](hls/mask_and_scale/mask_scale_core_hls.cpp) |
 | Causal mask HLS | [hls/causal_mask/causal_mask_core_hls.cpp](hls/causal_mask/causal_mask_core_hls.cpp) |
 | Score scale HLS | [hls/score_scale/score_scale_core_hls.cpp](hls/score_scale/score_scale_core_hls.cpp) |
 | Softmax HLS | [hls/softmax/softmax_core_hls.cpp](hls/softmax/softmax_core_hls.cpp) |
@@ -60,7 +61,8 @@ docs/       offload design notes
 
 | Stage | Local bench | Vitis csim | Vitis csynth |
 |---|---|---|---|
-| score GEMM | PASS | PASS | PASS (~342 MHz, 32 DSP) |
+| score GEMM | PASS | PASS | PASS (~342 MHz, 32 DSP, ~1312 cycles after 64-bit packed I/O) |
+| mask+scale | PASS | PASS | PASS (~331 MHz, 3 DSP) |
 | causal mask | PASS | PASS | PASS (~331 MHz, 0 DSP) |
 | score scale | PASS | PASS | PASS (~342 MHz, 3 DSP) |
 | softmax | PASS | PASS | PASS (~316 MHz, 9 DSP) — minor timing warning remains |
@@ -68,6 +70,41 @@ docs/       offload design notes
 Not yet run: `hw_emu`, real `hw` on U55C, full XRT host compile.
 
 > Re-read HLS reports under `hls/build/.../syn/report/` before quoting numbers — the table above is a snapshot.
+
+---
+
+## Current Track A WIP
+
+- Step 1 code change is in place:
+  - `hls/attention_score/attention_score_core_hls.cpp` now uses
+    `#pragma HLS UNROLL factor=16`
+  - matching local array partitioning is now 16-way
+  - local score-kernel bench still passes
+  - Vitis HLS 2023.2 `csim` and `csynth` now pass again at
+    `~342.47 MHz`, `32 DSP`, `7 BRAM_18K`
+  - important result: this source change did not move the synthesized score
+    kernel off the earlier ~`32 DSP` point under the current tool/loop shape
+  - a follow-on contained optimization then widened the score-kernel external
+    Q/K/score memory traffic to 64-bit packed words without changing the Track A
+    checklist ordering
+  - after that packed-I/O change, the score kernel still synthesized at
+    `~342.47 MHz` and `32 DSP`, but latency improved from about `5153 cycles`
+    to about `1312 cycles`
+  - the improvement came from memory traffic:
+    - Q load about `515 -> 67` cycles
+    - K load about `4099 -> 515` cycles
+    - score store about `516 -> 259` cycles
+- Step 2 code change is in place:
+  - new merged kernel under `hls/mask_and_scale/`
+  - `host/attention_score_chain_xrt.cpp`, `host/vpp_link.cfg`, and
+    `host/build_xclbin.sh` now target `attention_score -> mask_scale -> softmax`
+  - local merged-kernel bench passes against `score_scaled.txt`
+  - Vitis HLS 2023.2 `csim` and `csynth` now pass for the merged kernel at
+    `~330.91 MHz`, `3 DSP`, `6 BRAM_18K`
+- Still pending for this WIP:
+  - rebuilt `xclbin` and XRT runtime verification for the new 3-kernel chain
+  - a matching U55C platform `.xpfm` path for local `v++` was not found under
+    the checked local Vitis 2023.2 platform directories
 
 ---
 
@@ -228,9 +265,9 @@ in the implementation checklist.
 ## Parallelism in the Current Design
 
 **Exists:**
-- 8-way MAC parallelism inside the GEMM kernel (`UNROLL factor=8`)
+- 16-way MAC parallelism in the current Track A WIP GEMM kernel
 - Loop pipelining at II=1 in all kernels
-- 8-bank array partitioning for parallel SRAM reads in the GEMM
+- 16-bank array partitioning for parallel SRAM reads in the current Track A WIP GEMM kernel
 
 **Does not exist:**
 - The 4 kernel stages run sequentially (no dataflow streaming between them)

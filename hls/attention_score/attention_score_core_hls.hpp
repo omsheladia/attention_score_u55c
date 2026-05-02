@@ -10,6 +10,7 @@ namespace attention_score {
 
 using hls_common::accum_int32_t;
 using hls_common::act_int8_t;
+using hls_common::word64_t;
 
 void attention_score_core_hls(
     const act_int8_t q_tile[hls_common::kScoreRowsPerTile][hls_common::kHeadDim],
@@ -19,9 +20,9 @@ void attention_score_core_hls(
     std::uint16_t key_col_count);
 
 void attention_score_u55c_kernel(
-    const act_int8_t* q_tile,
-    const act_int8_t* k_tile,
-    accum_int32_t* score_tile,
+    const word64_t* q_tile,
+    const word64_t* k_tile,
+    word64_t* score_tile,
     std::uint32_t query_row_count,
     std::uint32_t key_col_count);
 
