@@ -14,7 +14,8 @@ Q_rot_int8, K_rot_int8
   -> score_softmax_fp32   (row-wise softmax)
 ```
 
-**Out of scope:** Q/K/V projections, RoPE generation, softmax@V, decoder integration.
+**Currently out of scope:** Q/K/V projections, RoPE generation, decoder integration.
+**Planned (Track B):** softmax@V to complete the full attention block for one head.
 
 ---
 
@@ -144,21 +145,33 @@ The current Python exporter (`model/export_attention_score_vectors.py`) generate
 are not real language model inputs — they exist purely to verify hardware
 correctness in a reproducible way.
 
-Two testing tracks are planned:
+Four implementation tracks are planned in priority order:
 
 **Track A — Synthetic inputs (primary)**
 Use the synthetic exporter with the host tiling loop to test correctness and
 measure performance at multiple sequence lengths: S = 8, 64, 128, 256, 512.
 No TinyLlama installation required.
 
-**Track B — Real TinyLlama inputs (extension)**
+**Track B — Complete attention block**
+Add `softmax @ V` as a 5th kernel so the FPGA produces a complete attention
+output `(S, 64)` rather than stopping at softmax weights. V stays float32 —
+the FPGA already runs float32 in stages 3 and 4.
+Key constraint: the existing softmax kernel is fixed at 64 columns; a new
+full-row softmax kernel (up to 512 columns) is required before the tiling loop
+works correctly for S > 64.
+
+**Track C — Real TinyLlama inputs (extension)**
 Run TinyLlama inference via PyTorch, hook into one attention layer to extract
-real `Q_rot` and `K_rot` tensors, quantize to INT8, and export in the same file
-format the host app already reads. The FPGA pipeline and host app do not change —
-only the input files change.
+real `Q_rot` (RoPE-rotated), `K_rot` (RoPE-rotated), and `V` (projected,
+not RoPE-rotated) tensors. Quantize Q/K to INT8; V stays float32. Export in
+the same file format the host app already reads.
+
+**Track D — CPU/GPU baseline and benchmarking**
+Measure FPGA `attn_out` latency against CPU/GPU at S = 8, 64, 128, 256, 512.
+CPU and GPU baselines run on Windows. FPGA timing requires Linux + XRT.
 
 See [docs/implementation_checklist.md](docs/implementation_checklist.md) for the
-full step-by-step plan for both tracks.
+full step-by-step plan for all four tracks.
 
 ---
 
@@ -228,21 +241,32 @@ in the implementation checklist.
 
 ## Recommended Next Steps
 
-**Immediate (Track A):**
+**Track A — Immediate:**
 1. Move to Linux (Vitis 2023.2 + XRT + U55C platform)
 2. Follow [host/LINUX_BRINGUP.md](host/LINUX_BRINGUP.md) — get `hw_emu` passing
 3. Increase GEMM UNROLL factor (1 line, re-synthesize)
-4. Add host tiling loop — test at S = 8, 64, 128, 256, 512
-5. Merge causal mask + score scale into one kernel
+4. Add host tiling loop (two-pass: score/mask/scale then full-row softmax)
+5. Implement full-row softmax kernel — required for S > 64
+6. Merge causal mask + score scale into one kernel
 
-**Extension (Track B):**
-1. Extract real Q/K from TinyLlama via PyTorch hooks
-2. Quantize to INT8 and export in existing file format
-3. Run real vectors through the FPGA pipeline
-4. Compare FPGA softmax output against PyTorch reference
+**Track B — Complete attention block:**
+1. Add `softmax @ V` Python reference and synthetic V export
+2. Implement V weighted sum HLS kernel
+3. Update host app with three-pass tiling loop
+
+**Track C — Real inputs (after Track A + B on hardware):**
+1. Extract real Q/K/V from TinyLlama via PyTorch hooks
+2. Quantize Q/K to INT8; V stays float32
+3. Export in existing file format and run through FPGA pipeline
+4. Compare FPGA `attn_out` against PyTorch reference
+
+**Track D — Benchmarking:**
+1. CPU baseline in Python (runnable on Windows now)
+2. GPU baseline in PyTorch (runnable on Windows if CUDA available)
+3. FPGA timing instrumentation (requires Linux + XRT)
+4. Comparison table and analysis
 
 **Future (post-hardware confirmation):**
 1. Double-buffer DMA transfers
-2. Merge all stages into one dataflow kernel
-3. Add V weighted-sum stage
-4. Connect to full TinyLlama attention subgraph
+2. Merge pre-softmax stages into one dataflow kernel
+3. Connect to full TinyLlama attention subgraph

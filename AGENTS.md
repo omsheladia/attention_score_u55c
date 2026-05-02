@@ -54,7 +54,7 @@ What is intentionally **not** implemented in this isolated flow:
 
 - full Q/K/V projection path on FPGA
 - live RoPE generation in the full runtime path
-- `softmax @ V`
+- `softmax @ V` in the current verified four-kernel flow
 - decoder-layer integration
 - full TinyLlama inference
 
@@ -72,21 +72,34 @@ Current correctness does **not** mean:
 
 ## Current Required Scope
 
-The required near-term scope is Track A from
-`docs/implementation_checklist.md`: improve the existing synthetic-input
-attention-score demo and make it work across real sequence lengths. This is
-still narrower than full TinyLlama.
+The current required scope is the four-track plan in
+`docs/implementation_checklist.md`. This is still narrower than full TinyLlama,
+but it has expanded beyond the original 4-stage score-weight demo.
 
-Priority Track A work:
+Priority order:
+
+1. Track A: speed up the existing synthetic-input pipeline and make it work
+   across real sequence lengths
+2. Track B: add `softmax @ V` as a 5th stage so the FPGA produces complete
+   one-head attention output, not just attention weights
+3. Track C: replace synthetic vectors with real TinyLlama Q/K/V inputs
+4. Track D: collect CPU/GPU/FPGA baseline and speedup numbers
+
+Track A priority work:
 
 1. increase the GEMM unroll factor in `hls/attention_score/`
 2. merge causal mask and score scale into one kernel
 3. add full-sequence tiling in the Python reference and XRT host app
+4. add full-row softmax support for `S > 64`
 
-Track B is an extension after Track A: extract real TinyLlama `Q_rot` and
-`K_rot`, quantize them to INT8, export them in the existing vector format, and
-run the same FPGA pipeline. Track B changes the data source, not the offload
-boundary.
+Important ordering conclusion:
+
+- full-row softmax is required before sequence lengths with multiple K chunks
+  can be correct
+- `softmax @ V` depends on Track A tiling because it accumulates partial
+  weighted-sum results across K/V chunks
+- real TinyLlama Q/K/V input export is useful after the synthetic full attention
+  block is working
 
 ## Tile And Sequence-Length Model
 
@@ -108,6 +121,24 @@ tiles per head = ceil(S / 8) * ceil(S / 64)
 Recommended synthetic test lengths are `S = 8, 64, 128, 256, 512`. The current
 docs state that the host tiling loop does not yet exist, so the proven flow is
 still a single tile of one head unless later work changes this file.
+
+Softmax correctness note:
+
+- running softmax independently per 8 x 64 score tile is only correct for
+  `S <= 64`
+- for `S > 64`, softmax must normalize each query row across all `S` keys
+- the existing `hls/softmax/` kernel is fixed at 8 x 64, so Track A now calls
+  for a new `hls/softmax_full_row/` kernel or an equivalent online/tiled
+  full-row softmax design
+
+Track B data note:
+
+- the V weighted-sum kernel should consume 8 x 64 softmax-weight tiles and
+  64 x 64 V chunks
+- each V-kernel call produces a partial 8 x 64 contribution; the host
+  accumulates across K/V chunks into final `attn_out` with shape `(S, 64)`
+- multi-chunk sequence tests should use full V data such as `v_full.txt`; a
+  `v_tile.txt` file is only a single-chunk convenience
 
 ## Current Repo Layout
 
@@ -149,6 +180,13 @@ Current exported files include:
 - `kernel_meta.txt`
 - `metadata.json`
 
+Planned vector/export additions from `docs/implementation_checklist.md`:
+
+- `softmax_full_rows(logits)` in `model/attention_score_ref.py`
+- full-sequence Q/K reference exports for `S = 8, 64, 128, 256, 512`
+- `v_full.txt` for complete `(S, 64)` V data
+- `attn_out.txt` for final `(S, 64)` attention output after `softmax @ V`
+
 ### HLS Kernels
 
 - score GEMM:
@@ -159,6 +197,13 @@ Current exported files include:
   - `hls/score_scale/score_scale_core_hls.cpp`
 - softmax:
   - `hls/softmax/softmax_core_hls.cpp`
+
+Planned HLS additions from `docs/implementation_checklist.md`:
+
+- `hls/mask_and_scale/` to merge causal mask and score scale
+- `hls/softmax_full_row/` for full-row softmax up to `S = 512`
+- `hls/v_weighted_sum/` for the `softmax @ V` partial weighted-sum kernel
+- `hls/score_and_mask_scale/` as a later pre-softmax dataflow merge
 
 ### Host / XRT
 
@@ -386,37 +431,44 @@ Not yet confirmed:
 
 - full-sequence host tiling over `S = 8, 64, 128, 256, 512`
 - synthetic Track A regression through multiple vector directories
-- real TinyLlama `Q_rot` / `K_rot` extraction and INT8 export
+- full-row softmax kernel/design for `S > 64`
+- merged mask-and-scale kernel
+- `softmax @ V` / V weighted-sum stage
+- real TinyLlama `Q_rot` / `K_rot` extraction, V extraction, and INT8 Q/K export
+- CPU/GPU/FPGA baseline comparison for acceleration claims
 - full TinyLlama attention path
 - full TinyLlama model execution
 
 So the project is now a proven **single-tile isolated FPGA demo**, but not yet a
-full sequence-length attention-score accelerator or a full TinyLlama hardware
-runtime.
+full sequence-length attention accelerator or a full TinyLlama hardware runtime.
 
 ## Best Next Step
 
-Best next practical steps are Track A Steps 1-3 from
+Best next practical steps are Track A from
 `docs/implementation_checklist.md`:
 
 1. increase the GEMM unroll factor and re-synthesize
 2. merge causal mask and score scale into one kernel and verify locally/HLS
-3. add the Python reference tiling loop and matching XRT host tiling loop for
-   `S = 8, 64, 128, 256, 512`
+3. add Python full-sequence tiling with `softmax_full_rows(logits)`
+4. add the matching XRT host tiling loop for `S = 8, 64, 128, 256, 512`
+5. add a full-row softmax kernel/design for `S > 64`
 
 ## After That
 
 After Track A works across sequence lengths, the next major engineering steps
 are:
 
-1. Track B: extract real TinyLlama Q/K with PyTorch hooks
-2. quantize/export real vectors in the existing file format
-3. run real vectors through the same FPGA pipeline and compare to PyTorch
-4. add double-buffering or merge kernels for performance
-5. add the V weighted-sum stage
-6. connect to a real TinyLlama attention subgraph
-7. add KV-cache-aware decode flow
-8. eventually integrate into a decoder-layer path
+1. Track B: add `softmax @ V` with a V weighted-sum HLS kernel
+2. export and verify `v_full.txt` and `attn_out.txt`
+3. Track C: extract real TinyLlama Q/K/V with PyTorch hooks
+4. quantize/export real Q/K and keep V as float32
+5. run real vectors through the same FPGA pipeline and compare `attn_out` to
+   PyTorch attention output
+6. Track D: collect CPU/GPU/FPGA timing baselines and speedup tables
+7. add double-buffering or merge kernels for performance
+8. connect to a real TinyLlama attention subgraph
+9. add KV-cache-aware decode flow
+10. eventually integrate into a decoder-layer path
 
 ## Current Repo State Relevant To This Effort
 
@@ -426,7 +478,10 @@ At the time of writing:
   `docs/`, `sim/`, `rtl/`)
 - `CLAUDE.md`, `docs/attention_concepts.md`, and
   `docs/implementation_checklist.md` define the current required scope:
-  Track A first, Track B later
+  Track A first, then Track B, Track C, and Track D
+- `docs/implementation_checklist.md` now treats full-row softmax as required
+  for `S > 64`, adds `softmax @ V` as Track B, upgrades real inputs to Q/K/V,
+  and adds CPU/GPU/FPGA baseline work
 - `AGENTS.md` has been updated to reconcile the pulled real-hardware history
   with those current scope docs
 
