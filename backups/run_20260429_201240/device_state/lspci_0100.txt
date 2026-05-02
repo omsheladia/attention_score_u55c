@@ -1,0 +1,8 @@
+01:00.0 Processing accelerators [1200]: Xilinx Corporation Device [10ee:505c]
+	Subsystem: Xilinx Corporation Device [10ee:000e]
+	Kernel driver in use: xclmgmt
+	Kernel modules: xclmgmt
+01:00.1 Processing accelerators [1200]: Xilinx Corporation Device [10ee:505d]
+	Subsystem: Xilinx Corporation Device [10ee:000e]
+	Kernel driver in use: xocl
+	Kernel modules: xocl

@@ -16,12 +16,14 @@ Q_rot_int8, K_rot_int8
 - `attention_score_chain_xrt.cpp`
   - native XRT C++ host app
   - loads one `.xclbin`
-  - launches the three kernels in sequence
+  - launches the four kernels in sequence
   - compares device outputs against the exported reference vectors
 - `build_host.sh`
   - Linux host compile helper
 - `build_xclbin.sh`
   - Linux `v++` compile/link helper
+- `run_hw.sh`
+  - real-card run helper for the verified U55C/XRT 2022.2 flow
 - `vpp_link.cfg`
   - example HBM bank placement so the intermediate score buffers can be shared
 
@@ -35,9 +37,16 @@ Q_rot_int8, K_rot_int8
 
 ## Example Linux Flow
 
+Local C++ simulation, no Vitis/XRT required:
+
 ```bash
-source /path/to/Vitis/2023.2/settings64.sh
-source /opt/xilinx/xrt/setup.sh
+bash attention_score_u55c/host/run_local_csim.sh
+```
+
+Full U55C/XRT flow:
+
+```bash
+source attention_score_u55c/host/setup_2022_2_env.sh
 
 python3 attention_score_u55c/model/export_attention_score_vectors.py
 
@@ -52,12 +61,23 @@ bash attention_score_u55c/host/build_host.sh
 
 For first bring-up, `hw_emu` is the right target before `hw`.
 
+Known-good real-card run after the U55C is on shell
+`xilinx_u55c_gen3x16_xdma_base_3`:
+
+```bash
+bash attention_score_u55c/host/run_hw.sh 0
+```
+
+The host prints per-kernel timing and total chain timing using host wall-clock
+measurements from launch through `wait()`, then verifies all intermediate
+outputs against the reference vectors.
+
 ## Deployable Meaning
 
 There are two useful meanings of "deployable" here:
 
 1. **Tile-demo deployable**
-   - enough to run this isolated three-kernel score path on the card
+   - enough to run this isolated four-kernel score path on the card
    - this host app is meant for that stage
 2. **Model deployable**
    - enough to run a meaningful end-to-end attention path inside the larger

@@ -1,4 +1,5 @@
 #include <cmath>
+#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
@@ -35,6 +36,11 @@ struct Args {
   std::string xclbin_path;
   std::string vector_dir = "attention_score_u55c/sim/attention_score_tile";
   unsigned int device_index = 0;
+};
+
+struct TimedStage {
+  std::string name;
+  double milliseconds = 0.0;
 };
 
 template <typename T>
@@ -164,6 +170,31 @@ void compare_float(
   }
 }
 
+template <typename LaunchFn>
+double run_timed(const std::string& name, LaunchFn&& launch) {
+  using Clock = std::chrono::steady_clock;
+
+  std::cout << "Running " << name << "\n";
+  const auto start = Clock::now();
+  auto run = launch();
+  run.wait();
+  const auto stop = Clock::now();
+
+  return std::chrono::duration<double, std::milli>(stop - start).count();
+}
+
+void print_timings(const std::vector<TimedStage>& stages, double total_ms) {
+  std::cout << std::fixed << std::setprecision(3);
+  std::cout << "Kernel timing summary (host wall-clock, launch through wait):\n";
+  for (const auto& stage : stages) {
+    std::cout << "  " << std::left << std::setw(28) << stage.name << std::right
+              << stage.milliseconds << " ms\n";
+  }
+  std::cout << "  " << std::left << std::setw(28) << "total_chain" << std::right
+            << total_ms << " ms\n";
+  std::cout.unsetf(std::ios::floatfield);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -207,32 +238,45 @@ int main(int argc, char** argv) {
     q_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
     k_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
-    std::cout << "Running attention score kernel\n";
-    auto score_run = score_kernel(
-        q_bo,
-        k_bo,
-        raw_score_bo,
-        meta.query_row_count,
-        meta.key_col_count);
-    score_run.wait();
+    using Clock = std::chrono::steady_clock;
+    std::vector<TimedStage> timings;
+    timings.reserve(4);
+    const auto chain_start = Clock::now();
 
-    std::cout << "Running causal mask kernel\n";
-    auto mask_run = mask_kernel(
-        raw_score_bo,
-        masked_score_bo,
-        meta.query_pos_base,
-        meta.key_pos_base,
-        meta.query_row_count,
-        meta.key_col_count);
-    mask_run.wait();
+    timings.push_back({"attention_score_u55c_kernel", run_timed("attention score kernel", [&]() {
+                        return score_kernel(
+                            q_bo,
+                            k_bo,
+                            raw_score_bo,
+                            meta.query_row_count,
+                            meta.key_col_count);
+                      })});
 
-    std::cout << "Running score scale kernel\n";
-    auto scale_run = scale_kernel(masked_score_bo, scaled_score_bo, meta.total_scale);
-    scale_run.wait();
+    timings.push_back({"causal_mask_u55c_kernel", run_timed("causal mask kernel", [&]() {
+                        return mask_kernel(
+                            raw_score_bo,
+                            masked_score_bo,
+                            meta.query_pos_base,
+                            meta.key_pos_base,
+                            meta.query_row_count,
+                            meta.key_col_count);
+                      })});
 
-    std::cout << "Running softmax kernel\n";
-    auto softmax_run = softmax_kernel(scaled_score_bo, softmax_prob_bo, meta.query_row_count, meta.key_col_count);
-    softmax_run.wait();
+    timings.push_back({"score_scale_u55c_kernel", run_timed("score scale kernel", [&]() {
+                        return scale_kernel(masked_score_bo, scaled_score_bo, meta.total_scale);
+                      })});
+
+    timings.push_back({"softmax_u55c_kernel", run_timed("softmax kernel", [&]() {
+                        return softmax_kernel(
+                            scaled_score_bo,
+                            softmax_prob_bo,
+                            meta.query_row_count,
+                            meta.key_col_count);
+                      })});
+
+    const auto chain_stop = Clock::now();
+    const double total_chain_ms =
+        std::chrono::duration<double, std::milli>(chain_stop - chain_start).count();
 
     raw_score_bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
     masked_score_bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
@@ -254,6 +298,7 @@ int main(int argc, char** argv) {
     compare_float(score_scaled_got, score_scaled_expected, "score_scaled", 1.0e-4f);
     compare_float(score_softmax_got, score_softmax_expected, "score_softmax", 1.0e-4f);
 
+    print_timings(timings, total_chain_ms);
     std::cout << "XRT chain verification PASSED\n";
     return 0;
   } catch (const std::exception& ex) {

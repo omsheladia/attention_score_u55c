@@ -1,0 +1,187 @@
+
+
+================================================================
+== Vitis HLS Report for 'causal_mask_core_hls'
+================================================================
+* Date:           Mon Apr 27 17:15:45 2026
+
+* Version:        2022.2 (Build 3670227 on Oct 13 2022)
+* Project:        causal_mask_prj
+* Solution:       sol1 (Vivado IP Flow Target)
+* Product family: virtexuplus
+* Target device:  xcu55c-fsvh2892-2L-e
+
+
+================================================================
+== Performance Estimates
+================================================================
++ Timing: 
+    * Summary: 
+    +--------+---------+----------+------------+
+    |  Clock |  Target | Estimated| Uncertainty|
+    +--------+---------+----------+------------+
+    |ap_clk  |  4.00 ns|  2.670 ns|     1.08 ns|
+    +--------+---------+----------+------------+
+
++ Latency: 
+    * Summary: 
+    +---------+---------+----------+----------+-----+-----+---------+
+    |  Latency (cycles) |  Latency (absolute) |  Interval | Pipeline|
+    |   min   |   max   |    min   |    max   | min | max |   Type  |
+    +---------+---------+----------+----------+-----+-----+---------+
+    |      515|      515|  2.060 us|  2.060 us|  515|  515|       no|
+    +---------+---------+----------+----------+-----+-----+---------+
+
+    + Detail: 
+        * Instance: 
+        N/A
+
+        * Loop: 
+        +-----------------------------------+---------+---------+----------+-----------+-----------+------+----------+
+        |                                   |  Latency (cycles) | Iteration|  Initiation Interval  | Trip |          |
+        |             Loop Name             |   min   |   max   |  Latency |  achieved |   target  | Count| Pipelined|
+        +-----------------------------------+---------+---------+----------+-----------+-----------+------+----------+
+        |- VITIS_LOOP_17_1_VITIS_LOOP_18_2  |      513|      513|         3|          1|          1|   512|       yes|
+        +-----------------------------------+---------+---------+----------+-----------+-----------+------+----------+
+
+
+
+================================================================
+== Utilization Estimates
+================================================================
+* Summary: 
++---------------------+---------+------+---------+---------+-----+
+|         Name        | BRAM_18K|  DSP |    FF   |   LUT   | URAM|
++---------------------+---------+------+---------+---------+-----+
+|DSP                  |        -|     -|        -|        -|    -|
+|Expression           |        -|     -|        0|      234|    -|
+|FIFO                 |        -|     -|        -|        -|    -|
+|Instance             |        -|     -|        -|        -|    -|
+|Memory               |        -|     -|        -|        -|    -|
+|Multiplexer          |        -|     -|        -|       72|    -|
+|Register             |        -|     -|       54|        -|    -|
++---------------------+---------+------+---------+---------+-----+
+|Total                |        0|     0|       54|      306|    0|
++---------------------+---------+------+---------+---------+-----+
+|Available SLR        |     1344|  3008|   869120|   434560|  320|
++---------------------+---------+------+---------+---------+-----+
+|Utilization SLR (%)  |        0|     0|       ~0|       ~0|    0|
++---------------------+---------+------+---------+---------+-----+
+|Available            |     4032|  9024|  2607360|  1303680|  960|
++---------------------+---------+------+---------+---------+-----+
+|Utilization (%)      |        0|     0|       ~0|       ~0|    0|
++---------------------+---------+------+---------+---------+-----+
+
++ Detail: 
+    * Instance: 
+    N/A
+
+    * DSP: 
+    N/A
+
+    * Memory: 
+    N/A
+
+    * FIFO: 
+    N/A
+
+    * Expression: 
+    +-------------------------+----------+----+---+----+------------+------------+
+    |      Variable Name      | Operation| DSP| FF| LUT| Bitwidth P0| Bitwidth P1|
+    +-------------------------+----------+----+---+----+------------+------------+
+    |add_ln17_1_fu_228_p2     |         +|   0|  0|  24|          17|          17|
+    |add_ln17_2_fu_165_p2     |         +|   0|  0|  17|          10|           1|
+    |add_ln17_fu_174_p2       |         +|   0|  0|  12|           4|           1|
+    |add_ln18_fu_270_p2       |         +|   0|  0|  14|           7|           1|
+    |add_ln24_fu_258_p2       |         +|   0|  0|  24|          17|          17|
+    |add_ln26_fu_238_p2       |         +|   0|  0|  16|           9|           9|
+    |and_ln22_1_fu_310_p2     |       and|   0|  0|   2|           1|           1|
+    |and_ln22_fu_305_p2       |       and|   0|  0|   2|           1|           1|
+    |cmp5_fu_153_p2           |      icmp|   0|  0|  13|          16|          16|
+    |cmp5_mid1_fu_218_p2      |      icmp|   0|  0|  13|          16|          16|
+    |icmp_ln17_fu_159_p2      |      icmp|   0|  0|  11|          10|          11|
+    |icmp_ln18_fu_180_p2      |      icmp|   0|  0|  11|           7|           8|
+    |icmp_ln22_fu_252_p2      |      icmp|   0|  0|  13|          16|          16|
+    |icmp_ln25_fu_264_p2      |      icmp|   0|  0|  13|          17|          17|
+    |score_out_d0             |    select|   0|  0|  32|           1|          32|
+    |select_ln17_1_fu_194_p3  |    select|   0|  0|   4|           1|           4|
+    |select_ln17_2_fu_295_p3  |    select|   0|  0|   2|           1|           1|
+    |select_ln17_fu_186_p3    |    select|   0|  0|   7|           1|           1|
+    |ap_enable_pp0            |       xor|   0|  0|   2|           1|           2|
+    |xor_ln25_fu_300_p2       |       xor|   0|  0|   2|           1|           2|
+    +-------------------------+----------+----+---+----+------------+------------+
+    |Total                    |          |   0|  0| 234|         154|         174|
+    +-------------------------+----------+----+---+----+------------+------------+
+
+    * Multiplexer: 
+    +--------------------------------------+----+-----------+-----+-----------+
+    |                 Name                 | LUT| Input Size| Bits| Total Bits|
+    +--------------------------------------+----+-----------+-----+-----------+
+    |ap_done_int                           |   9|          2|    1|          2|
+    |ap_enable_reg_pp0_iter1               |   9|          2|    1|          2|
+    |ap_sig_allocacmp_col_load             |   9|          2|    7|         14|
+    |ap_sig_allocacmp_indvar_flatten_load  |   9|          2|   10|         20|
+    |ap_sig_allocacmp_row_1                |   9|          2|    4|          8|
+    |col_fu_58                             |   9|          2|    7|         14|
+    |indvar_flatten_fu_66                  |   9|          2|   10|         20|
+    |row_fu_62                             |   9|          2|    4|          8|
+    +--------------------------------------+----+-----------+-----+-----------+
+    |Total                                 |  72|         16|   44|         88|
+    +--------------------------------------+----+-----------+-----+-----------+
+
+    * Register: 
+    +----------------------------------+----+----+-----+-----------+
+    |               Name               | FF | LUT| Bits| Const Bits|
+    +----------------------------------+----+----+-----+-----------+
+    |add_ln26_reg_365                  |   9|   0|    9|          0|
+    |ap_CS_fsm                         |   1|   0|    1|          0|
+    |ap_done_reg                       |   1|   0|    1|          0|
+    |ap_enable_reg_pp0_iter1           |   1|   0|    1|          0|
+    |ap_enable_reg_pp0_iter2           |   1|   0|    1|          0|
+    |ap_loop_exit_ready_pp0_iter1_reg  |   1|   0|    1|          0|
+    |cmp5_mid1_reg_360                 |   1|   0|    1|          0|
+    |cmp5_mid1_reg_360_pp0_iter1_reg   |   1|   0|    1|          0|
+    |cmp5_reg_346                      |   1|   0|    1|          0|
+    |cmp5_reg_346_pp0_iter1_reg        |   1|   0|    1|          0|
+    |col_fu_58                         |   7|   0|    7|          0|
+    |icmp_ln18_reg_355                 |   1|   0|    1|          0|
+    |icmp_ln18_reg_355_pp0_iter1_reg   |   1|   0|    1|          0|
+    |icmp_ln22_reg_370                 |   1|   0|    1|          0|
+    |icmp_ln22_reg_370_pp0_iter1_reg   |   1|   0|    1|          0|
+    |icmp_ln25_reg_375                 |   1|   0|    1|          0|
+    |icmp_ln25_reg_375_pp0_iter1_reg   |   1|   0|    1|          0|
+    |indvar_flatten_fu_66              |  10|   0|   10|          0|
+    |row_fu_62                         |   4|   0|    4|          0|
+    |zext_ln26_1_reg_380               |   9|   0|   64|         55|
+    +----------------------------------+----+----+-----+-----------+
+    |Total                             |  54|   0|  109|         55|
+    +----------------------------------+----+----+-----+-----------+
+
+
+
+================================================================
+== Interface
+================================================================
+* Summary: 
++--------------------+-----+-----+------------+----------------------+--------------+
+|      RTL Ports     | Dir | Bits|  Protocol  |     Source Object    |    C Type    |
++--------------------+-----+-----+------------+----------------------+--------------+
+|ap_clk              |   in|    1|  ap_ctrl_hs|  causal_mask_core_hls|  return value|
+|ap_rst              |   in|    1|  ap_ctrl_hs|  causal_mask_core_hls|  return value|
+|ap_start            |   in|    1|  ap_ctrl_hs|  causal_mask_core_hls|  return value|
+|ap_done             |  out|    1|  ap_ctrl_hs|  causal_mask_core_hls|  return value|
+|ap_idle             |  out|    1|  ap_ctrl_hs|  causal_mask_core_hls|  return value|
+|ap_ready            |  out|    1|  ap_ctrl_hs|  causal_mask_core_hls|  return value|
+|score_in_address0   |  out|    9|   ap_memory|              score_in|         array|
+|score_in_ce0        |  out|    1|   ap_memory|              score_in|         array|
+|score_in_q0         |   in|   32|   ap_memory|              score_in|         array|
+|score_out_address0  |  out|    9|   ap_memory|             score_out|         array|
+|score_out_ce0       |  out|    1|   ap_memory|             score_out|         array|
+|score_out_we0       |  out|    1|   ap_memory|             score_out|         array|
+|score_out_d0        |  out|   32|   ap_memory|             score_out|         array|
+|query_pos_base      |   in|   16|     ap_none|        query_pos_base|        scalar|
+|key_pos_base        |   in|   16|     ap_none|          key_pos_base|        scalar|
+|query_row_count     |   in|   16|     ap_none|       query_row_count|        scalar|
+|key_col_count       |   in|   16|     ap_none|         key_col_count|        scalar|
++--------------------+-----+-----+------------+----------------------+--------------+
+

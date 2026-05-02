@@ -1,0 +1,66 @@
+===============================================================================
+Version:    v++ v2022.2 (64-bit)
+Build:      SW Build 3671529 on 2022-10-13-17:52:11
+Copyright:  Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+Created:    Mon Apr 27 18:43:23 2026
+===============================================================================
+
+-------------------------------------------------------------------------------
+Design Name:             softmax_u55c_kernel
+Target Device:           xilinx:u55c:gen3x16_xdma_3:202210.1
+Target Clock:            300.000000MHz
+Total number of kernels: 1
+-------------------------------------------------------------------------------
+
+Kernel Summary
+Kernel Name          Type  Target              OpenCL Library       Compute Units
+-------------------  ----  ------------------  -------------------  -------------
+softmax_u55c_kernel  c     fpga0:OCL_REGION_0  softmax_u55c_kernel  1
+
+
+-------------------------------------------------------------------------------
+OpenCL Binary:     softmax_u55c_kernel
+Kernels mapped to: clc_region
+
+Timing Information (MHz)
+Compute Unit           Kernel Name          Module Name                                                     Target Frequency  Estimated Frequency
+---------------------  -------------------  --------------------------------------------------------------  ----------------  -------------------
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_u55c_kernel_Pipeline_VITIS_LOOP_91_1_VITIS_LOOP_92_2    300.300293        411.015198
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_67_7                       300.300293        523.286255
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_39_2                       300.300293        419.287201
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_46_3                       300.300293        404.858307
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_52_4                       300.300293        914.913025
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_57_5                       300.300293        429.737885
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_62_6                       300.300293        523.286255
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls                                                300.300293        404.858307
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_u55c_kernel_Pipeline_VITIS_LOOP_104_3_VITIS_LOOP_105_4  300.300293        411.015198
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_u55c_kernel                                             300.300293        404.858307
+
+Latency Information
+Compute Unit           Kernel Name          Module Name                                                     Start Interval  Best (cycles)  Avg (cycles)  Worst (cycles)  Best (absolute)  Avg (absolute)  Worst (absolute)
+---------------------  -------------------  --------------------------------------------------------------  --------------  -------------  ------------  --------------  ---------------  --------------  ----------------
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_u55c_kernel_Pipeline_VITIS_LOOP_91_1_VITIS_LOOP_92_2    515             515            515           515             1.716 us         1.716 us        1.716 us
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_67_7                       66              66             66            66              0.220 us         0.220 us        0.220 us
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_39_2                       undef           undef          undef         undef           undef            undef           undef
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_46_3                       2 ~ 262165      2              undef         262165          6.666 ns         undef           0.874 ms
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_52_4                       undef           undef          undef         undef           undef            undef           undef
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_57_5                       2 ~ 142         2              undef         142             6.666 ns         undef           0.473 us
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_62_6                       undef           undef          undef         undef           undef            undef           undef
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls                                                undef           undef          undef         undef           undef            undef           undef
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_u55c_kernel_Pipeline_VITIS_LOOP_104_3_VITIS_LOOP_105_4  516             516            516           516             1.720 us         1.720 us        1.720 us
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_u55c_kernel                                             undef           undef          undef         undef           undef            undef           undef
+
+Area Information
+Compute Unit           Kernel Name          Module Name                                                     FF     LUT    DSP  BRAM  URAM
+---------------------  -------------------  --------------------------------------------------------------  -----  -----  ---  ----  ----
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_u55c_kernel_Pipeline_VITIS_LOOP_91_1_VITIS_LOOP_92_2    1040   612    0    0     0
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_67_7                       9      68     0    0     0
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_39_2                       222    266    0    0     0
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_46_3                       1165   1482   0    0     0
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_52_4                       9      41     0    0     0
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_57_5                       171    113    0    0     0
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls_Pipeline_VITIS_LOOP_62_6                       18     77     0    0     0
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_core_hls                                                1699   2393   0    0     0
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_u55c_kernel_Pipeline_VITIS_LOOP_104_3_VITIS_LOOP_105_4  1098   1045   0    0     0
+softmax_u55c_kernel_1  softmax_u55c_kernel  softmax_u55c_kernel                                             13523  21473  0    2     0
+-------------------------------------------------------------------------------

@@ -1,0 +1,26 @@
+System Configuration
+  OS Name              : Linux
+  Release              : 5.4.0-148-generic
+  Version              : #165-Ubuntu SMP Tue Apr 18 08:53:12 UTC 2023
+  Machine              : x86_64
+  CPU Cores            : 20
+  Memory               : 31798 MB
+  Distribution         : Ubuntu 20.04.6 LTS
+  GLIBC                : 2.31
+  Model                : Precision 3680
+
+XRT
+  Version              : 2.14.354
+  Branch               : 2022.2
+  Hash                 : 43926231f7183688add2dccfd391b36a1f000bea
+  Hash Date            : 2022-10-08 09:49:58
+  XOCL                 : 2.14.354, 43926231f7183688add2dccfd391b36a1f000bea
+  XCLMGMT              : 2.14.354, 43926231f7183688add2dccfd391b36a1f000bea
+
+Devices present
+BDF             :  Shell                            Platform UUID                         Device ID       Device Ready*  
+-------------------------------------------------------------------------------------------------------------------------
+[0000:01:00.1]  :  xilinx_u55c_gen3x16_xdma_base_3  97088961-FEAE-DA91-52A2-1D9DFD63CCEF  user(inst=128)  Yes            
+
+
+* Devices that are not ready will have reduced functionality when using XRT tools

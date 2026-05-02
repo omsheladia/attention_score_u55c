@@ -1,0 +1,222 @@
+
+
+================================================================
+== Synthesis Summary Report of 'softmax_u55c_kernel'
+================================================================
++ General Information: 
+    * Date:           Mon Apr 27 17:17:06 2026
+    * Version:        2022.2 (Build 3670227 on Oct 13 2022)
+    * Project:        softmax_prj
+    * Solution:       sol1 (Vivado IP Flow Target)
+    * Product family: virtexuplus
+    * Target device:  xcu55c-fsvh2892-2L-e
+    
+
++ Performance & Resource Estimates: 
+    
+    PS: '+' for module; 'o' for loop; '*' for dataflow
+    +-------------------------------------------------------------------+--------+-------+---------+-----------+----------+---------+-------+----------+---------+---------+------------+------------+-----+
+    |                              Modules                              |  Issue |       | Latency |  Latency  | Iteration|         |  Trip |          |         |         |            |            |     |
+    |                              & Loops                              |  Type  | Slack | (cycles)|    (ns)   |  Latency | Interval| Count | Pipelined|  BRAM   |   DSP   |     FF     |     LUT    | URAM|
+    +-------------------------------------------------------------------+--------+-------+---------+-----------+----------+---------+-------+----------+---------+---------+------------+------------+-----+
+    |+ softmax_u55c_kernel                                              |  Timing|  -0.25|        -|          -|         -|        -|      -|        no|  2 (~0%)|  9 (~0%)|  3651 (~0%)|  5712 (~0%)|    -|
+    | + softmax_u55c_kernel_Pipeline_VITIS_LOOP_91_1_VITIS_LOOP_92_2    |       -|   0.00|      515|  2.060e+03|         -|      515|      -|        no|        -|        -|    68 (~0%)|   161 (~0%)|    -|
+    |  o VITIS_LOOP_91_1_VITIS_LOOP_92_2                                |       -|   2.92|      513|  2.052e+03|         3|        1|    512|       yes|        -|        -|           -|           -|    -|
+    | + softmax_core_hls                                                |  Timing|  -0.25|        -|          -|         -|        -|      -|        no|        -|  9 (~0%)|  1554 (~0%)|  2400 (~0%)|    -|
+    |  o VITIS_LOOP_35_1                                                |       -|   2.92|        -|          -|         -|        -|      -|        no|        -|        -|           -|           -|    -|
+    |   + softmax_core_hls_Pipeline_VITIS_LOOP_67_7                     |       -|   1.01|       66|    264.000|         -|       66|      -|        no|        -|        -|     9 (~0%)|    68 (~0%)|    -|
+    |    o VITIS_LOOP_67_7                                              |       -|   2.92|       64|    256.000|         1|        1|     64|       yes|        -|        -|           -|           -|    -|
+    |   + softmax_core_hls_Pipeline_VITIS_LOOP_39_2                     |       -|   0.07|        -|          -|         -|        -|      -|        no|        -|        -|   187 (~0%)|   266 (~0%)|    -|
+    |    o VITIS_LOOP_39_2                                              |       -|   2.92|        -|          -|         3|        1|      -|       yes|        -|        -|           -|           -|    -|
+    |   + softmax_core_hls_Pipeline_VITIS_LOOP_46_3                     |  Timing|  -0.25|   196626|  7.865e+05|         -|   196626|      -|        no|        -|  9 (~0%)|  1056 (~0%)|  1489 (~0%)|    -|
+    |    o VITIS_LOOP_46_3                                              |       -|   2.92|   196624|  7.865e+05|        23|        3|  65535|       yes|        -|        -|           -|           -|    -|
+    |   + softmax_core_hls_Pipeline_VITIS_LOOP_52_4                     |       -|   1.83|        -|          -|         -|        -|      -|        no|        -|        -|     9 (~0%)|    41 (~0%)|    -|
+    |    o VITIS_LOOP_52_4                                              |       -|   2.92|        -|          -|         1|        1|      -|       yes|        -|        -|           -|           -|    -|
+    |   + softmax_core_hls_Pipeline_VITIS_LOOP_57_5                     |       -|   0.59|      142|    568.000|         -|      142|      -|        no|        -|        -|   171 (~0%)|   113 (~0%)|    -|
+    |    o VITIS_LOOP_57_5                                              |       -|   2.92|      140|    560.000|        15|        1|    127|       yes|        -|        -|           -|           -|    -|
+    |   + softmax_core_hls_Pipeline_VITIS_LOOP_62_6                     |       -|   1.01|        -|          -|         -|        -|      -|        no|        -|        -|    18 (~0%)|    77 (~0%)|    -|
+    |    o VITIS_LOOP_62_6                                              |       -|   2.92|        -|          -|         1|        1|      -|       yes|        -|        -|           -|           -|    -|
+    | + softmax_u55c_kernel_Pipeline_VITIS_LOOP_104_3_VITIS_LOOP_105_4  |       -|   0.00|      516|  2.064e+03|         -|      516|      -|        no|        -|        -|    71 (~0%)|   177 (~0%)|    -|
+    |  o VITIS_LOOP_104_3_VITIS_LOOP_105_4                              |       -|   2.92|      514|  2.056e+03|         4|        1|    512|       yes|        -|        -|           -|           -|    -|
+    +-------------------------------------------------------------------+--------+-------+---------+-----------+----------+---------+-------+----------+---------+---------+------------+------------+-----+
+
+
+================================================================
+== HW Interfaces
+================================================================
+* M_AXI
++-------------+------------+---------------+---------+--------+----------+-----------+--------------+--------------+-------------+-------------+
+| Interface   | Data Width | Address Width | Latency | Offset | Register | Max Widen | Max Read     | Max Write    | Num Read    | Num Write   |
+|             | (SW->HW)   |               |         |        |          | Bitwidth  | Burst Length | Burst Length | Outstanding | Outstanding |
++-------------+------------+---------------+---------+--------+----------+-----------+--------------+--------------+-------------+-------------+
+| m_axi_gmem0 | 32 -> 32   | 64            | 0       | slave  | 0        | 0         | 16           | 16           | 16          | 16          |
+| m_axi_gmem1 | 32 -> 32   | 64            | 0       | slave  | 0        | 0         | 16           | 16           | 16          | 16          |
++-------------+------------+---------------+---------+--------+----------+-----------+--------------+--------------+-------------+-------------+
+
+* S_AXILITE Interfaces
++---------------+------------+---------------+--------+----------+
+| Interface     | Data Width | Address Width | Offset | Register |
++---------------+------------+---------------+--------+----------+
+| s_axi_control | 32         | 6             | 16     | 0        |
++---------------+------------+---------------+--------+----------+
+
+* S_AXILITE Registers
++---------------+-----------------+--------+-------+--------+----------------------------------+----------------------------------------------------------------------+
+| Interface     | Register        | Offset | Width | Access | Description                      | Bit Fields                                                           |
++---------------+-----------------+--------+-------+--------+----------------------------------+----------------------------------------------------------------------+
+| s_axi_control | CTRL            | 0x00   | 32    | RW     | Control signals                  | 0=AP_START 1=AP_DONE 2=AP_IDLE 3=AP_READY 7=AUTO_RESTART 9=INTERRUPT |
+| s_axi_control | GIER            | 0x04   | 32    | RW     | Global Interrupt Enable Register | 0=Enable                                                             |
+| s_axi_control | IP_IER          | 0x08   | 32    | RW     | IP Interrupt Enable Register     | 0=CHAN0_INT_EN 1=CHAN1_INT_EN                                        |
+| s_axi_control | IP_ISR          | 0x0c   | 32    | RW     | IP Interrupt Status Register     | 0=CHAN0_INT_ST 1=CHAN1_INT_ST                                        |
+| s_axi_control | score_in_1      | 0x10   | 32    | W      | Data signal of score_in          |                                                                      |
+| s_axi_control | score_in_2      | 0x14   | 32    | W      | Data signal of score_in          |                                                                      |
+| s_axi_control | prob_out_1      | 0x1c   | 32    | W      | Data signal of prob_out          |                                                                      |
+| s_axi_control | prob_out_2      | 0x20   | 32    | W      | Data signal of prob_out          |                                                                      |
+| s_axi_control | query_row_count | 0x28   | 32    | W      | Data signal of query_row_count   |                                                                      |
+| s_axi_control | key_col_count   | 0x30   | 32    | W      | Data signal of key_col_count     |                                                                      |
++---------------+-----------------+--------+-------+--------+----------------------------------+----------------------------------------------------------------------+
+
+* TOP LEVEL CONTROL
++-----------+------------+-----------+
+| Interface | Type       | Ports     |
++-----------+------------+-----------+
+| ap_clk    | clock      | ap_clk    |
+| ap_rst_n  | reset      | ap_rst_n  |
+| interrupt | interrupt  | interrupt |
+| ap_ctrl   | ap_ctrl_hs |           |
++-----------+------------+-----------+
+
+
+================================================================
+== SW I/O Information
+================================================================
+* Top Function Arguments
++-----------------+-----------+---------------+
+| Argument        | Direction | Datatype      |
++-----------------+-----------+---------------+
+| score_in        | in        | float const * |
+| prob_out        | out       | float*        |
+| query_row_count | in        | unsigned int  |
+| key_col_count   | in        | unsigned int  |
++-----------------+-----------+---------------+
+
+* SW-to-HW Mapping
++-----------------+---------------+-----------+----------+-------------------------------------------+
+| Argument        | HW Interface  | HW Type   | HW Usage | HW Info                                   |
++-----------------+---------------+-----------+----------+-------------------------------------------+
+| score_in        | m_axi_gmem0   | interface |          |                                           |
+| score_in        | s_axi_control | register  | offset   | name=score_in_1 offset=0x10 range=32      |
+| score_in        | s_axi_control | register  | offset   | name=score_in_2 offset=0x14 range=32      |
+| prob_out        | m_axi_gmem1   | interface |          |                                           |
+| prob_out        | s_axi_control | register  | offset   | name=prob_out_1 offset=0x1c range=32      |
+| prob_out        | s_axi_control | register  | offset   | name=prob_out_2 offset=0x20 range=32      |
+| query_row_count | s_axi_control | register  |          | name=query_row_count offset=0x28 range=32 |
+| key_col_count   | s_axi_control | register  |          | name=key_col_count offset=0x30 range=32   |
++-----------------+---------------+-----------+----------+-------------------------------------------+
+
+
+================================================================
+== M_AXI Burst Information
+================================================================
+ Note: All burst requests might be further partitioned into multiple requests during RTL generation based on max_read_burst_length or max_write_burst_length settings.
+
+* Inferred Burst Summary
++--------------+------------------+-----------+--------+-------+----------------------------------------------------------------------------------------+
+| HW Interface | Loop             | Direction | Length | Width | Location                                                                               |
++--------------+------------------+-----------+--------+-------+----------------------------------------------------------------------------------------+
+| m_axi_gmem0  | VITIS_LOOP_91_1  | read      | 512    | 32    | /home/advent/Desktop/RC19/attention_score_u55c/hls/softmax/softmax_core_hls.cpp:91:20  |
+| m_axi_gmem1  | VITIS_LOOP_104_3 | write     | 512    | 32    | /home/advent/Desktop/RC19/attention_score_u55c/hls/softmax/softmax_core_hls.cpp:104:21 |
++--------------+------------------+-----------+--------+-------+----------------------------------------------------------------------------------------+
+
+* Inferred Bursts and Widening Missed
++--------------+----------+------------------+---------------------------------------------------------------------------------------------------------+------------+----------------------------------------------------------------------------------------+
+| HW Interface | Variable | Loop             | Problem                                                                                                 | Resolution | Location                                                                               |
++--------------+----------+------------------+---------------------------------------------------------------------------------------------------------+------------+----------------------------------------------------------------------------------------+
+| m_axi_gmem1  | prob_out | VITIS_LOOP_105_4 | Could not widen since type float size is greater than or equal to the max_widen_bitwidth threshold of 0 | 214-353    | /home/advent/Desktop/RC19/attention_score_u55c/hls/softmax/softmax_core_hls.cpp:105:23 |
+| m_axi_gmem0  | score_in | VITIS_LOOP_92_2  | Could not widen since type float size is greater than or equal to the max_widen_bitwidth threshold of 0 | 214-353    | /home/advent/Desktop/RC19/attention_score_u55c/hls/softmax/softmax_core_hls.cpp:92:22  |
++--------------+----------+------------------+---------------------------------------------------------------------------------------------------------+------------+----------------------------------------------------------------------------------------+
+
+    * Resolution URL: www.xilinx.com/cgi-bin/docs/rdoc?v=2022.2;t=hls+guidance;d=XXX-YYY.html (replace XXX-YYY with column value)
+
+================================================================
+== Bind Op Report
+================================================================
++-------------------------------------------------------------------+-----+--------+--------------+------+---------+---------+
+| Name                                                              | DSP | Pragma | Variable     | Op   | Impl    | Latency |
++-------------------------------------------------------------------+-----+--------+--------------+------+---------+---------+
+| + softmax_u55c_kernel                                             | 9   |        |              |      |         |         |
+|  + softmax_u55c_kernel_Pipeline_VITIS_LOOP_91_1_VITIS_LOOP_92_2   | 0   |        |              |      |         |         |
+|    add_ln91_1_fu_130_p2                                           | -   |        | add_ln91_1   | add  | fabric  | 0       |
+|    add_ln91_fu_153_p2                                             | -   |        | add_ln91     | add  | fabric  | 0       |
+|    add_ln94_fu_197_p2                                             | -   |        | add_ln94     | add  | fabric  | 0       |
+|    add_ln92_fu_203_p2                                             | -   |        | add_ln92     | add  | fabric  | 0       |
+|  + softmax_core_hls                                               | 9   |        |              |      |         |         |
+|    add_ln35_fu_169_p2                                             | -   |        | add_ln35     | add  | fabric  | 0       |
+|   + softmax_core_hls_Pipeline_VITIS_LOOP_67_7                     | 0   |        |              |      |         |         |
+|     add_ln67_fu_70_p2                                             | -   |        | add_ln67     | add  | fabric  | 0       |
+|     add_ln69_fu_80_p2                                             | -   |        | add_ln69     | add  | fabric  | 0       |
+|   + softmax_core_hls_Pipeline_VITIS_LOOP_39_2                     | 0   |        |              |      |         |         |
+|     add_ln40_fu_118_p2                                            | -   |        | add_ln40     | add  | fabric  | 0       |
+|     add_ln39_fu_133_p2                                            | -   |        | add_ln39     | add  | fabric  | 0       |
+|   + softmax_core_hls_Pipeline_VITIS_LOOP_46_3                     | 9   |        |              |      |         |         |
+|     add_ln46_fu_143_p2                                            | -   |        | add_ln46     | add  | fabric  | 0       |
+|     add_ln48_fu_153_p2                                            | -   |        | add_ln48     | add  | fabric  | 0       |
+|     fsub_32ns_32ns_32_7_full_dsp_1_U13                            | 2   |        | value_assign | fsub | fulldsp | 6       |
+|     fexp_32ns_32ns_32_10_full_dsp_1_U15                           | 7   |        | tmp          | fexp | fulldsp | 9       |
+|     fadd_32ns_32ns_32_4_no_dsp_1_U14                              | -   |        | sum_exp_1    | fadd | fabric  | 3       |
+|   + softmax_core_hls_Pipeline_VITIS_LOOP_52_4                     | 0   |        |              |      |         |         |
+|     add_ln52_fu_73_p2                                             | -   |        | add_ln52     | add  | fabric  | 0       |
+|   + softmax_core_hls_Pipeline_VITIS_LOOP_57_5                     | 0   |        |              |      |         |         |
+|     add_ln57_fu_108_p2                                            | -   |        | add_ln57     | add  | fabric  | 0       |
+|     add_ln59_fu_127_p2                                            | -   |        | add_ln59     | add  | fabric  | 0       |
+|     fdiv_32ns_32ns_32_12_no_dsp_1_U27                             | -   |        | div          | fdiv | fabric  | 11      |
+|   + softmax_core_hls_Pipeline_VITIS_LOOP_62_6                     | 0   |        |              |      |         |         |
+|     add_ln64_fu_98_p2                                             | -   |        | add_ln64     | add  | fabric  | 0       |
+|     add_ln62_fu_109_p2                                            | -   |        | add_ln62     | add  | fabric  | 0       |
+|  + softmax_u55c_kernel_Pipeline_VITIS_LOOP_104_3_VITIS_LOOP_105_4 | 0   |        |              |      |         |         |
+|    add_ln104_1_fu_135_p2                                          | -   |        | add_ln104_1  | add  | fabric  | 0       |
+|    add_ln104_fu_147_p2                                            | -   |        | add_ln104    | add  | fabric  | 0       |
+|    add_ln107_fu_191_p2                                            | -   |        | add_ln107    | add  | fabric  | 0       |
+|    add_ln105_fu_197_p2                                            | -   |        | add_ln105    | add  | fabric  | 0       |
++-------------------------------------------------------------------+-----+--------+--------------+------+---------+---------+
+
+
+================================================================
+== Bind Storage Report
+================================================================
++-----------------------+------+------+--------+----------------+---------+------+---------+
+| Name                  | BRAM | URAM | Pragma | Variable       | Storage | Impl | Latency |
++-----------------------+------+------+--------+----------------+---------+------+---------+
+| + softmax_u55c_kernel | 2    | 0    |        |                |         |      |         |
+|   score_in_local_U    | 1    | -    |        | score_in_local | ram_1p  | auto | 1       |
+|   prob_out_local_U    | 1    | -    |        | prob_out_local | ram_1p  | auto | 1       |
+|  + softmax_core_hls   | 0    | 0    |        |                |         |      |         |
+|    exp_buf_U          | -    | -    |        | exp_buf        | ram_1p  | auto | 1       |
++-----------------------+------+------+--------+----------------+---------+------+---------+
+
+
+================================================================
+== Pragma Report
+================================================================
+* Valid Pragma Syntax
++-----------+---------------------------------------------------------+----------------------------------------------------------------------------+
+| Type      | Options                                                 | Location                                                                   |
++-----------+---------------------------------------------------------+----------------------------------------------------------------------------+
+| inline    | off                                                     | ../softmax/softmax_core_hls.cpp:31 in softmax_core_hls                     |
+| pipeline  | II=3                                                    | ../softmax/softmax_core_hls.cpp:47 in softmax_core_hls                     |
+| pipeline  | II=1                                                    | ../softmax/softmax_core_hls.cpp:53 in softmax_core_hls                     |
+| pipeline  | II=1                                                    | ../softmax/softmax_core_hls.cpp:58 in softmax_core_hls                     |
+| pipeline  | II=1                                                    | ../softmax/softmax_core_hls.cpp:63 in softmax_core_hls                     |
+| pipeline  | II=1                                                    | ../softmax/softmax_core_hls.cpp:68 in softmax_core_hls                     |
+| interface | m_axi port=score_in offset=slave bundle=gmem0 depth=512 | ../softmax/softmax_core_hls.cpp:80 in softmax_u55c_kernel, score_in        |
+| interface | m_axi port=prob_out offset=slave bundle=gmem1 depth=512 | ../softmax/softmax_core_hls.cpp:81 in softmax_u55c_kernel, prob_out        |
+| interface | s_axilite port=score_in bundle=control                  | ../softmax/softmax_core_hls.cpp:82 in softmax_u55c_kernel, score_in        |
+| interface | s_axilite port=prob_out bundle=control                  | ../softmax/softmax_core_hls.cpp:83 in softmax_u55c_kernel, prob_out        |
+| interface | s_axilite port=query_row_count bundle=control           | ../softmax/softmax_core_hls.cpp:84 in softmax_u55c_kernel, query_row_count |
+| interface | s_axilite port=key_col_count bundle=control             | ../softmax/softmax_core_hls.cpp:85 in softmax_u55c_kernel, key_col_count   |
+| interface | s_axilite port=return bundle=control                    | ../softmax/softmax_core_hls.cpp:86 in softmax_u55c_kernel, return          |
+| pipeline  | II=1                                                    | ../softmax/softmax_core_hls.cpp:93 in softmax_u55c_kernel                  |
+| pipeline  | II=1                                                    | ../softmax/softmax_core_hls.cpp:106 in softmax_u55c_kernel                 |
++-----------+---------------------------------------------------------+----------------------------------------------------------------------------+
+
+

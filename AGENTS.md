@@ -126,10 +126,120 @@ Current exported files include:
 - `attention_score_u55c/host/build_xclbin.sh`
 - `attention_score_u55c/host/build_host.sh`
 - `attention_score_u55c/host/vpp_link.cfg`
+- `attention_score_u55c/host/run_hw.sh`
 - `attention_score_u55c/host/run_hw_emu.sh`
 - `attention_score_u55c/host/LINUX_BRINGUP.md`
+- `attention_score_u55c/docs/fpga_run_commands.md`
 
 ## Verification Status
+
+### Real Hardware Verification
+
+On 2026-04-28, the U55C shell was updated from
+`xilinx_u55c_gen3x16_xdma_base_2` to `xilinx_u55c_gen3x16_xdma_base_3`.
+After cold power cycle, `xbutil examine` reported the user function ready on
+`[0000:01:00.1]` with platform UUID `97088961-FEAE-DA91-52A2-1D9DFD63CCEF`.
+
+The real hardware `build/attention_score_chain.xclbin` was loaded and run on
+device 0 with the XRT host app. All four kernels ran and the host printed
+`XRT chain verification PASSED`.
+
+On 2026-04-29, a preservation backup was created at
+`backups/run_20260429_201240/`. It contains a repo snapshot, hardware xclbin,
+xo files, host binary, vectors, HLS/Vitis reports/logs, XRT device state,
+checksums, and a fresh real-hardware verification log.
+
+On 2026-04-30, `host/run_hw.sh` was added as the clean real-card runner for the
+verified flow. It sources `host/setup_2022_2_env.sh`, unsets
+`XCL_EMULATION_MODE`, validates the host binary/xclbin/vector paths, and runs
+device 0 by default. The XRT host app now prints host wall-clock timing for each
+kernel launch/wait and total four-kernel chain runtime before reporting
+verification. Running `bash attention_score_u55c/host/run_hw.sh 0` on the real
+card passed and printed:
+
+- attention score: 0.110 ms
+- causal mask: 0.029 ms
+- score scale: 0.021 ms
+- softmax: 0.026 ms
+- total chain: 0.193 ms
+
+On 2026-04-30, `docs/fpga_run_commands.md` was added as the concise command
+runbook for the verified FPGA flow. It records the exact environment setup,
+platform path, vector export parameters, local C++ checks, HLS csim/csynth
+commands, hw_emu build/run commands, real hardware build/run commands, HBM bank
+mapping, and current benchmark scope.
+
+### HW Emulation Verification
+
+On 2026-04-28, after full Vitis 2022.2 was added, `host/build_xclbin.sh hw_emu`
+successfully produced `build/attention_score_chain.xclbin` for
+`xilinx_u55c_gen3x16_xdma_3_202210_1`. `xclbinutil --info` identifies it as a
+`HW Emulation Binary` containing all four kernels:
+
+- `attention_score_u55c_kernel`
+- `causal_mask_u55c_kernel`
+- `score_scale_u55c_kernel`
+- `softmax_u55c_kernel`
+
+The XRT host app was rebuilt and run with `XCL_EMULATION_MODE=hw_emu`; the full
+four-kernel chain completed and printed `XRT chain verification PASSED`.
+
+### Historical Bring-Up Notes
+
+On 2026-04-28, this device had `g++`, Python, XRT 2022.2 under
+`/opt/xilinx/xrt`, Vivado/Vitis HLS 2022.2 under `/home/advent/Vivado`, and
+the U55C platform file under
+`/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/`. It did not have
+full Vitis 2022.2 installed/discoverable. A `v++` exists under
+`/home/advent/petalinux/tools/xsct/bin`, but it is a versionless XSCT wrapper
+and is not sufficient for this platform; it failed with:
+`Platform 'xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm' (version 2022.1) is not
+supported by the current tool version (.)`. `.xclbin` packaging/linking is
+therefore still blocked until full Vitis 2022.2 is added.
+
+Outside the earlier sandbox, XRT sees the card and reports it ready:
+`xbutil examine` shows `[0000:01:00.1]` as
+`xilinx_u55c_gen3x16_xdma_base_2`, and `xbmgmt examine` shows `[0000:01:00.0]`
+as the matching management function. `lspci` sees Xilinx devices `505c` and
+`505d` at `01:00.0` and `01:00.1`; `xclmgmt` and `xocl` are loaded and bound.
+
+The development platform in use is `xdma_3_202210_1`, while the card currently
+reports deployment shell `xdma_base_2`. Matching local base_3 deployment .debs
+exist under `/home/advent/Downloads`, but installing them requires sudo
+password. Flashing/updating the shell may also require a reboot or cold power
+cycle.
+
+A minimal Vitis 2022.2 add-on config was saved as
+`host/vitis_2022_2_add_config.txt`. The installer is available locally at
+`/home/advent/Downloads/Xilinx_Unified_2022.2_1014_8888_Lin64.bin`, but batch
+install requires an AMD/Xilinx auth token generated with
+`/home/advent/Vivado/.xinstall/Vivado_2022.2/xsetup -b AuthTokenGen`; that
+prompt requires the user's AMD/Xilinx credentials.
+
+A local native C++ validation helper was added at `host/run_local_csim.sh`; it
+regenerates vectors, builds the four C++ testbenches, and runs score, causal
+mask, score scale, and softmax. All four local benches passed on this device.
+After sourcing `/opt/xilinx/xrt/setup.sh`, the XRT host app also compiled
+successfully to `build/host_attention_score_chain`.
+
+An environment helper was added at `host/setup_2022_2_env.sh`. Source it before
+building/running this demo. `host/build_xclbin.sh` now rejects missing `v++` and
+the versionless PetaLinux XSCT `v++` wrapper with a clearer error.
+
+The HLS Tcl scripts were made portable for this Vitis HLS install by opening
+simple project names from inside `hls/build/` instead of passing slash-containing
+paths to `open_project`. Running Vitis HLS outside the sandbox was required
+because `csim_design` opens a local dispatch-server port.
+
+Vitis HLS 2022.2 `csim` and `csynth` passed again on this device for all four
+kernels:
+
+- attention score: estimated Fmax 342.47 MHz, 32 DSP, 57 BRAM_18K
+- causal mask: estimated Fmax 342.47 MHz, 0 DSP, 2 BRAM_18K
+- score scale: estimated Fmax 342.47 MHz, 3 DSP, 2 BRAM_18K
+- softmax: estimated Fmax 315.96 MHz, 9 DSP, 2 BRAM_18K; timing-budget warning
+  remains around the `sum_exp` floating-point add path, but loop constraints
+  were satisfied
 
 ### Local / Desktop Verification
 
@@ -228,30 +338,24 @@ Current user environment note:
 
 Not yet confirmed:
 
-- XRT host app compile on a real Linux+XRT install
-- full `.xclbin` link and run in `hw_emu`
-- real on-card `hw` run on the U55C
 - full TinyLlama attention path
 - full TinyLlama model execution
 
-So the project is close to an **isolated FPGA demo**, but not yet a fully proven
-hardware runtime.
+So the project is now a proven **isolated FPGA demo**, but not yet a full
+TinyLlama hardware runtime.
 
 ## Best Next Step
 
-Best next practical step:
+Best next practical steps:
 
-1. move to Linux
-2. follow `attention_score_u55c/host/LINUX_BRINGUP.md`
-3. get `hw_emu` passing
-4. then get a real `hw` pass on the U55C
-
-If those pass, the isolated attention-score chain can be considered deployable
-as a tile-level FPGA demo.
+1. add more vector cases with different `query_row_count` and `key_col_count`
+2. add a small regression runner that executes all vector directories through
+   local C++ and XRT paths
+3. consider implementing the next attention stage, `softmax @ V`
 
 ## After That
 
-If the isolated demo works on hardware, the next major engineering steps are:
+With the isolated demo working on hardware, the next major engineering steps are:
 
 1. integrate real Q/K producers
 2. add the V weighted-sum stage

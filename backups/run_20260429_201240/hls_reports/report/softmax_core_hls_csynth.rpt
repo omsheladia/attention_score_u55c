@@ -1,0 +1,196 @@
+
+
+================================================================
+== Vitis HLS Report for 'softmax_core_hls'
+================================================================
+* Date:           Mon Apr 27 17:17:05 2026
+
+* Version:        2022.2 (Build 3670227 on Oct 13 2022)
+* Project:        softmax_prj
+* Solution:       sol1 (Vivado IP Flow Target)
+* Product family: virtexuplus
+* Target device:  xcu55c-fsvh2892-2L-e
+
+
+================================================================
+== Performance Estimates
+================================================================
++ Timing: 
+    * Summary: 
+    +--------+---------+----------+------------+
+    |  Clock |  Target | Estimated| Uncertainty|
+    +--------+---------+----------+------------+
+    |ap_clk  |  4.00 ns|  3.165 ns|     1.08 ns|
+    +--------+---------+----------+------------+
+
++ Latency: 
+    * Summary: 
+    +---------+---------+----------+----------+-----+-----+---------+
+    |  Latency (cycles) |  Latency (absolute) |  Interval | Pipeline|
+    |   min   |   max   |    min   |    max   | min | max |   Type  |
+    +---------+---------+----------+----------+-----+-----+---------+
+    |        ?|        ?|         ?|         ?|    ?|    ?|       no|
+    +---------+---------+----------+----------+-----+-----+---------+
+
+    + Detail: 
+        * Instance: 
+        +------------------------------------------------------+-------------------------------------------+---------+---------+----------+----------+-----+--------+---------+
+        |                                                      |                                           |  Latency (cycles) |  Latency (absolute) |   Interval   | Pipeline|
+        |                       Instance                       |                   Module                  |   min   |   max   |    min   |    max   | min |   max  |   Type  |
+        +------------------------------------------------------+-------------------------------------------+---------+---------+----------+----------+-----+--------+---------+
+        |grp_softmax_core_hls_Pipeline_VITIS_LOOP_67_7_fu_89   |softmax_core_hls_Pipeline_VITIS_LOOP_67_7  |       66|       66|  0.264 us|  0.264 us|   66|      66|       no|
+        |grp_softmax_core_hls_Pipeline_VITIS_LOOP_39_2_fu_96   |softmax_core_hls_Pipeline_VITIS_LOOP_39_2  |        ?|        ?|         ?|         ?|    ?|       ?|       no|
+        |grp_softmax_core_hls_Pipeline_VITIS_LOOP_46_3_fu_106  |softmax_core_hls_Pipeline_VITIS_LOOP_46_3  |        2|   196626|  8.000 ns|  0.787 ms|    2|  196626|       no|
+        |grp_softmax_core_hls_Pipeline_VITIS_LOOP_52_4_fu_117  |softmax_core_hls_Pipeline_VITIS_LOOP_52_4  |        ?|        ?|         ?|         ?|    ?|       ?|       no|
+        |grp_softmax_core_hls_Pipeline_VITIS_LOOP_57_5_fu_123  |softmax_core_hls_Pipeline_VITIS_LOOP_57_5  |        2|      142|  8.000 ns|  0.568 us|    2|     142|       no|
+        |grp_softmax_core_hls_Pipeline_VITIS_LOOP_62_6_fu_133  |softmax_core_hls_Pipeline_VITIS_LOOP_62_6  |        ?|        ?|         ?|         ?|    ?|       ?|       no|
+        +------------------------------------------------------+-------------------------------------------+---------+---------+----------+----------+-----+--------+---------+
+
+        * Loop: 
+        +-------------------+---------+---------+----------+-----------+-----------+------+----------+
+        |                   |  Latency (cycles) | Iteration|  Initiation Interval  | Trip |          |
+        |     Loop Name     |   min   |   max   |  Latency |  achieved |   target  | Count| Pipelined|
+        +-------------------+---------+---------+----------+-----------+-----------+------+----------+
+        |- VITIS_LOOP_35_1  |        ?|        ?|         ?|          -|          -|     8|        no|
+        +-------------------+---------+---------+----------+-----------+-----------+------+----------+
+
+
+
+================================================================
+== Utilization Estimates
+================================================================
+* Summary: 
++---------------------+---------+------+---------+---------+-----+
+|         Name        | BRAM_18K|  DSP |    FF   |   LUT   | URAM|
++---------------------+---------+------+---------+---------+-----+
+|DSP                  |        -|     -|        -|        -|    -|
+|Expression           |        -|     -|        0|       51|    -|
+|FIFO                 |        -|     -|        -|        -|    -|
+|Instance             |        -|     9|     1450|     2054|    -|
+|Memory               |        0|     -|       32|       33|    0|
+|Multiplexer          |        -|     -|        -|      262|    -|
+|Register             |        -|     -|       72|        -|    -|
++---------------------+---------+------+---------+---------+-----+
+|Total                |        0|     9|     1554|     2400|    0|
++---------------------+---------+------+---------+---------+-----+
+|Available SLR        |     1344|  3008|   869120|   434560|  320|
++---------------------+---------+------+---------+---------+-----+
+|Utilization SLR (%)  |        0|    ~0|       ~0|       ~0|    0|
++---------------------+---------+------+---------+---------+-----+
+|Available            |     4032|  9024|  2607360|  1303680|  960|
++---------------------+---------+------+---------+---------+-----+
+|Utilization (%)      |        0|    ~0|       ~0|       ~0|    0|
++---------------------+---------+------+---------+---------+-----+
+
++ Detail: 
+    * Instance: 
+    +------------------------------------------------------+-------------------------------------------+---------+----+------+------+-----+
+    |                       Instance                       |                   Module                  | BRAM_18K| DSP|  FF  |  LUT | URAM|
+    +------------------------------------------------------+-------------------------------------------+---------+----+------+------+-----+
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_39_2_fu_96   |softmax_core_hls_Pipeline_VITIS_LOOP_39_2  |        0|   0|   187|   266|    0|
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_46_3_fu_106  |softmax_core_hls_Pipeline_VITIS_LOOP_46_3  |        0|   9|  1056|  1489|    0|
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_52_4_fu_117  |softmax_core_hls_Pipeline_VITIS_LOOP_52_4  |        0|   0|     9|    41|    0|
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_57_5_fu_123  |softmax_core_hls_Pipeline_VITIS_LOOP_57_5  |        0|   0|   171|   113|    0|
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_62_6_fu_133  |softmax_core_hls_Pipeline_VITIS_LOOP_62_6  |        0|   0|    18|    77|    0|
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_67_7_fu_89   |softmax_core_hls_Pipeline_VITIS_LOOP_67_7  |        0|   0|     9|    68|    0|
+    +------------------------------------------------------+-------------------------------------------+---------+----+------+------+-----+
+    |Total                                                 |                                           |        0|   9|  1450|  2054|    0|
+    +------------------------------------------------------+-------------------------------------------+---------+----+------+------+-----+
+
+    * DSP: 
+    N/A
+
+    * Memory: 
+    +-----------+----------------------------------------+---------+----+----+-----+------+-----+------+-------------+
+    |   Memory  |                 Module                 | BRAM_18K| FF | LUT| URAM| Words| Bits| Banks| W*Bits*Banks|
+    +-----------+----------------------------------------+---------+----+----+-----+------+-----+------+-------------+
+    |exp_buf_U  |softmax_core_hls_exp_buf_RAM_AUTO_1R1W  |        0|  32|  33|    0|    64|   32|     1|         2048|
+    +-----------+----------------------------------------+---------+----+----+-----+------+-----+------+-------------+
+    |Total      |                                        |        0|  32|  33|    0|    64|   32|     1|         2048|
+    +-----------+----------------------------------------+---------+----+----+-----+------+-----+------+-------------+
+
+    * FIFO: 
+    N/A
+
+    * Expression: 
+    +----------------------------------+----------+----+---+----+------------+------------+
+    |           Variable Name          | Operation| DSP| FF| LUT| Bitwidth P0| Bitwidth P1|
+    +----------------------------------+----------+----+---+----+------------+------------+
+    |add_ln35_fu_169_p2                |         +|   0|  0|  12|           4|           1|
+    |and_ln37_fu_198_p2                |       and|   0|  0|   2|           1|           1|
+    |ap_block_state14_on_subcall_done  |       and|   0|  0|   2|           1|           1|
+    |cmp3_not_fu_145_p2                |      icmp|   0|  0|  13|          16|           1|
+    |icmp_ln35_fu_163_p2               |      icmp|   0|  0|   9|           4|           5|
+    |icmp_ln37_fu_193_p2               |      icmp|   0|  0|  13|          16|          16|
+    +----------------------------------+----------+----+---+----+------------+------------+
+    |Total                             |          |   0|  0|  51|          42|          25|
+    +----------------------------------+----------+----+---+----+------------+------------+
+
+    * Multiplexer: 
+    +-------------------+----+-----------+-----+-----------+
+    |        Name       | LUT| Input Size| Bits| Total Bits|
+    +-------------------+----+-----------+-----+-----------+
+    |ap_NS_fsm          |  65|         15|    1|         15|
+    |exp_buf_address0   |  20|          4|    6|         24|
+    |exp_buf_ce0        |  20|          4|    1|          4|
+    |exp_buf_d0         |  14|          3|   32|         96|
+    |exp_buf_we0        |  14|          3|    1|          3|
+    |prob_out_address0  |  20|          4|    9|         36|
+    |prob_out_ce0       |  20|          4|    1|          4|
+    |prob_out_d0        |  20|          4|   32|        128|
+    |prob_out_we0       |  20|          4|    1|          4|
+    |row_fu_48          |   9|          2|    4|          8|
+    |score_in_address0  |  20|          4|    9|         36|
+    |score_in_ce0       |  20|          4|    1|          4|
+    +-------------------+----+-----------+-----+-----------+
+    |Total              | 262|         55|   98|        362|
+    +-------------------+----+-----------+-----+-----------+
+
+    * Register: 
+    +-------------------------------------------------------------------+----+----+-----+-----------+
+    |                                Name                               | FF | LUT| Bits| Const Bits|
+    +-------------------------------------------------------------------+----+----+-----+-----------+
+    |add_ln35_reg_260                                                   |   4|   0|    4|          0|
+    |and_ln37_reg_279                                                   |   1|   0|    1|          0|
+    |ap_CS_fsm                                                          |  14|   0|   14|          0|
+    |cmp3_not_reg_252                                                   |   1|   0|    1|          0|
+    |empty_reg_247                                                      |   7|   0|    7|          0|
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_39_2_fu_96_ap_start_reg   |   1|   0|    1|          0|
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_46_3_fu_106_ap_start_reg  |   1|   0|    1|          0|
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_52_4_fu_117_ap_start_reg  |   1|   0|    1|          0|
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_57_5_fu_123_ap_start_reg  |   1|   0|    1|          0|
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_62_6_fu_133_ap_start_reg  |   1|   0|    1|          0|
+    |grp_softmax_core_hls_Pipeline_VITIS_LOOP_67_7_fu_89_ap_start_reg   |   1|   0|    1|          0|
+    |row_fu_48                                                          |   4|   0|    4|          0|
+    |row_max_reg_283                                                    |  32|   0|   32|          0|
+    |tmp_4_reg_265                                                      |   3|   0|    9|          6|
+    +-------------------------------------------------------------------+----+----+-----+-----------+
+    |Total                                                              |  72|   0|   78|          6|
+    +-------------------------------------------------------------------+----+----+-----+-----------+
+
+
+
+================================================================
+== Interface
+================================================================
+* Summary: 
++-------------------+-----+-----+------------+------------------+--------------+
+|     RTL Ports     | Dir | Bits|  Protocol  |   Source Object  |    C Type    |
++-------------------+-----+-----+------------+------------------+--------------+
+|ap_clk             |   in|    1|  ap_ctrl_hs|  softmax_core_hls|  return value|
+|ap_rst             |   in|    1|  ap_ctrl_hs|  softmax_core_hls|  return value|
+|ap_start           |   in|    1|  ap_ctrl_hs|  softmax_core_hls|  return value|
+|ap_done            |  out|    1|  ap_ctrl_hs|  softmax_core_hls|  return value|
+|ap_idle            |  out|    1|  ap_ctrl_hs|  softmax_core_hls|  return value|
+|ap_ready           |  out|    1|  ap_ctrl_hs|  softmax_core_hls|  return value|
+|score_in_address0  |  out|    9|   ap_memory|          score_in|         array|
+|score_in_ce0       |  out|    1|   ap_memory|          score_in|         array|
+|score_in_q0        |   in|   32|   ap_memory|          score_in|         array|
+|prob_out_address0  |  out|    9|   ap_memory|          prob_out|         array|
+|prob_out_ce0       |  out|    1|   ap_memory|          prob_out|         array|
+|prob_out_we0       |  out|    1|   ap_memory|          prob_out|         array|
+|prob_out_d0        |  out|   32|   ap_memory|          prob_out|         array|
+|query_row_count    |   in|   16|     ap_none|   query_row_count|        scalar|
+|key_col_count      |   in|   16|     ap_none|     key_col_count|        scalar|
++-------------------+-----+-----+------------+------------------+--------------+
+

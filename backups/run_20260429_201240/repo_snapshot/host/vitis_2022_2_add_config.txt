@@ -1,0 +1,19 @@
+#### Vitis Unified Software Platform Install Configuration ####
+Edition=Vitis Unified Software Platform
+
+Product=Vitis
+
+# Path where Xilinx software will be installed.
+Destination=/home/advent/Vivado
+
+# Minimal device/tool selections for the U55C attention-score xclbin build.
+Modules=Install devices for Alveo and Xilinx edge acceleration platforms:1,Virtex UltraScale+ HBM:1,Virtex UltraScale+:1,Virtex UltraScale+ 58G:0,Install Devices for Kria SOMs and Starter Kits:0,Vitis IP Cache (Enable faster on-boarding for new users):0,Zynq-7000:0,Versal AI Edge Series:0,Kintex UltraScale+:0,Artix UltraScale+:0,Spartan-7:0,Versal AI Core Series:0,Versal Premium Series:0,Kintex-7:0,Versal Prime Series:0,Zynq UltraScale+ MPSoC:0,DocNav:0,Vitis Model Composer(Xilinx Toolbox for MATLAB and Simulink. Includes the functionality of System Generator for DSP):0,Kintex UltraScale:0,Virtex UltraScale:0,Zynq UltraScale+ RFSoC:0,Virtex-7:0
+
+InstallOptions=
+CreateProgramGroupShortcuts=1
+ProgramGroupFolder=Xilinx Design Tools
+CreateShortcutsForAllUsers=0
+CreateDesktopShortcuts=1
+CreateFileAssociation=1
+EnableDiskUsageOptimization=1
+
