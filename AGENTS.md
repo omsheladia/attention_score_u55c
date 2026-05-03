@@ -143,9 +143,10 @@ On 2026-05-01, Track A Steps 1-2 were started in code:
     - score store: `516 -> 259`
   - this confirms the main bottleneck was external memory beat width, not GEMM
     MAC count
-- `v++` exists locally, but no U55C `.xpfm` platform file was found under the
-  checked local Vitis 2023.2 platform directories, so rebuilt `xclbin` / XRT
-  verification for the new 3-kernel chain remains pending
+- historical note: `v++` existed locally, but no U55C `.xpfm` platform file was
+  found under the checked local Vitis 2023.2 platform directories at that time.
+  The platform path was later found under `/opt/xilinx/platforms/` and the
+  design was rebuilt and verified with Vitis/XRT 2022.2.
 
 On 2026-05-01, the current 3-kernel chain was built and verified with Vitis/XRT
 2022.2 on Linux using platform:
@@ -270,7 +271,7 @@ The same day, `README.md`, `host/README.md`, `model/README.md`,
 `docs/implementation_checklist.md`, and `CLAUDE.md` were refreshed to reflect
 that real-card `sim/real_tinyllama_tile/` result. Track C Step 5 is now marked
 complete for the current single-tile 3-kernel design only; multi-length real
-vectors still require Track A tiling and full-row softmax.
+vectors still require Track A host tiling with the full-row softmax kernel.
 
 On 2026-05-03, Track D Steps 1-2 benchmark infrastructure was added:
 
@@ -315,17 +316,17 @@ tiles per head = ceil(S / 8) * ceil(S / 64)
 ```
 
 Recommended synthetic test lengths are `S = 8, 64, 128, 256, 512`. The current
-docs state that the host tiling loop does not yet exist, so the proven flow is
-still a single tile of one head unless later work changes this file.
+host supports the legacy single-tile `--vectors <dir>` path and the tiled
+synthetic `--seq-len <S>` path for these lengths.
 
 Softmax correctness note:
 
 - running softmax independently per 8 x 64 score tile is only correct for
   `S <= 64`
 - for `S > 64`, softmax must normalize each query row across all `S` keys
-- the existing `hls/softmax/` kernel is fixed at 8 x 64, so Track A now calls
-  for a new `hls/softmax_full_row/` kernel or an equivalent online/tiled
-  full-row softmax design
+- the existing `hls/softmax/` kernel is fixed at 8 x 64
+- `hls/softmax_full_row/` now provides the standalone full-row kernel for
+  `S <= 512`, and the XRT host tiled `--seq-len` path uses it
 
 Track B data note:
 
@@ -383,9 +384,9 @@ Current exported files include:
 - `kernel_meta.txt`
 - `metadata.json`
 
-Planned vector/export additions from `docs/implementation_checklist.md`:
+Current and planned vector/export additions from `docs/implementation_checklist.md`:
 
-- `softmax_full_rows(logits)` in `model/attention_score_ref.py`
+- `softmax_full_rows(logits)` in `model/attention_score_ref.py` is implemented
 - full-sequence Q/K reference exports for `S = 8, 64, 128, 256, 512`
 - `v_full.txt` for complete `(S, 64)` V data
 - `attn_out.txt` for final `(S, 64)` attention output after `softmax @ V`
@@ -402,11 +403,13 @@ Planned vector/export additions from `docs/implementation_checklist.md`:
   - `hls/score_scale/score_scale_core_hls.cpp`
 - softmax:
   - `hls/softmax/softmax_core_hls.cpp`
+- full-row softmax:
+  - `hls/softmax_full_row/softmax_full_row_hls.cpp`
 
-Planned HLS additions from `docs/implementation_checklist.md`:
+Current and planned HLS additions from `docs/implementation_checklist.md`:
 
-- `hls/mask_and_scale/` to merge causal mask and score scale
-- `hls/softmax_full_row/` for full-row softmax up to `S = 512`
+- `hls/mask_and_scale/` to merge causal mask and score scale is implemented
+- `hls/softmax_full_row/` for full-row softmax up to `S = 512` is implemented
 - `hls/v_weighted_sum/` for the `softmax @ V` partial weighted-sum kernel
 - `hls/score_and_mask_scale/` as a later pre-softmax dataflow merge
 
@@ -635,47 +638,123 @@ Current pulled-state note:
 
 Not yet confirmed:
 
-- full-sequence host tiling over `S = 8, 64, 128, 256, 512`
-- synthetic Track A regression through multiple vector directories
-- full-row softmax kernel/design for `S > 64`
+- full-sequence real TinyLlama vector export beyond the current 8-token tile
+- automated synthetic Track A regression through multiple vector directories
 - `softmax @ V` / V weighted-sum stage
 - XRT `hw_emu` run using `sim/real_tinyllama_tile/`
 - CPU/GPU/FPGA baseline comparison for final acceleration claims
 - full TinyLlama attention path
 - full TinyLlama model execution
 
-So the project is now a proven **single-tile isolated FPGA demo**, but not yet a
-full sequence-length attention accelerator or a full TinyLlama hardware runtime.
+So the project is now a proven **tiled attention-score/softmax FPGA demo** for
+synthetic sequence lengths up to `S=512`, but not yet a full TinyLlama hardware
+runtime.
 Track C Steps 1-3 are implemented and verified locally; Track C Step 4 is
 implemented for the current single-tile 3-kernel design and verified with local
 C++ benches plus a real-card XRT run.
 
+On 2026-05-02, Track A Step 3 Part A was implemented in
+`model/attention_score_ref.py`. New helpers include
+`compute_full_attention_score(q_full, k_full, ...)`,
+`softmax_full_rows(logits)`, and `brute_force_full_attention_score(...)`.
+Running `python3 model/attention_score_ref.py --check-full-tiling` passed for
+`S = 8, 64, 128, 256, 512` with zero max difference for raw scores, scaled
+logits, and full-row softmax probabilities. This started as Python reference
+work; the full-row HLS softmax kernel and XRT host tiling loop were added later
+on 2026-05-02.
+
+Later on 2026-05-02, `hls/softmax_full_row/` was added as the full-row softmax
+kernel for `8 x S` rows with `S <= 512`. The original `hls/softmax/` tile
+kernel remains unchanged. Local C++ bench passed for `S = 64, 128, 256, 512`,
+partial rows, and masked logits. Vitis HLS 2022.2 `csim` and `csynth` passed
+for `softmax_full_row_u55c_kernel` with estimated `315.96 MHz`, `9 DSP`,
+`1 BRAM_18K`, `2 URAM`, `3693 FF`, `5772 LUT`, and all loop constraints
+satisfied in standalone HLS. This kernel was then wired into the XRT host,
+xclbin build script, and link config.
+
+Later still on 2026-05-02, the XRT host tiled path was implemented and verified
+in `hw_emu`. `host/attention_score_chain_xrt.cpp` now keeps the legacy
+single-tile `--vectors` mode and adds `--seq-len <S>` for synthetic
+full-sequence runs. `host/build_xclbin.sh` and `host/vpp_link.cfg` now include
+`softmax_full_row_u55c_kernel`, mapped with full-row logits on `HBM[4]` and
+full-row probabilities on `HBM[5]`. A fresh four-kernel `hw_emu` xclbin was
+built successfully; `xclbinutil --info` reports content `HW Emulation Binary`,
+UUID `1f6b30da-9112-3c47-7e52-a4a149705c10`, and kernels
+`attention_score_u55c_kernel`, `mask_scale_u55c_kernel`,
+`softmax_u55c_kernel`, and `softmax_full_row_u55c_kernel`. The host compile
+passed. `hw_emu` passed for `--seq-len 8`, `--seq-len 64`, and `--seq-len 128`
+with `Tiled sequence verification PASSED` and `XRT chain verification PASSED`;
+the `S=128` run is the first verified two-K-chunk case. The original
+single-tile `--vectors attention_score_u55c/sim/attention_score_tile` path also
+passed under the new four-kernel `hw_emu` xclbin. Real hardware rebuild/run for
+this four-kernel tiled design was completed next.
+
+The four-kernel real hardware xclbin was then built successfully. Hardware link
+took about 45 minutes and produced `build/attention_score_chain.xclbin` with
+content `Bitstream`, UUID `d0099c1c-0481-4332-4772-0a89999bc1f8`, kernels
+`attention_score_u55c_kernel`, `mask_scale_u55c_kernel`,
+`softmax_u55c_kernel`, and `softmax_full_row_u55c_kernel`, and HBM banks
+`HBM[0]` through `HBM[5]` used. The real U55C tiled synthetic sweep passed for
+`S = 8, 64, 128, 256, 512`, each printing `Tiled sequence verification PASSED`
+and `XRT chain verification PASSED`. Timings were:
+
+- `S=8`: total 3.321 ms, 1 tile, 301.11 tiles/sec, 19,271.30 scores/sec
+- `S=64`: total 1.931 ms, 8 tiles, 4,142.93 tiles/sec, 2,121,180.74 scores/sec
+- `S=128`: total 4.622 ms, 32 tiles, 6,923.41 tiles/sec, 3,544,785.81 scores/sec
+- `S=256`: total 13.353 ms, 128 tiles, 9,585.86 tiles/sec, 4,907,960.76 scores/sec
+- `S=512`: total 49.444 ms, 512 tiles, 10,355.15 tiles/sec, 5,301,836.42 scores/sec
+
+Approximate staged-kernel HBM traffic estimates were 11,264 bytes for `S=8`,
+118,784 bytes for `S=64`, 475,136 bytes for `S=128`, 1,900,544 bytes for
+`S=256`, and 7,602,176 bytes for `S=512`. The original single-tile synthetic
+and real TinyLlama vector modes also passed on the new four-kernel bitstream.
+
+On 2026-05-03, Track A Step 4 was implemented in the XRT host for the tiled
+synthetic path. `host/attention_score_chain_xrt.cpp` now uses two BO sets for
+the pass-1 score/mask-scale loop (`q`, `k`, raw score, and scaled score) and
+alternates K tiles through those sets. Full-row softmax remains after all K
+chunks for a Q chunk, because it needs the complete S-wide row for correctness.
+The host binary rebuilt successfully, the Python full-tiling check still
+passed, and the existing four-kernel real U55C bitstream passed:
+
+- `S=8`: total 0.510 ms, 1 tile, 1,960.78 tiles/sec, 125,490.20 scores/sec
+- `S=64`: total 2.307 ms, 8 tiles, 3,467.71 tiles/sec, 1,775,465.97 scores/sec
+- `S=128`: total 5.238 ms, 32 tiles, 6,109.20 tiles/sec, 3,127,911.42 scores/sec
+- `S=256`: total 11.709 ms, 128 tiles, 10,931.76 tiles/sec, 5,597,062.09 scores/sec
+- `S=512`: total 35.992 ms, 512 tiles, 14,225.38 tiles/sec, 7,283,396.31 scores/sec
+
+All Step 4 real-card runs printed `Tiled sequence verification PASSED` and
+`XRT chain verification PASSED`. The legacy single-tile synthetic vector mode
+and real TinyLlama vector mode also still passed. Per-kernel mask/scale timing
+is now an overlapped host-observed window; use `total_chain` for Track A Step 4
+comparisons.
+
 ## Best Next Step
 
-Best next practical steps are Track A from
-`docs/implementation_checklist.md`:
+Track A Steps 1-4 are complete for the current staged design. Track A Step 5
+remains a future fusion/dataflow milestone, not required before starting
+dependent work. Best next practical steps are:
 
-1. add Python full-sequence tiling with `softmax_full_rows(logits)`
-2. add a full-row softmax kernel/design for `S > 64`
-3. add the matching XRT host tiling loop for `S = 8, 64, 128, 256, 512`
-4. add multi-vector regression and CPU/GPU/FPGA baseline tables
-5. if more score-kernel speed is needed after that, prefer wider packing or
+1. start Track B `softmax @ V` so the FPGA produces `attn_out`
+2. add/update CPU/GPU/FPGA comparison tables using the real U55C sequence sweep
+3. extend Track C real TinyLlama export beyond the current 8-token single tile
+4. if more score-kernel speed is needed after that, prefer wider packing or
    on-chip fusion before chasing higher GEMM unroll, because the 64-bit packed
    interface produced the first material latency drop
 
 ## After That
 
-After Track A works across sequence lengths, the next major engineering steps
-are:
+With Track A Steps 1-4 working across synthetic sequence lengths, the next
+major engineering steps are:
 
 1. Track B: add `softmax @ V` with a V weighted-sum HLS kernel
 2. export and verify `v_full.txt` and `attn_out.txt`
 3. extend the existing Track C real-vector export beyond the current single-tile
-   path once full-sequence tiling exists
+   path using the Track A tiled host path
 4. run real vectors through the same FPGA pipeline and compare `attn_out` to
    PyTorch attention output
 5. Track D: collect CPU/GPU/FPGA timing baselines and speedup tables
-6. add double-buffering or merge kernels for performance
+6. merge kernels for performance if the staged HBM path becomes the bottleneck
 7. connect to a real TinyLlama attention subgraph
 8. add KV-cache-aware decode flow
 9. eventually integrate into a decoder-layer path

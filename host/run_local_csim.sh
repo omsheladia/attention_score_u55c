@@ -36,10 +36,16 @@ g++ -O2 -std=c++17 \
   -I"$COMMON_INC" \
   -o "$SIM_DIR/tb_softmax"
 
+g++ -O2 -std=c++17 \
+  attention_score_u55c/hls/softmax_full_row/softmax_full_row_hls.cpp \
+  attention_score_u55c/hls/softmax_full_row/tb_softmax_full_row.cpp \
+  -I"$COMMON_INC" \
+  -o "$SIM_DIR/tb_softmax_full_row"
+
 "$SIM_DIR/tb_attention_score" "$VECTOR_DIR"
 "$SIM_DIR/tb_causal_mask" "$VECTOR_DIR"
 "$SIM_DIR/tb_score_scale" "$VECTOR_DIR"
 "$SIM_DIR/tb_softmax" "$VECTOR_DIR"
+"$SIM_DIR/tb_softmax_full_row"
 
 echo "Local attention-score C++ simulation chain PASSED"
-

@@ -6,6 +6,7 @@ reference.
 - `attention_score_ref.py`
   - small reference implementation for one score tile
   - includes raw score, causal mask, score scaling, and softmax helpers
+  - includes Track A Step 3 full-sequence tiled score/softmax reference helpers
 - `export_attention_score_vectors.py`
   - emits deterministic vectors under `sim/attention_score_tile/`
 - `check_tinyllama_setup.py`
@@ -47,6 +48,22 @@ for debugging, but the current hardware chain merges mask and scale into
 The exported vectors assume the offload boundary starts after RoPE. In other
 words, the FPGA score kernel consumes `Q_rot` and `K_rot`, not the pre-RoPE
 projection outputs.
+
+## Full-Sequence Python Tiling Check
+
+Track A Step 3 Part A is implemented in `attention_score_ref.py`. It assembles
+the full scaled logit matrix with 8 x 64 score tiles, then applies full-row
+softmax across all `S` keys.
+
+Run:
+
+```bash
+python3 model/attention_score_ref.py --check-full-tiling
+```
+
+The verified local run covered `S = 8, 64, 128, 256, 512` and matched the
+brute-force reference with zero max difference for raw scores, scaled logits,
+and softmax probabilities.
 
 ## TinyLlama Setup Check
 

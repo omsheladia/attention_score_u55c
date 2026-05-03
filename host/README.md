@@ -1,7 +1,8 @@
 # XRT Host Flow
 
-This folder is the first real host-side step for running the isolated
-three-kernel chain on a U55C:
+This folder is the host-side step for running the isolated attention-score
+chain on a U55C. The proven real-card path is still the single-tile three-kernel
+flow:
 
 ```text
 Q_rot_int8, K_rot_int8
@@ -15,8 +16,10 @@ Q_rot_int8, K_rot_int8
 - `attention_score_chain_xrt.cpp`
   - native XRT C++ host app
   - loads one `.xclbin`
-  - launches the three runtime kernels in sequence
-  - compares device outputs against the exported reference vectors
+  - launches the three runtime kernels in sequence for `--vectors <dir>`
+  - launches tiled score+mask+scale plus full-row softmax for `--seq-len <S>`
+  - compares device outputs against exported vectors or generated synthetic
+    full-sequence references
 - `build_host.sh`
   - Linux host compile helper
 - `build_xclbin.sh`
@@ -31,7 +34,7 @@ Q_rot_int8, K_rot_int8
 - Linux machine
 - XRT installed and sourced
 - U55C platform installed
-- one linked `.xclbin` containing the three runtime kernels
+- one linked `.xclbin` containing the runtime kernels
 - vectors already exported under `sim/attention_score_tile/` or
   `sim/real_tinyllama_tile/`
 
@@ -57,6 +60,25 @@ bash host/build_host.sh
   --xclbin build/attention_score_chain.xclbin \
   --vectors sim/attention_score_tile \
   --device 0
+```
+
+Tiled synthetic `hw_emu` flow with full-row softmax:
+
+```bash
+export XCL_EMULATION_MODE=hw_emu
+
+./build/host_attention_score_chain \
+  --xclbin build/attention_score_chain.xclbin \
+  --seq-len 128 \
+  --device 0
+```
+
+Verified `hw_emu` sequence lengths so far:
+
+```text
+S=8
+S=64
+S=128
 ```
 
 For first bring-up, `hw_emu` is the right target before `hw`.
@@ -114,5 +136,8 @@ There are two useful meanings of "deployable" here:
      TinyLlama accelerator
    - that still needs more blocks and system integration
 
-Right now this workspace has reached the first meaning for a single tile, but
-not the second.
+Right now this workspace has reached the first meaning for a single tile and
+for synthetic tiled sequence lengths. Track A Step 4 also added double-buffered
+pass-1 BO sets in the tiled host path. Real hardware sequence sweeps pass for
+`S = 8, 64, 128, 256, 512`; the latest Step 4 S=512 run completed in
+`35.992 ms` with `7,283,396.31 scores/sec`.

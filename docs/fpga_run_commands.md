@@ -1,8 +1,8 @@
 # U55C FPGA Run Commands
 
 This is the command runbook for the isolated `attention_score_u55c` FPGA demo.
-It captures the steps and parameters used to build, emulate, and run the current
-three-kernel attention-score chain on the real U55C.
+It captures the steps and parameters used to build, emulate, and run the
+attention-score chain on the U55C.
 
 ## Verified Hardware State
 
@@ -15,7 +15,9 @@ three-kernel attention-score chain on the real U55C.
   `/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm`
 - Working directory for all commands below: `/home/advent/Desktop/RC19`
 
-## Kernel Chain
+## Kernel Chains
+
+Verified real-card single-tile path:
 
 ```text
 Q_rot_int8, K_rot_int8
@@ -24,15 +26,27 @@ Q_rot_int8, K_rot_int8
 -> softmax_u55c_kernel
 ```
 
-The current XRT host verifies:
+Current tiled `hw_emu` path:
+
+```text
+Q_rot_int8, K_rot_int8
+-> tiled attention_score_u55c_kernel launches
+-> tiled mask_scale_u55c_kernel launches
+-> softmax_full_row_u55c_kernel per Q chunk
+```
+
+The XRT host verifies:
 
 - `score_raw.txt`
 - `score_scaled.txt`
 - `score_softmax.txt`
 
+for `--vectors <dir>` single-tile mode, and generated full-sequence raw,
+scaled-logit, and softmax references for `--seq-len <S>` tiled synthetic mode.
+
 The real TinyLlama vector directory also contains `v_full.txt` and
 `attn_ref_float.txt`, but those are for later `softmax @ V` work and are not
-consumed by the current three-kernel xclbin.
+consumed by the current xclbin.
 
 ## HBM Bank Mapping
 
@@ -43,8 +57,10 @@ The link config used for the `.xclbin` is
 q_tile       -> HBM[0]
 k_tile       -> HBM[1]
 raw score    -> HBM[2]
-scaled score -> HBM[3]
-prob out     -> HBM[4]
+tile scaled  -> HBM[3]
+tile prob    -> HBM[4]
+full logits  -> HBM[4]
+full prob    -> HBM[5]
 ```
 
 ## 1. Source The 2022.2 Environment
@@ -206,6 +222,7 @@ Each HLS Tcl script runs `csim_design` and `csynth_design` for one kernel.
 vitis_hls -f attention_score_u55c/hls/attention_score/run_hls.tcl
 vitis_hls -f attention_score_u55c/hls/mask_and_scale/run_hls.tcl
 vitis_hls -f attention_score_u55c/hls/softmax/run_hls.tcl
+vitis_hls -f attention_score_u55c/hls/softmax_full_row/run_hls.tcl
 ```
 
 Legacy split-kernel HLS projects still exist for reference:
@@ -274,6 +291,12 @@ v++ -c -t hw_emu \
   -k softmax_u55c_kernel \
   -o attention_score_u55c/build/softmax_u55c_kernel.xo \
   attention_score_u55c/hls/softmax/softmax_core_hls.cpp
+
+v++ -c -t hw_emu \
+  --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm \
+  -k softmax_full_row_u55c_kernel \
+  -o attention_score_u55c/build/softmax_full_row_u55c_kernel.xo \
+  attention_score_u55c/hls/softmax_full_row/softmax_full_row_hls.cpp
 ```
 
 Then links:
@@ -285,7 +308,8 @@ v++ -l -t hw_emu \
   -o attention_score_u55c/build/attention_score_chain.xclbin \
   attention_score_u55c/build/attention_score_u55c_kernel.xo \
   attention_score_u55c/build/mask_scale_u55c_kernel.xo \
-  attention_score_u55c/build/softmax_u55c_kernel.xo
+  attention_score_u55c/build/softmax_u55c_kernel.xo \
+  attention_score_u55c/build/softmax_full_row_u55c_kernel.xo
 ```
 
 ## 9. Run Hardware Emulation
@@ -319,6 +343,48 @@ Expected pass signal:
 XRT chain verification PASSED
 ```
 
+Tiled synthetic hardware-emulation commands:
+
+```bash
+export XCL_EMULATION_MODE=hw_emu
+
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --seq-len 8 \
+  --device 0
+
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --seq-len 64 \
+  --device 0
+
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --seq-len 128 \
+  --device 0
+```
+
+Verified `hw_emu` tiled results on 2026-05-02:
+
+```text
+S=8:   q_chunks=1,  k_chunks=1, Tiled sequence verification PASSED
+S=64:  q_chunks=8,  k_chunks=1, Tiled sequence verification PASSED
+S=128: q_chunks=16, k_chunks=2, Tiled sequence verification PASSED
+```
+
+The current `build/attention_score_chain.xclbin` after this build is a
+hardware-emulation xclbin:
+
+```text
+Content: HW Emulation Binary
+UUID: 1f6b30da-9112-3c47-7e52-a4a149705c10
+Kernels:
+  attention_score_u55c_kernel
+  mask_scale_u55c_kernel
+  softmax_u55c_kernel
+  softmax_full_row_u55c_kernel
+```
+
 ## 10. Build The Real Hardware `.xclbin`
 
 ```bash
@@ -329,9 +395,11 @@ bash attention_score_u55c/host/build_xclbin.sh \
   /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
 ```
 
-The hardware build uses the same three `v++ -c` compile commands and final
+The hardware build uses the same four `v++ -c` compile commands and final
 `v++ -l` link command as hardware emulation, with `-t hw` instead of
 `-t hw_emu`.
+
+The four-kernel tiled design has now been rebuilt and run on the real U55C card.
 
 Output:
 
@@ -448,7 +516,7 @@ xclbinutil --info \
   --input attention_score_u55c/build/attention_score_chain.xclbin
 ```
 
-Expected xclbin details for the current real hardware build:
+Expected xclbin details for the latest verified three-kernel real hardware build:
 
 ```text
 Content: Bitstream
@@ -459,7 +527,115 @@ Kernels:
   softmax_u55c_kernel
 ```
 
-## 14. Preserve A Known-Good Run
+Expected xclbin details for the latest four-kernel `hw_emu` build:
+
+```text
+Content: HW Emulation Binary
+UUID: 1f6b30da-9112-3c47-7e52-a4a149705c10
+Kernels:
+  attention_score_u55c_kernel
+  mask_scale_u55c_kernel
+  softmax_u55c_kernel
+  softmax_full_row_u55c_kernel
+```
+
+Expected xclbin details for the latest four-kernel real hardware build:
+
+```text
+Content: Bitstream
+UUID: d0099c1c-0481-4332-4772-0a89999bc1f8
+Kernels:
+  attention_score_u55c_kernel
+  mask_scale_u55c_kernel
+  softmax_u55c_kernel
+  softmax_full_row_u55c_kernel
+HBM banks used:
+  HBM[0] through HBM[5]
+```
+
+## 14. Run Tiled Synthetic Sequences On The Real U55C
+
+Verified sweep command:
+
+```bash
+source attention_score_u55c/host/setup_2022_2_env.sh
+unset XCL_EMULATION_MODE
+
+for s in 8 64 128 256 512; do
+  ./attention_score_u55c/build/host_attention_score_chain \
+    --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+    --seq-len "$s" \
+    --device 0
+done
+```
+
+Verified real-card results on 2026-05-02 before Track A Step 4 host
+double-buffering:
+
+| S | q_chunks | k_chunks | tiles | total ms | tiles/sec | scores/sec |
+|---|----------|----------|-------|----------|-----------|------------|
+| 8 | 1 | 1 | 1 | 3.321 | 301.11 | 19,271.30 |
+| 64 | 8 | 1 | 8 | 1.931 | 4,142.93 | 2,121,180.74 |
+| 128 | 16 | 2 | 32 | 4.622 | 6,923.41 | 3,544,785.81 |
+| 256 | 32 | 4 | 128 | 13.353 | 9,585.86 | 4,907,960.76 |
+| 512 | 64 | 8 | 512 | 49.444 | 10,355.15 | 5,301,836.42 |
+
+All five runs printed:
+
+```text
+Tiled sequence verification PASSED
+XRT chain verification PASSED
+```
+
+Approximate kernel timing summary from that sweep:
+
+| S | attention score ms | mask+scale ms | full-row softmax ms | total ms |
+|---|--------------------|---------------|---------------------|----------|
+| 8 | 2.939 | 0.094 | 0.129 | 3.321 |
+| 64 | 0.538 | 0.316 | 0.634 | 1.931 |
+| 128 | 0.875 | 1.086 | 1.354 | 4.622 |
+| 256 | 2.817 | 2.912 | 3.377 | 13.353 |
+| 512 | 12.969 | 11.928 | 8.090 | 49.444 |
+
+Verified real-card results on 2026-05-03 after the Track A Step 4
+double-buffered tiled host pass:
+
+| S | q_chunks | k_chunks | tiles | total ms | tiles/sec | scores/sec |
+|---|----------|----------|-------|----------|-----------|------------|
+| 8 | 1 | 1 | 1 | 0.510 | 1,960.78 | 125,490.20 |
+| 64 | 8 | 1 | 8 | 2.307 | 3,467.71 | 1,775,465.97 |
+| 128 | 16 | 2 | 32 | 5.238 | 6,109.20 | 3,127,911.42 |
+| 256 | 32 | 4 | 128 | 11.709 | 10,931.76 | 5,597,062.09 |
+| 512 | 64 | 8 | 512 | 35.992 | 14,225.38 | 7,283,396.31 |
+
+All five runs printed:
+
+```text
+Tiled sequence verification PASSED
+XRT chain verification PASSED
+```
+
+The Step 4 host pass uses two BO sets for Q/K/raw-score/scaled-score in the
+tiled score/mask-scale loop. Full-row softmax remains after all K chunks for a
+Q chunk, because it needs the complete S-wide logit row. Per-kernel mask/scale
+timing is now an overlapped host-observed window; `total_chain` is the primary
+comparison metric.
+
+Approximate HBM traffic estimate for the current staged implementation,
+recomputed with the 2026-05-03 Step 4 totals:
+
+| S | estimated HBM bytes | estimated HBM GB/s |
+|---|---------------------|--------------------|
+| 8 | 11,264 | 0.0221 |
+| 64 | 118,784 | 0.0515 |
+| 128 | 475,136 | 0.0907 |
+| 256 | 1,900,544 | 0.1623 |
+| 512 | 7,602,176 | 0.2112 |
+
+These are attention-score probabilities/sec metrics, not model tokens/sec.
+Tokens/sec still requires Track B `softmax @ V` and decode-loop integration.
+
+## 15. Preserve A Known-Good Run
 
 The older known-good preservation backup was created at:
 
@@ -478,8 +654,8 @@ reports, device state, checksums, and the real hardware verification log.
 
 ## Current Benchmark Scope
 
-The current FPGA run is a verified single attention-score tile. It is not yet a
-multi-sequence-length benchmark or full tokens/sec measurement.
+The current real-card FPGA run now includes a synthetic tiled attention-score
+sweep through `S = 512`. This is not yet a full tokens/sec measurement.
 
 Verified synthetic vector parameters:
 
@@ -504,8 +680,7 @@ k_scale: 0.0174317248165607
 total_scale: 0.0001067348132716
 ```
 
-The next benchmarking step is to generate multiple vector directories with
-different `query_rows` and `key_cols`, run each through the host app, and report
-latency, tiles/sec, effective scores/sec, and HBM traffic estimates. Tokens/sec
-is not meaningful yet because this design stops at attention probabilities and
-does not run `softmax @ V` or full TinyLlama decoding.
+The next benchmarking step is to compare these FPGA score-probability timings
+against the CPU/GPU baselines, then add Track B `softmax @ V`. Tokens/sec is not
+meaningful yet because this design stops at attention probabilities and does not
+run full TinyLlama decoding.

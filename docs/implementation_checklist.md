@@ -35,14 +35,20 @@ Step 4 is a stretch goal. Step 5 is a future milestone, not a 2-day task.
 
 ### What to do
 
-- [ ] Open `hls/attention_score/attention_score_core_hls.cpp`
-- [ ] Find line with `#pragma HLS UNROLL factor=8`
-- [ ] Change to `factor=16` (safe, ~2× GEMM speedup, 64 DSPs) or `factor=64`
+- [x] Open `hls/attention_score/attention_score_core_hls.cpp`
+- [x] Find line with `#pragma HLS UNROLL factor=8`
+- [x] Change to `factor=16` (safe, ~2× GEMM speedup, 64 DSPs) or `factor=64`
       (full unroll, ~8× GEMM speedup, 256 DSPs — still fits on U55C)
-- [ ] Re-run Vitis csynth for the `attention_score` kernel
-- [ ] Confirm new DSP count in synthesis report
-- [ ] Confirm csim still passes
-- [ ] Record new MHz and DSP numbers in `CLAUDE.md` verification table
+- [x] Re-run Vitis csynth for the `attention_score` kernel
+- [x] Confirm new DSP count in synthesis report
+- [x] Confirm csim still passes
+- [x] Record new MHz and DSP numbers in `CLAUDE.md` verification table
+
+Actual result: the source unroll change did not increase DSP count under the
+current Vitis HLS loop shape; the useful Step 1 gain came from the follow-on
+64-bit packed external-memory interface for Q/K/raw-score traffic. HLS passed
+with estimated `342.47 MHz`, `32 DSP`, and latency improved from about
+`5153 cycles` to about `1312 cycles`.
 
 ### Expected result
 
@@ -63,8 +69,8 @@ Step 4 is a stretch goal. Step 5 is a future milestone, not a 2-day task.
 ### What to do
 
 #### HLS kernel
-- [ ] Create `hls/mask_and_scale/mask_scale_core_hls.hpp`
-- [ ] Create `hls/mask_and_scale/mask_scale_core_hls.cpp` with a single
+- [x] Create `hls/mask_and_scale/mask_scale_core_hls.hpp`
+- [x] Create `hls/mask_and_scale/mask_scale_core_hls.cpp` with a single
       `kScoreRowsPerTile × kScoreColsPerTile` loop that applies the causal mask
       condition and multiplies by `total_scale` in one pass:
       ```
@@ -73,28 +79,32 @@ Step 4 is a stretch goal. Step 5 is a future milestone, not a 2-day task.
                     ((key_pos_base + col) > (query_pos_base + row));
       out[row][col] = masked ? -1e9f : (float)in[row][col] * total_scale;
       ```
-- [ ] Add `#pragma HLS PIPELINE II=1` to the inner loop
-- [ ] Write AXI interface pragmas (m_axi for in/out, s_axilite for scalars)
+- [x] Add `#pragma HLS PIPELINE II=1` to the inner loop
+- [x] Write AXI interface pragmas (m_axi for in/out, s_axilite for scalars)
 
 #### Testbench
-- [ ] Create `hls/mask_and_scale/tb_mask_scale.cpp`
-- [ ] Load reference vectors from `sim/attention_score_tile/score_raw.txt`
+- [x] Create `hls/mask_and_scale/tb_mask_scale.cpp`
+- [x] Load reference vectors from `sim/attention_score_tile/score_raw.txt`
       and `sim/attention_score_tile/score_scaled.txt`
-- [ ] Compile and run locally with g++ — confirm pass
+- [x] Compile and run locally with g++ — confirm pass
 
 #### Vitis
-- [ ] Create `hls/mask_and_scale/run_hls.tcl` (copy pattern from existing kernels)
-- [ ] Run csim — confirm pass
-- [ ] Run csynth — record MHz and DSP count
+- [x] Create `hls/mask_and_scale/run_hls.tcl` (copy pattern from existing kernels)
+- [x] Run csim — confirm pass
+- [x] Run csynth — record MHz and DSP count
 
 #### Host app
-- [ ] Remove `mask_kernel` and `scale_kernel` XRT objects from
+- [x] Remove `mask_kernel` and `scale_kernel` XRT objects from
       `host/attention_score_chain_xrt.cpp`
-- [ ] Add `mask_scale_kernel` XRT object
-- [ ] Remove `masked_score_bo` intermediate buffer (now on-chip)
-- [ ] Update kernel launch sequence: `score → mask_scale → softmax`
-- [ ] Update `vpp_link.cfg` to include the new kernel and remove the old two
-- [ ] Rebuild xclbin and host app
+- [x] Add `mask_scale_kernel` XRT object
+- [x] Remove `masked_score_bo` intermediate buffer (now on-chip)
+- [x] Update kernel launch sequence: `score → mask_scale → softmax`
+- [x] Update `vpp_link.cfg` to include the new kernel and remove the old two
+- [x] Rebuild xclbin and host app
+
+Actual result: `mask_scale_u55c_kernel` passed local bench, Vitis HLS `csim`,
+Vitis HLS `csynth`, `hw_emu`, and real U55C hardware. HLS estimate was about
+`330.91 MHz`, `3 DSP`.
 
 ### Expected result
 - Eliminates one HBM read + write per tile (~4 KB saved per tile call)
@@ -110,8 +120,8 @@ Step 4 is a stretch goal. Step 5 is a future milestone, not a 2-day task.
 
 ### Part A — Python reference tiling (do this first)
 
-- [ ] Open `model/attention_score_ref.py`
-- [ ] Add a new function `compute_full_attention_score(q_full, k_full)` that
+- [x] Open `model/attention_score_ref.py`
+- [x] Add a new function `compute_full_attention_score(q_full, k_full)` that
       uses a **two-pass** structure. Softmax must normalize across all S keys
       for each query row — running it per tile is wrong for S > 64 because each
       tile only sees 64 of the S keys, so each tile row sums to 1 instead of
@@ -135,22 +145,31 @@ Step 4 is a stretch goal. Step 5 is a future milestone, not a 2-day task.
   #       return probs shape (S, S)
   softmax_weights = softmax_full_rows(logits)
   ```
-- [ ] Add `softmax_full_rows(logits)` to `model/attention_score_ref.py` that
+- [x] Add `softmax_full_rows(logits)` to `model/attention_score_ref.py` that
       operates on an unpadded `(S, S)` logit matrix — no fixed tile size assumed
-- [ ] Add a test script or CLI flag that runs the full tiling at:
+- [x] Add a test script or CLI flag that runs the full tiling at:
   - S = 8   (single tile sanity check — one K-chunk, passes either way)
   - S = 64  (8 Q-chunks × 1 K-chunk — still one K-chunk, safe boundary)
   - S = 128 (16 × 2 — first case where per-tile softmax would silently fail)
   - S = 256 (32 × 4)
   - S = 512 (64 × 8)
-- [ ] For each S, verify the tiled output matches a brute-force reference
+- [x] For each S, verify the tiled output matches a brute-force reference
       (compute the full score matrix directly in Python and compare)
+
+Verified on 2026-05-02 with:
+
+```bash
+python3 model/attention_score_ref.py --check-full-tiling
+```
+
+The run covered `S = 8, 64, 128, 256, 512` and reported zero max difference
+for raw scores, scaled logits, and full-row softmax probabilities.
 
 ### Part B — XRT host tiling loop
 
-- [ ] Open `host/attention_score_chain_xrt.cpp`
-- [ ] Add `seq_len` as a command-line argument (`--seq-len`)
-- [ ] Replace the single-tile kernel launch with a **two-pass** loop.
+- [x] Open `host/attention_score_chain_xrt.cpp`
+- [x] Add `seq_len` as a command-line argument (`--seq-len`)
+- [x] Replace the single-tile kernel launch with a **two-pass** loop.
       The score/mask/scale kernels run per tile as before, but softmax must
       see the full row of S logits — not just one 64-wide tile — to normalize
       correctly. Running the softmax kernel per tile is only correct when S ≤ 64:
@@ -174,11 +193,47 @@ Step 4 is a stretch goal. Step 5 is a future milestone, not a 2-day task.
       DMA softmax output back
       write into softmax_weights[q_chunk*8..]
   ```
-- [ ] Allocate output buffer large enough for the full `S × S` logit matrix
+- [x] Allocate output buffer large enough for the full `S × S` logit matrix
       and a separate `S × S` softmax weights matrix
-- [ ] Update reference loading to generate full-sequence reference vectors
+- [x] Update reference loading to generate full-sequence reference vectors
       (use the Python tiling function from Part A to produce expected outputs)
-- [ ] Test in hw_emu at S = 8, 64, 128
+- [x] Test in hw_emu at S = 8, 64, 128
+
+Verified on 2026-05-02 with a four-kernel `hw_emu` xclbin:
+
+```bash
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --seq-len 8 \
+  --device 0
+
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --seq-len 64 \
+  --device 0
+
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --seq-len 128 \
+  --device 0
+```
+
+All three runs printed `Tiled sequence verification PASSED` and
+`XRT chain verification PASSED`. `S = 128` is the first verified two-K-chunk
+case.
+
+Verified real U55C sweep on 2026-05-02:
+
+| S | q_chunks | k_chunks | tiles | total ms | tiles/sec | scores/sec |
+|---|----------|----------|-------|----------|-----------|------------|
+| 8 | 1 | 1 | 1 | 3.321 | 301.11 | 19,271.30 |
+| 64 | 8 | 1 | 8 | 1.931 | 4,142.93 | 2,121,180.74 |
+| 128 | 16 | 2 | 32 | 4.622 | 6,923.41 | 3,544,785.81 |
+| 256 | 32 | 4 | 128 | 13.353 | 9,585.86 | 4,907,960.76 |
+| 512 | 64 | 8 | 512 | 49.444 | 10,355.15 | 5,301,836.42 |
+
+All five real-card runs printed `Tiled sequence verification PASSED` and
+`XRT chain verification PASSED`.
 
 ### Part C — Full-row softmax kernel (blocker for S > 64)
 
@@ -211,12 +266,35 @@ Two implementation options:
 **Recommendation:** Use Option A for correctness first, switch to Option B
 if on-chip SRAM becomes a constraint at large S.
 
-- [ ] Implement chosen option as `hls/softmax_full_row/softmax_full_row_hls.cpp`
-- [ ] Write testbench verifying correctness at S = 64, 128, 256, 512
-- [ ] Run csim and csynth — confirm pass and record resource usage
-- [ ] Update host app pass 2 to use the new kernel instead of the old one
-- [ ] Keep the original `softmax` kernel unchanged — it is still used for the
+- [x] Implement chosen option as `hls/softmax_full_row/softmax_full_row_hls.cpp`
+- [x] Write testbench verifying correctness at S = 64, 128, 256, 512
+- [x] Run csim and csynth — confirm pass and record resource usage
+- [x] Update host app pass 2 to use the new kernel instead of the old one
+- [x] Keep the original `softmax` kernel unchanged — it is still used for the
       single-tile path (S ≤ 64) and existing testbenches depend on it
+
+Verified on 2026-05-02:
+
+```bash
+g++ -O2 -std=c++17 \
+  hls/softmax_full_row/softmax_full_row_hls.cpp \
+  hls/softmax_full_row/tb_softmax_full_row.cpp \
+  -Ihls/common \
+  -o sim/tb_softmax_full_row
+sim/tb_softmax_full_row
+
+source attention_score_u55c/host/setup_2022_2_env.sh
+vitis_hls -f attention_score_u55c/hls/softmax_full_row/run_hls.tcl
+```
+
+Results:
+
+- local C++ bench PASS for `S = 64, 128, 256, 512`, partial rows, and masked logits
+- Vitis HLS 2022.2 `csim PASS`
+- Vitis HLS 2022.2 `csynth PASS`
+- estimated Fmax: `315.96 MHz`
+- resources: `9 DSP`, `1 BRAM_18K`, `2 URAM`, `3693 FF`, `5772 LUT`
+- loop constraint status: all loop constraints satisfied
 
 ### Expected result
 - Project can now process real sentence-length inputs
@@ -225,7 +303,7 @@ if on-chip SRAM becomes a constraint at large S.
 
 ---
 
-## Step 4 — Double-Buffer DMA Transfers *(stretch goal)*
+## Step 4 — Double-Buffer Tiled Host Pass *(stretch goal)*
 
 **Effort:** 1 day (including debugging)  
 **Requires:** XRT on Linux  
@@ -233,15 +311,49 @@ if on-chip SRAM becomes a constraint at large S.
 
 ### What to do
 
-- [ ] Allocate two sets of Q/K input buffer objects (`q_bo[2]`, `k_bo[2]`)
-- [ ] Allocate two sets of output buffer objects (`softmax_bo[2]`)
-- [ ] Pre-load tile 0 into buffer set 0 before the loop starts
-- [ ] Inside the tiling loop:
+- [x] Allocate two sets of Q/K input buffer objects (`q_bo[2]`, `k_bo[2]`)
+- [x] Allocate two sets of score/mask-scale output buffer objects
+      (`raw_score_bo[2]`, `scaled_score_bo[2]`)
+- [x] Pre-load tile 0 into buffer set 0 before the loop starts
+- [x] Inside the tiled score/mask-scale loop:
   - Launch kernel on buffer set `i % 2`
-  - Simultaneously DMA tile `i+1` into buffer set `(i+1) % 2`
+  - Preload tile `i+1` into buffer set `(i+1) % 2`
   - Wait for kernel on buffer set `i % 2`
   - DMA result back from buffer set `i % 2`
-- [ ] Verify output matches Step 3 output exactly
+- [x] Verify output matches Step 3 output exactly
+
+Implementation note: full-row softmax is not double-buffered in this step
+because it must run after all K chunks for a Q chunk have produced the complete
+S-wide row. The double-buffering applies to pass 1: score plus mask/scale.
+
+Verified on 2026-05-03 with the existing four-kernel real U55C bitstream and a
+rebuilt host binary:
+
+```bash
+source attention_score_u55c/host/setup_2022_2_env.sh
+unset XCL_EMULATION_MODE
+
+for s in 8 64 128 256 512; do
+  ./attention_score_u55c/build/host_attention_score_chain \
+    --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+    --seq-len "$s" \
+    --device 0
+done
+```
+
+| S | q_chunks | k_chunks | tiles | total ms | tiles/sec | scores/sec |
+|---|----------|----------|-------|----------|-----------|------------|
+| 8 | 1 | 1 | 1 | 0.510 | 1,960.78 | 125,490.20 |
+| 64 | 8 | 1 | 8 | 2.307 | 3,467.71 | 1,775,465.97 |
+| 128 | 16 | 2 | 32 | 5.238 | 6,109.20 | 3,127,911.42 |
+| 256 | 32 | 4 | 128 | 11.709 | 10,931.76 | 5,597,062.09 |
+| 512 | 64 | 8 | 512 | 35.992 | 14,225.38 | 7,283,396.31 |
+
+All runs printed `Tiled sequence verification PASSED` and
+`XRT chain verification PASSED`. The single-tile synthetic and real TinyLlama
+`--vectors` modes also still passed. Per-kernel timing for the overlapped
+mask/scale stage is a host-observed window and can exceed non-overlapped kernel
+time; `total_chain` is the primary metric for this step.
 
 ### Expected result
 - DMA latency for tile N+1 is hidden behind compute time for tile N
@@ -282,11 +394,11 @@ softmax weights — neither fits the single-pass dataflow model naturally.
 
 | Step | Effort | Testable on Windows now | Do in 2 days? |
 |------|--------|------------------------|---------------|
-| 1 — UNROLL factor | 30 min | Code yes, verify needs Vitis | Yes |
-| 2 — Merge mask+scale | 2–3 hrs | Local bench yes, csynth needs Vitis | Yes |
-| 3 — Tiling loop | 4–6 hrs | Python side fully, XRT needs Linux | Yes |
-| 4 — Double buffering | ~1 day | No (needs XRT) | Stretch |
-| 5 — Dataflow merge | 2–3 days | No | No |
+| 1 — UNROLL / packed I/O | Done | Verified with Vitis | Done |
+| 2 — Merge mask+scale | Done | Local, HLS, hw_emu, real U55C | Done |
+| 3 — Tiling loop | Done | Python, hw_emu, real U55C | Done |
+| 4 — Double buffering | Done for pass 1 | Real U55C | Done |
+| 5 — Dataflow merge | Future | No | Not in current sprint |
 
 ---
 
@@ -575,7 +687,8 @@ Track B (V kernel) must be working before real V is useful.
 
 **Current status:** implemented and verified for the current single-tile
 3-kernel design using `sim/real_tinyllama_tile/`. Full multi-sentence and
-multi-length coverage is still pending Track A tiling and full-row softmax.
+multi-length real TinyLlama coverage is now unblocked by Track A, but still
+requires extending the real-vector exporter beyond the current 8-token tile.
 
 ### What to do
 

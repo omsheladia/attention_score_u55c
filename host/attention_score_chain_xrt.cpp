@@ -1,9 +1,12 @@
 #include <cmath>
+#include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -18,9 +21,13 @@ namespace {
 constexpr std::size_t kHeadDim = 64;
 constexpr std::size_t kScoreRowsPerTile = 8;
 constexpr std::size_t kScoreColsPerTile = 64;
+constexpr std::size_t kFullRowMaxCols = 512;
 constexpr std::size_t kQTileElems = kScoreRowsPerTile * kHeadDim;
 constexpr std::size_t kKTileElems = kScoreColsPerTile * kHeadDim;
 constexpr std::size_t kScoreTileElems = kScoreRowsPerTile * kScoreColsPerTile;
+constexpr float kMaskNegInf = -1000000000.0f;
+constexpr float kDefaultQScale = 0.03125f;
+constexpr float kDefaultKScale = 0.02734375f;
 
 struct KernelMeta {
   std::uint32_t query_row_count = 0;
@@ -36,11 +43,22 @@ struct Args {
   std::string xclbin_path;
   std::string vector_dir = "attention_score_u55c/sim/attention_score_tile";
   unsigned int device_index = 0;
+  std::uint32_t seq_len = 0;
+  float q_scale = kDefaultQScale;
+  float k_scale = kDefaultKScale;
 };
 
 struct TimedStage {
   std::string name;
   double milliseconds = 0.0;
+};
+
+struct PendingMaskScale {
+  bool valid = false;
+  std::uint32_t key_base = 0;
+  std::uint32_t key_cols = 0;
+  std::chrono::steady_clock::time_point launch_time;
+  std::optional<xrt::run> run;
 };
 
 template <typename T>
@@ -103,14 +121,24 @@ Args parse_args(int argc, char** argv) {
       args.vector_dir = argv[++idx];
     } else if (arg == "--device" && (idx + 1) < argc) {
       args.device_index = static_cast<unsigned int>(std::stoul(argv[++idx]));
+    } else if (arg == "--seq-len" && (idx + 1) < argc) {
+      args.seq_len = static_cast<std::uint32_t>(std::stoul(argv[++idx]));
+    } else if (arg == "--q-scale" && (idx + 1) < argc) {
+      args.q_scale = std::stof(argv[++idx]);
+    } else if (arg == "--k-scale" && (idx + 1) < argc) {
+      args.k_scale = std::stof(argv[++idx]);
     } else {
       throw std::runtime_error(
-          "Usage: host_attention_score_chain --xclbin <path> [--vectors <dir>] [--device <idx>]");
+          "Usage: host_attention_score_chain --xclbin <path> [--vectors <dir>] "
+          "[--device <idx>] [--seq-len <S>] [--q-scale <float>] [--k-scale <float>]");
     }
   }
 
   if (args.xclbin_path.empty()) {
     throw std::runtime_error("Missing required --xclbin argument");
+  }
+  if (args.seq_len > kFullRowMaxCols) {
+    throw std::runtime_error("--seq-len must be <= 512 for the current full-row softmax kernel");
   }
   return args;
 }
@@ -171,10 +199,12 @@ void compare_float(
 }
 
 template <typename LaunchFn>
-double run_timed(const std::string& name, LaunchFn&& launch) {
+double run_timed(const std::string& name, LaunchFn&& launch, bool verbose = true) {
   using Clock = std::chrono::steady_clock;
 
-  std::cout << "Running " << name << "\n";
+  if (verbose) {
+    std::cout << "Running " << name << "\n";
+  }
   const auto start = Clock::now();
   auto run = launch();
   run.wait();
@@ -195,50 +225,164 @@ void print_timings(const std::vector<TimedStage>& stages, double total_ms) {
   std::cout.unsetf(std::ios::floatfield);
 }
 
-}  // namespace
+int positive_mod(int value, int divisor) {
+  const int result = value % divisor;
+  return (result < 0) ? result + divisor : result;
+}
 
-int main(int argc, char** argv) {
-  try {
-    const auto args = parse_args(argc, argv);
+std::int8_t deterministic_q_value(std::uint32_t row, std::uint32_t dim) {
+  return static_cast<std::int8_t>(positive_mod(static_cast<int>(row * 5 + dim * 3), 15) - 7);
+}
 
-    const auto q_tile = read_text_vector<std::int8_t>(args.vector_dir + "/q_tile.txt", kQTileElems);
-    const auto k_tile = read_text_vector<std::int8_t>(args.vector_dir + "/k_tile.txt", kKTileElems);
-    const auto score_raw_expected =
-        read_text_vector<std::int32_t>(args.vector_dir + "/score_raw.txt", kScoreTileElems);
-    const auto score_scaled_expected =
-        read_text_vector<float>(args.vector_dir + "/score_scaled.txt", kScoreTileElems);
-    const auto score_softmax_expected =
-        read_text_vector<float>(args.vector_dir + "/score_softmax.txt", kScoreTileElems);
-    const auto meta = read_kernel_meta(args.vector_dir + "/kernel_meta.txt");
+std::int8_t deterministic_k_value(std::uint32_t col, std::uint32_t dim) {
+  return static_cast<std::int8_t>(positive_mod(static_cast<int>(col * 7) - static_cast<int>(dim * 2), 15) - 7);
+}
 
-    std::cout << "Opening device " << args.device_index << "\n";
-    auto device = xrt::device(args.device_index);
-    auto uuid = device.load_xclbin(args.xclbin_path);
+std::vector<std::int8_t> make_synthetic_q(std::uint32_t seq_len) {
+  std::vector<std::int8_t> q(seq_len * kHeadDim);
+  for (std::uint32_t row = 0; row < seq_len; ++row) {
+    for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+      q[(row * kHeadDim) + dim] = deterministic_q_value(row, dim);
+    }
+  }
+  return q;
+}
 
-    auto score_kernel = xrt::kernel(device, uuid, "attention_score_u55c_kernel");
-    auto mask_scale_kernel = xrt::kernel(device, uuid, "mask_scale_u55c_kernel");
-    auto softmax_kernel = xrt::kernel(device, uuid, "softmax_u55c_kernel");
+std::vector<std::int8_t> make_synthetic_k(std::uint32_t seq_len) {
+  std::vector<std::int8_t> k(seq_len * kHeadDim);
+  for (std::uint32_t col = 0; col < seq_len; ++col) {
+    for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+      k[(col * kHeadDim) + dim] = deterministic_k_value(col, dim);
+    }
+  }
+  return k;
+}
 
-    auto q_bo = xrt::bo(device, sizeof(std::int8_t) * q_tile.size(), score_kernel.group_id(0));
-    auto k_bo = xrt::bo(device, sizeof(std::int8_t) * k_tile.size(), score_kernel.group_id(1));
-    auto raw_score_bo =
-        xrt::bo(device, sizeof(std::int32_t) * score_raw_expected.size(), score_kernel.group_id(2));
-    auto scaled_score_bo =
-        xrt::bo(device, sizeof(float) * score_scaled_expected.size(), mask_scale_kernel.group_id(1));
-    auto softmax_prob_bo =
-        xrt::bo(device, sizeof(float) * score_softmax_expected.size(), softmax_kernel.group_id(1));
+float total_scale(float q_scale, float k_scale) {
+  return q_scale * k_scale * (1.0f / std::sqrt(static_cast<float>(kHeadDim)));
+}
 
-    q_bo.write(q_tile.data());
-    k_bo.write(k_tile.data());
-    q_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-    k_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+void compute_cpu_reference(
+    const std::vector<std::int8_t>& q_full,
+    const std::vector<std::int8_t>& k_full,
+    std::uint32_t seq_len,
+    float scale,
+    std::vector<std::int32_t>* raw_expected,
+    std::vector<float>* logits_expected,
+    std::vector<float>* softmax_expected) {
+  raw_expected->assign(seq_len * seq_len, 0);
+  logits_expected->assign(seq_len * seq_len, 0.0f);
+  softmax_expected->assign(seq_len * seq_len, 0.0f);
 
-    using Clock = std::chrono::steady_clock;
-    std::vector<TimedStage> timings;
-    timings.reserve(4);
-    const auto chain_start = Clock::now();
+  for (std::uint32_t row = 0; row < seq_len; ++row) {
+    for (std::uint32_t col = 0; col < seq_len; ++col) {
+      std::int32_t accum = 0;
+      for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+        accum += static_cast<std::int32_t>(q_full[(row * kHeadDim) + dim]) *
+                 static_cast<std::int32_t>(k_full[(col * kHeadDim) + dim]);
+      }
+      (*raw_expected)[(row * seq_len) + col] = accum;
+      const float masked_or_raw = (col > row) ? kMaskNegInf : static_cast<float>(accum);
+      (*logits_expected)[(row * seq_len) + col] = masked_or_raw * scale;
+    }
+  }
 
-    timings.push_back({"attention_score_u55c_kernel", run_timed("attention score kernel", [&]() {
+  for (std::uint32_t row = 0; row < seq_len; ++row) {
+    const std::size_t row_base = row * seq_len;
+    float row_max = (*logits_expected)[row_base];
+    for (std::uint32_t col = 1; col < seq_len; ++col) {
+      row_max = std::max(row_max, (*logits_expected)[row_base + col]);
+    }
+
+    float sum_exp = 0.0f;
+    for (std::uint32_t col = 0; col < seq_len; ++col) {
+      const float exp_value = std::exp((*logits_expected)[row_base + col] - row_max);
+      (*softmax_expected)[row_base + col] = exp_value;
+      sum_exp += exp_value;
+    }
+    for (std::uint32_t col = 0; col < seq_len; ++col) {
+      (*softmax_expected)[row_base + col] /= sum_exp;
+    }
+  }
+}
+
+void copy_q_tile(
+    const std::vector<std::int8_t>& q_full,
+    std::uint32_t seq_len,
+    std::uint32_t query_base,
+    std::vector<std::int8_t>* q_tile) {
+  q_tile->assign(kQTileElems, 0);
+  const std::uint32_t rows = std::min<std::uint32_t>(kScoreRowsPerTile, seq_len - query_base);
+  for (std::uint32_t row = 0; row < rows; ++row) {
+    for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+      (*q_tile)[(row * kHeadDim) + dim] = q_full[((query_base + row) * kHeadDim) + dim];
+    }
+  }
+}
+
+void copy_k_tile(
+    const std::vector<std::int8_t>& k_full,
+    std::uint32_t seq_len,
+    std::uint32_t key_base,
+    std::vector<std::int8_t>* k_tile) {
+  k_tile->assign(kKTileElems, 0);
+  const std::uint32_t cols = std::min<std::uint32_t>(kScoreColsPerTile, seq_len - key_base);
+  for (std::uint32_t col = 0; col < cols; ++col) {
+    for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+      (*k_tile)[(col * kHeadDim) + dim] = k_full[((key_base + col) * kHeadDim) + dim];
+    }
+  }
+}
+
+std::vector<std::int32_t> read_i32_bo(xrt::bo& bo, std::size_t count) {
+  std::vector<std::int32_t> values(count);
+  bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+  bo.read(values.data());
+  return values;
+}
+
+std::vector<float> read_float_bo(xrt::bo& bo, std::size_t count) {
+  std::vector<float> values(count);
+  bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+  bo.read(values.data());
+  return values;
+}
+
+int run_single_tile(const Args& args, xrt::device& device, const xrt::uuid& uuid) {
+  const auto q_tile = read_text_vector<std::int8_t>(args.vector_dir + "/q_tile.txt", kQTileElems);
+  const auto k_tile = read_text_vector<std::int8_t>(args.vector_dir + "/k_tile.txt", kKTileElems);
+  const auto score_raw_expected =
+      read_text_vector<std::int32_t>(args.vector_dir + "/score_raw.txt", kScoreTileElems);
+  const auto score_scaled_expected =
+      read_text_vector<float>(args.vector_dir + "/score_scaled.txt", kScoreTileElems);
+  const auto score_softmax_expected =
+      read_text_vector<float>(args.vector_dir + "/score_softmax.txt", kScoreTileElems);
+  const auto meta = read_kernel_meta(args.vector_dir + "/kernel_meta.txt");
+
+  auto score_kernel = xrt::kernel(device, uuid, "attention_score_u55c_kernel");
+  auto mask_scale_kernel = xrt::kernel(device, uuid, "mask_scale_u55c_kernel");
+  auto softmax_kernel = xrt::kernel(device, uuid, "softmax_u55c_kernel");
+
+  auto q_bo = xrt::bo(device, sizeof(std::int8_t) * q_tile.size(), score_kernel.group_id(0));
+  auto k_bo = xrt::bo(device, sizeof(std::int8_t) * k_tile.size(), score_kernel.group_id(1));
+  auto raw_score_bo =
+      xrt::bo(device, sizeof(std::int32_t) * score_raw_expected.size(), score_kernel.group_id(2));
+  auto scaled_score_bo =
+      xrt::bo(device, sizeof(float) * score_scaled_expected.size(), mask_scale_kernel.group_id(1));
+  auto softmax_prob_bo =
+      xrt::bo(device, sizeof(float) * score_softmax_expected.size(), softmax_kernel.group_id(1));
+
+  q_bo.write(q_tile.data());
+  k_bo.write(k_tile.data());
+  q_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+  k_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+
+  using Clock = std::chrono::steady_clock;
+  std::vector<TimedStage> timings;
+  timings.reserve(4);
+  const auto chain_start = Clock::now();
+
+  timings.push_back({"attention_score_u55c_kernel", run_timed("attention score kernel", [&]() {
                         return score_kernel(
                             q_bo,
                             k_bo,
@@ -247,7 +391,7 @@ int main(int argc, char** argv) {
                             meta.key_col_count);
                       })});
 
-    timings.push_back({"mask_scale_u55c_kernel", run_timed("mask+scale kernel", [&]() {
+  timings.push_back({"mask_scale_u55c_kernel", run_timed("mask+scale kernel", [&]() {
                         return mask_scale_kernel(
                             raw_score_bo,
                             scaled_score_bo,
@@ -258,7 +402,7 @@ int main(int argc, char** argv) {
                             meta.total_scale);
                       })});
 
-    timings.push_back({"softmax_u55c_kernel", run_timed("softmax kernel", [&]() {
+  timings.push_back({"softmax_u55c_kernel", run_timed("softmax kernel", [&]() {
                         return softmax_kernel(
                             scaled_score_bo,
                             softmax_prob_bo,
@@ -266,29 +410,229 @@ int main(int argc, char** argv) {
                             meta.key_col_count);
                       })});
 
-    const auto chain_stop = Clock::now();
-    const double total_chain_ms =
-        std::chrono::duration<double, std::milli>(chain_stop - chain_start).count();
+  const auto chain_stop = Clock::now();
+  const double total_chain_ms =
+      std::chrono::duration<double, std::milli>(chain_stop - chain_start).count();
 
-    raw_score_bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-    scaled_score_bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
-    softmax_prob_bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
+  const auto score_raw_got = read_i32_bo(raw_score_bo, score_raw_expected.size());
+  const auto score_scaled_got = read_float_bo(scaled_score_bo, score_scaled_expected.size());
+  const auto score_softmax_got = read_float_bo(softmax_prob_bo, score_softmax_expected.size());
 
-    std::vector<std::int32_t> score_raw_got(score_raw_expected.size());
-    std::vector<float> score_scaled_got(score_scaled_expected.size());
-    std::vector<float> score_softmax_got(score_softmax_expected.size());
+  compare_exact(score_raw_got, score_raw_expected, "score_raw");
+  compare_float(score_scaled_got, score_scaled_expected, "score_scaled", 1.0e-4f);
+  compare_float(score_softmax_got, score_softmax_expected, "score_softmax", 1.0e-4f);
 
-    raw_score_bo.read(score_raw_got.data());
-    scaled_score_bo.read(score_scaled_got.data());
-    softmax_prob_bo.read(score_softmax_got.data());
+  print_timings(timings, total_chain_ms);
+  std::cout << "XRT chain verification PASSED\n";
+  return 0;
+}
 
-    compare_exact(score_raw_got, score_raw_expected, "score_raw");
-    compare_float(score_scaled_got, score_scaled_expected, "score_scaled", 1.0e-4f);
-    compare_float(score_softmax_got, score_softmax_expected, "score_softmax", 1.0e-4f);
+int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& uuid) {
+  if (args.seq_len == 0) {
+    throw std::runtime_error("--seq-len must be positive");
+  }
 
-    print_timings(timings, total_chain_ms);
-    std::cout << "XRT chain verification PASSED\n";
-    return 0;
+  const std::uint32_t seq_len = args.seq_len;
+  const std::uint32_t q_chunks =
+      (seq_len + static_cast<std::uint32_t>(kScoreRowsPerTile) - 1U) /
+      static_cast<std::uint32_t>(kScoreRowsPerTile);
+  const std::uint32_t k_chunks =
+      (seq_len + static_cast<std::uint32_t>(kScoreColsPerTile) - 1U) /
+      static_cast<std::uint32_t>(kScoreColsPerTile);
+
+  std::cout << "Running tiled synthetic sequence, S=" << seq_len
+            << ", q_chunks=" << q_chunks
+            << ", k_chunks=" << k_chunks << "\n";
+
+  const auto q_full = make_synthetic_q(seq_len);
+  const auto k_full = make_synthetic_k(seq_len);
+  const float scale = total_scale(args.q_scale, args.k_scale);
+
+  std::vector<std::int32_t> raw_expected;
+  std::vector<float> logits_expected;
+  std::vector<float> softmax_expected;
+  compute_cpu_reference(
+      q_full,
+      k_full,
+      seq_len,
+      scale,
+      &raw_expected,
+      &logits_expected,
+      &softmax_expected);
+
+  auto score_kernel = xrt::kernel(device, uuid, "attention_score_u55c_kernel");
+  auto mask_scale_kernel = xrt::kernel(device, uuid, "mask_scale_u55c_kernel");
+  auto softmax_full_row_kernel = xrt::kernel(device, uuid, "softmax_full_row_u55c_kernel");
+
+  std::vector<std::int8_t> q_tile(kQTileElems);
+  std::vector<std::int8_t> k_tile(kKTileElems);
+  std::vector<float> full_row_logits(kScoreRowsPerTile * kFullRowMaxCols, 0.0f);
+  std::vector<float> full_row_probs(kScoreRowsPerTile * kFullRowMaxCols, 0.0f);
+  std::vector<std::int32_t> raw_got(seq_len * seq_len, 0);
+  std::vector<float> logits_got(seq_len * seq_len, 0.0f);
+  std::vector<float> softmax_got(seq_len * seq_len, 0.0f);
+
+  std::vector<xrt::bo> q_bos;
+  std::vector<xrt::bo> k_bos;
+  std::vector<xrt::bo> raw_score_bos;
+  std::vector<xrt::bo> scaled_score_bos;
+  q_bos.reserve(2);
+  k_bos.reserve(2);
+  raw_score_bos.reserve(2);
+  scaled_score_bos.reserve(2);
+  for (std::size_t set = 0; set < 2; ++set) {
+    q_bos.emplace_back(device, sizeof(std::int8_t) * kQTileElems, score_kernel.group_id(0));
+    k_bos.emplace_back(device, sizeof(std::int8_t) * kKTileElems, score_kernel.group_id(1));
+    raw_score_bos.emplace_back(device, sizeof(std::int32_t) * kScoreTileElems, score_kernel.group_id(2));
+    scaled_score_bos.emplace_back(device, sizeof(float) * kScoreTileElems, mask_scale_kernel.group_id(1));
+  }
+  auto full_row_score_bo =
+      xrt::bo(device, sizeof(float) * full_row_logits.size(), softmax_full_row_kernel.group_id(0));
+  auto full_row_prob_bo =
+      xrt::bo(device, sizeof(float) * full_row_probs.size(), softmax_full_row_kernel.group_id(1));
+
+  using Clock = std::chrono::steady_clock;
+  std::vector<TimedStage> timings = {
+      {"attention_score_u55c_kernel", 0.0},
+      {"mask_scale_u55c_kernel", 0.0},
+      {"softmax_full_row_u55c_kernel", 0.0},
+  };
+  const auto chain_start = Clock::now();
+
+  for (std::uint32_t query_base = 0; query_base < seq_len; query_base += kScoreRowsPerTile) {
+    const std::uint32_t query_rows =
+        std::min<std::uint32_t>(kScoreRowsPerTile, seq_len - query_base);
+    std::fill(full_row_logits.begin(), full_row_logits.end(), 0.0f);
+
+    copy_q_tile(q_full, seq_len, query_base, &q_tile);
+    for (std::size_t set = 0; set < q_bos.size(); ++set) {
+      q_bos[set].write(q_tile.data());
+      q_bos[set].sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    }
+
+    std::array<PendingMaskScale, 2> pending_masks;
+
+    auto preload_k_tile = [&](std::size_t set, std::uint32_t key_base) {
+      copy_k_tile(k_full, seq_len, key_base, &k_tile);
+      k_bos[set].write(k_tile.data());
+      k_bos[set].sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    };
+
+    auto finish_pending_mask = [&](std::size_t set) {
+      auto& pending = pending_masks[set];
+      if (!pending.valid) {
+        return;
+      }
+
+      pending.run->wait();
+      const auto finish_time = Clock::now();
+      timings[1].milliseconds +=
+          std::chrono::duration<double, std::milli>(finish_time - pending.launch_time).count();
+
+      const auto raw_tile = read_i32_bo(raw_score_bos[set], kScoreTileElems);
+      const auto scaled_tile = read_float_bo(scaled_score_bos[set], kScoreTileElems);
+      for (std::uint32_t row = 0; row < query_rows; ++row) {
+        const std::size_t global_row_base = (query_base + row) * seq_len;
+        const std::size_t tile_row_base = row * kScoreColsPerTile;
+        const std::size_t full_row_base = row * kFullRowMaxCols;
+        for (std::uint32_t col = 0; col < pending.key_cols; ++col) {
+          raw_got[global_row_base + pending.key_base + col] = raw_tile[tile_row_base + col];
+          logits_got[global_row_base + pending.key_base + col] = scaled_tile[tile_row_base + col];
+          full_row_logits[full_row_base + pending.key_base + col] = scaled_tile[tile_row_base + col];
+        }
+      }
+
+      pending.run.reset();
+      pending.valid = false;
+    };
+
+    preload_k_tile(0, 0);
+
+    for (std::uint32_t key_tile_idx = 0; key_tile_idx < k_chunks; ++key_tile_idx) {
+      const std::uint32_t key_base =
+          key_tile_idx * static_cast<std::uint32_t>(kScoreColsPerTile);
+      const std::uint32_t key_cols =
+          std::min<std::uint32_t>(kScoreColsPerTile, seq_len - key_base);
+      const std::size_t set = key_tile_idx % 2U;
+      finish_pending_mask(set);
+
+      timings[0].milliseconds += run_timed("attention score tile", [&]() {
+        return score_kernel(q_bos[set], k_bos[set], raw_score_bos[set], query_rows, key_cols);
+      }, false);
+
+      auto& pending = pending_masks[set];
+      pending.valid = true;
+      pending.key_base = key_base;
+      pending.key_cols = key_cols;
+      pending.launch_time = Clock::now();
+      pending.run.emplace(mask_scale_kernel(
+          raw_score_bos[set],
+          scaled_score_bos[set],
+          query_base,
+          key_base,
+          query_rows,
+          key_cols,
+          scale));
+
+      const std::uint32_t next_key_tile_idx = key_tile_idx + 1U;
+      if (next_key_tile_idx < k_chunks) {
+        const std::uint32_t next_key_base =
+            next_key_tile_idx * static_cast<std::uint32_t>(kScoreColsPerTile);
+        preload_k_tile(next_key_tile_idx % 2U, next_key_base);
+      }
+    }
+
+    finish_pending_mask(0);
+    finish_pending_mask(1);
+
+    full_row_score_bo.write(full_row_logits.data());
+    full_row_score_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+    timings[2].milliseconds += run_timed("full-row softmax", [&]() {
+      return softmax_full_row_kernel(
+          full_row_score_bo,
+          full_row_prob_bo,
+          query_rows,
+          seq_len);
+    }, false);
+
+    const auto prob_tile = read_float_bo(full_row_prob_bo, full_row_probs.size());
+    for (std::uint32_t row = 0; row < query_rows; ++row) {
+      const std::size_t global_row_base = (query_base + row) * seq_len;
+      const std::size_t full_row_base = row * kFullRowMaxCols;
+      for (std::uint32_t col = 0; col < seq_len; ++col) {
+        softmax_got[global_row_base + col] = prob_tile[full_row_base + col];
+      }
+    }
+  }
+
+  const auto chain_stop = Clock::now();
+  const double total_chain_ms =
+      std::chrono::duration<double, std::milli>(chain_stop - chain_start).count();
+
+  compare_exact(raw_got, raw_expected, "full_score_raw");
+  compare_float(logits_got, logits_expected, "full_score_scaled", 1.0e-4f);
+  compare_float(softmax_got, softmax_expected, "full_score_softmax", 1.0e-4f);
+
+  print_timings(timings, total_chain_ms);
+  std::cout << "Tiled sequence verification PASSED\n";
+  std::cout << "XRT chain verification PASSED\n";
+  return 0;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+  try {
+    const auto args = parse_args(argc, argv);
+
+    std::cout << "Opening device " << args.device_index << "\n";
+    auto device = xrt::device(args.device_index);
+    auto uuid = device.load_xclbin(args.xclbin_path);
+
+    if (args.seq_len != 0) {
+      return run_tiled_sequence(args, device, uuid);
+    }
+    return run_single_tile(args, device, uuid);
   } catch (const std::exception& ex) {
     std::cerr << "XRT host failed: " << ex.what() << "\n";
     return 1;

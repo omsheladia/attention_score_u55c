@@ -15,18 +15,25 @@ Alveo U55C.
 
 The current state is a verified tile-level FPGA demo: local C++ tests, HLS
 `csim`/`csynth`, hardware emulation, and a real U55C hardware run have passed.
-This is not yet a full TinyLlama runtime or tokens/sec benchmark.
+This is not yet a full TinyLlama runtime or tokens/sec benchmark. Track A Step
+3 Part A, the Python full-sequence tiled score/softmax reference, is now
+implemented and verified for `S = 8, 64, 128, 256, 512`; the tiled XRT
+`hw_emu` path is verified for `S = 8, 64, 128`, and the real U55C tiled sweep
+is verified for `S = 8, 64, 128, 256, 512`.
 
 ## What Is In Scope
 
 - Python reference math for one attention-score tile
+- Python full-sequence tiled score/softmax reference checks
 - deterministic vector export for simulation and HLS C-sim
 - TinyLlama setup check for later real Q/K/V extraction
 - U55C-oriented HLS kernels for:
   - INT8 score GEMM
   - merged causal mask + score scaling
   - row-wise softmax
+  - full-row softmax up to `S = 512` for the next tiled host path
 - native XRT host app for the verified three-kernel chain
+- tiled XRT `hw_emu` path using full-row softmax for synthetic sequence lengths
 - Linux helpers for local C++ checks, HLS/Vitis builds, hardware emulation, and
   real-card execution
 - HBM bank mapping for the chain buffers
@@ -149,6 +156,63 @@ From the repo root, generate vectors and run the local C++ checks:
 bash host/run_local_csim.sh
 ```
 
+Run the full-sequence Python tiling check:
+
+```bash
+python model/attention_score_ref.py --check-full-tiling
+```
+
+Run the full-row softmax local C++ bench:
+
+```bash
+g++ -O2 -std=c++17 \
+  hls/softmax_full_row/softmax_full_row_hls.cpp \
+  hls/softmax_full_row/tb_softmax_full_row.cpp \
+  -Ihls/common \
+  -o sim/tb_softmax_full_row
+sim/tb_softmax_full_row
+```
+
+Run the tiled synthetic hardware-emulation path:
+
+```bash
+source attention_score_u55c/host/setup_2022_2_env.sh
+export XCL_EMULATION_MODE=hw_emu
+
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --seq-len 128 \
+  --device 0
+```
+
+Run the real-card synthetic sequence sweep:
+
+```bash
+source attention_score_u55c/host/setup_2022_2_env.sh
+unset XCL_EMULATION_MODE
+
+for s in 8 64 128 256 512; do
+  ./attention_score_u55c/build/host_attention_score_chain \
+    --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+    --seq-len "$s" \
+    --device 0
+done
+```
+
+Latest real-card sweep after the Track A Step 4 double-buffered host pass:
+
+| S | total ms | tiles/sec | scores/sec |
+|---|----------|-----------|------------|
+| 8 | 0.510 | 1,960.78 | 125,490.20 |
+| 64 | 2.307 | 3,467.71 | 1,775,465.97 |
+| 128 | 5.238 | 6,109.20 | 3,127,911.42 |
+| 256 | 11.709 | 10,931.76 | 5,597,062.09 |
+| 512 | 35.992 | 14,225.38 | 7,283,396.31 |
+
+The Step 4 host path double-buffers the pass-1 score/mask-scale BO sets. These
+are attention-score/softmax metrics, not model tokens/sec; tokens/sec still
+requires Track B `softmax @ V` and decoder-loop integration.
+
 Build the XRT host:
 
 ```bash
@@ -212,9 +276,7 @@ This block is easy to offload because:
 
 ## Next Work
 
-- Add Python full-sequence tiling with `softmax_full_rows(logits)`
-- Add a full-row softmax kernel/design for `S > 64`
-- Add the matching XRT host tiling loop for `S = 8, 64, 128, 256, 512`
-- Add multi-vector regression and CPU/GPU/FPGA timing tables
+- Add CPU/GPU/FPGA comparison tables
 - Implement `softmax @ V`
+- Extend real TinyLlama vectors beyond the current 8-token single-tile case
 - Integrate toward a real TinyLlama attention subgraph
