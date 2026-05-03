@@ -645,9 +645,15 @@ runs the same computation as the FPGA.
 **Runs on:** Any machine with Python  
 **Testable on Windows:** Yes
 
+**Status 2026-05-03:** Implemented as `model/benchmark_cpu.py` with shared
+helpers in `model/benchmark_common.py`. It supports synthetic scaling lengths
+and `--vectors sim/real_tinyllama_tile` real-input mode. The current verified
+CPU runs are software baselines only; final FPGA speedup claims still require
+Track A full-sequence tiling and Track B `softmax @ V` on FPGA.
+
 ### What to do
 
-- [ ] Write `model/benchmark_cpu.py` that:
+- [x] Write `model/benchmark_cpu.py` that:
   - generates synthetic Q, K, and V at S = 8, 64, 128, 256, 512
   - runs the full two-pass tiled computation (Track A Step 3A + Track B Step 1):
     pass 1 = score + mask + scale for all tiles, pass 2 = softmax across full
@@ -656,8 +662,8 @@ runs the same computation as the FPGA.
     10 iterations, report mean and standard deviation
   - also times score+softmax only (for comparison before Track B is done)
   - reports latency in milliseconds and throughput in tiles/second
-- [ ] Also time the brute-force (un-tiled) numpy version for comparison
-- [ ] Record results in a table:
+- [x] Also time the brute-force (un-tiled) numpy version for comparison
+- [x] Record results in a table printed by the script:
 
   | S | Tiled CPU (ms) | Brute-force CPU (ms) |
   |---|---|---|
@@ -675,9 +681,16 @@ runs the same computation as the FPGA.
 **Runs on:** Any machine with a CUDA GPU + PyTorch  
 **Testable on Windows:** Yes (if GPU present)
 
+**Status 2026-05-03:** Implemented and verified as `model/benchmark_gpu.py`.
+It uses the same synthetic and real-vector inputs as the CPU baseline, validates
+GPU output against CPU output, and times score+softmax and full `softmax @ V`
+scopes. After installing a CUDA-enabled PyTorch build, the RTX 3050 Laptop GPU
+validated synthetic `S = 8, 64, 128, 256, 512` and
+`sim/real_tinyllama_tile/`.
+
 ### What to do
 
-- [ ] Write `model/benchmark_gpu.py` that:
+- [x] Write `model/benchmark_gpu.py` that:
   - generates the same synthetic Q, K, and V as Track D Step 1
   - runs the full attention block on GPU:
     `scores = Q @ K.T`, causal mask, scale, `torch.softmax`, `softmax @ V`
@@ -686,7 +699,7 @@ runs the same computation as the FPGA.
   - also times score+softmax only separately so the comparison is fair
     regardless of whether Track B is done
   - reports mean latency and throughput
-- [ ] Compare against the CPU baseline from Step 1
+- [x] Run on a CUDA machine and compare against the CPU baseline from Step 1
 
 ---
 
@@ -746,10 +759,11 @@ runs the same computation as the FPGA.
 
 | Step | Effort | Testable on Windows | Prerequisite |
 |------|--------|---------------------|--------------|
-| D1 — CPU baseline | 1–2 hrs | Yes | Track A Step 3A |
-| D2 — GPU baseline | 1–2 hrs | Yes (needs CUDA GPU) | None |
+| D1 — CPU baseline | 1–2 hrs | Yes | Implemented; final comparison still waits for Track A/B |
+| D2 — GPU baseline | 1–2 hrs | Yes (needs CUDA GPU) | Implemented and verified on RTX 3050 |
 | D3 — FPGA timing | 1–2 hrs | No (needs XRT) | Track A Step 3 |
 | D4 — Comparison | 1–2 hrs | Yes | D1 + D3 |
 
-Steps D1 and D2 can be done immediately on Windows. D3 is blocked on hardware
-but is a straightforward instrumentation change once Track A Step 3 is running.
+Steps D1 and D2 are now implemented as benchmark infrastructure. D3 is blocked
+on hardware and Track A Step 3, but is a straightforward instrumentation change
+once Track A Step 3 is running.

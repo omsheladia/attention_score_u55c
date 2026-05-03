@@ -272,6 +272,31 @@ that real-card `sim/real_tinyllama_tile/` result. Track C Step 5 is now marked
 complete for the current single-tile 3-kernel design only; multi-length real
 vectors still require Track A tiling and full-row softmax.
 
+On 2026-05-03, Track D Steps 1-2 benchmark infrastructure was added:
+
+- `model/benchmark_common.py` provides shared synthetic input generation,
+  exported-vector loading, tiled CPU math, brute-force CPU math, validation,
+  and timing helpers
+- `model/benchmark_cpu.py` implements the CPU baseline for synthetic
+  `S = 8, 64, 128, 256, 512` and `--vectors sim/real_tinyllama_tile`
+- `model/benchmark_gpu.py` implements the CUDA baseline with the same inputs
+  and exits cleanly when CUDA is unavailable
+- verified CPU runs:
+  - synthetic default run passed with zero tiled-vs-brute differences for
+    softmax probabilities and `softmax @ V`
+  - real-vector run matched `sim/real_tinyllama_tile/score_softmax.txt` with
+    max difference `2.98023224e-08`
+- after installing CUDA-enabled PyTorch (`torch 2.11.0+cu128`,
+  `torch.version.cuda 12.8`), GPU timing was verified on an NVIDIA GeForce RTX
+  3050 Laptop GPU
+- verified GPU runs:
+  - synthetic `S = 8, 64, 128, 256, 512` validated against CPU with max
+    softmax diff `2.98023224e-07` and max `attn_out` diff `1.90734863e-06`
+  - real-vector run matched `sim/real_tinyllama_tile/score_softmax.txt` with
+    max difference `2.98023224e-08`
+- these are software baselines only; final speedup claims still require Track A
+  full-sequence FPGA tiling and Track B `softmax @ V` on FPGA
+
 ## Tile And Sequence-Length Model
 
 The hardware tile shape remains fixed:
@@ -339,6 +364,9 @@ Key subfolders:
 - `model/check_tinyllama_setup.py`
 - `model/extract_tinyllama_qkv.py`
 - `model/export_real_vectors.py`
+- `model/benchmark_common.py`
+- `model/benchmark_cpu.py`
+- `model/benchmark_gpu.py`
 
 These export deterministic vectors under:
 
@@ -612,7 +640,7 @@ Not yet confirmed:
 - full-row softmax kernel/design for `S > 64`
 - `softmax @ V` / V weighted-sum stage
 - XRT `hw_emu` run using `sim/real_tinyllama_tile/`
-- CPU/GPU/FPGA baseline comparison for acceleration claims
+- CPU/GPU/FPGA baseline comparison for final acceleration claims
 - full TinyLlama attention path
 - full TinyLlama model execution
 
@@ -669,6 +697,10 @@ At the time of writing:
 - Track C Step 4 has a current-design exporter in `model/export_real_vectors.py`
   that writes `sim/real_tinyllama_tile/` and has passed local C++ benches plus
   a real-card XRT run for attention score, mask+scale, and softmax
+- Track D Step 1 CPU baseline is implemented and locally verified in
+  `model/benchmark_cpu.py`
+- Track D Step 2 CUDA baseline is implemented and verified on the local RTX
+  3050 Laptop GPU in `model/benchmark_gpu.py`
 
 Agents should avoid redoing exploration that this file already captures unless
 something materially changed.

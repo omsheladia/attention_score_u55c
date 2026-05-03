@@ -22,6 +22,17 @@ reference.
   - writes current-host-compatible `q_tile.txt`, `k_tile.txt`, `kernel_meta.txt`,
     and expected score/mask-scale/softmax outputs
   - also writes `v_full.txt` for later Track B `softmax @ V` work
+- `benchmark_common.py`
+  - shared Track D helpers for synthetic input generation, real-vector loading,
+    tiled CPU math, brute-force CPU math, validation, and timing
+- `benchmark_cpu.py`
+  - Track D Step 1 CPU baseline
+  - benchmarks synthetic scaling lengths and optional real exported vectors
+  - reports both current score+mask+scale+softmax scope and future +V scope
+- `benchmark_gpu.py`
+  - Track D Step 2 CUDA baseline
+  - uses the same synthetic and real-vector inputs as the CPU baseline
+  - exits cleanly when CUDA is unavailable
 
 The current XRT host verifies the three-kernel runtime outputs against:
 
@@ -160,3 +171,47 @@ softmax_u55c_kernel         0.028 ms
 total_chain                 0.121 ms
 XRT chain verification PASSED
 ```
+
+## CPU/GPU Baseline Benchmarks
+
+Synthetic CPU baseline:
+
+```bash
+python model/benchmark_cpu.py
+```
+
+Real TinyLlama single-tile CPU baseline:
+
+```bash
+python model/benchmark_cpu.py --vectors sim/real_tinyllama_tile
+```
+
+CUDA GPU baseline, if a CUDA GPU is available:
+
+```bash
+python model/benchmark_gpu.py
+python model/benchmark_gpu.py --vectors sim/real_tinyllama_tile
+```
+
+The CPU script validates the tiled path against the brute-force NumPy path
+before timing. The verified local synthetic run covered `S = 8, 64, 128, 256,
+512` with zero tiled-vs-brute differences for both softmax probabilities and
+`softmax @ V`. The verified real-vector run matched
+`sim/real_tinyllama_tile/score_softmax.txt` with max difference
+`2.98023224e-08`.
+
+After installing a CUDA-enabled PyTorch build, the verified GPU run used:
+
+```text
+torch 2.11.0+cu128
+torch.version.cuda 12.8
+NVIDIA GeForce RTX 3050 Laptop GPU
+```
+
+The synthetic GPU run validated `S = 8, 64, 128, 256, 512` against the CPU
+reference. The real-vector GPU run matched
+`sim/real_tinyllama_tile/score_softmax.txt` with max difference
+`2.98023224e-08`.
+
+These are software baselines only. Final FPGA speedup tables still require
+Track A full-sequence tiling and Track B `softmax @ V` on FPGA.

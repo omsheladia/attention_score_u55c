@@ -48,6 +48,8 @@ docs/       offload design notes
 | TinyLlama setup check | [model/check_tinyllama_setup.py](model/check_tinyllama_setup.py) |
 | Q/K/V extraction + INT8 quant | [model/extract_tinyllama_qkv.py](model/extract_tinyllama_qkv.py) |
 | Real vector export (single-tile) | [model/export_real_vectors.py](model/export_real_vectors.py) |
+| CPU attention baseline | [model/benchmark_cpu.py](model/benchmark_cpu.py) |
+| GPU attention baseline | [model/benchmark_gpu.py](model/benchmark_gpu.py) |
 | Score GEMM HLS | [hls/attention_score/attention_score_core_hls.cpp](hls/attention_score/attention_score_core_hls.cpp) |
 | Mask+scale HLS | [hls/mask_and_scale/mask_scale_core_hls.cpp](hls/mask_and_scale/mask_scale_core_hls.cpp) |
 | Causal mask HLS | [hls/causal_mask/causal_mask_core_hls.cpp](hls/causal_mask/causal_mask_core_hls.cpp) |
@@ -320,6 +322,14 @@ lengths, and later `attn_out` comparison once Track B exists.
 Measure FPGA `attn_out` latency against CPU/GPU at S = 8, 64, 128, 256, 512.
 CPU and GPU baselines run on Windows. FPGA timing requires Linux + XRT.
 
+Steps 1–2 are implemented: `model/benchmark_cpu.py` runs the CPU baseline for
+synthetic S = 8, 64, 128, 256, 512 and real-vector input, validated with zero
+tiled-vs-brute difference for softmax and `softmax @ V`; `model/benchmark_gpu.py`
+runs the CUDA baseline with the same inputs, verified on an RTX 3050 Laptop GPU
+(`torch 2.11.0+cu128`). Final speedup numbers require Track A full-sequence
+FPGA tiling (Step 3) and Track B `softmax @ V` on FPGA before a meaningful
+comparison can be made.
+
 See [docs/implementation_checklist.md](docs/implementation_checklist.md) for the
 full step-by-step plan for all four tracks.
 
@@ -410,11 +420,10 @@ in the implementation checklist.
 - Step 4 tiling extension: blocked on Track A Step 3 (full-row softmax + host tiling loop)
 - Step 5 full-coverage extension: run multiple real-vector sequence lengths; compare softmax output now, or `attn_out` once Track B is done, against PyTorch reference
 
-**Track D — Benchmarking:**
-1. CPU baseline in Python (runnable on Windows now)
-2. GPU baseline in PyTorch (runnable on Windows if CUDA available)
-3. FPGA timing instrumentation (requires Linux + XRT)
-4. Comparison table and analysis
+**Track D — Steps 1–2 done; remaining:**
+- Steps 1–2 complete: `model/benchmark_cpu.py` verified for synthetic S = 8, 64, 128, 256, 512 and real-vector input; `model/benchmark_gpu.py` verified on RTX 3050 Laptop GPU.
+- Step 3: FPGA timing instrumentation — blocked on Track A full-sequence tiling (requires Linux + XRT)
+- Step 4: Comparison table and speedup analysis — blocked on Step 3 and Track B `softmax @ V`
 
 **Future (post-hardware confirmation):**
 1. Double-buffer DMA transfers
