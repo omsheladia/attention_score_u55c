@@ -14,7 +14,7 @@ The kernel computes one K/V chunk:
 out[row, dim] = sum_col weights[row, col] * v[col, dim]
 ```
 
-The XRT host will accumulate these partial outputs across all K/V chunks to
+The XRT host accumulates these partial outputs across all K/V chunks to
 produce final `attn_out` with shape `S x 64`.
 
 Verified on 2026-05-03:

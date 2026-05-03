@@ -43,9 +43,10 @@ The HLS C-sim testbench consumes:
 - `kernel_meta.txt`
 - `metadata.json`
 
-The current XRT host verifies `score_raw`, `score_scaled`, and
-`score_softmax`. `score_masked` remains useful for the legacy standalone
-causal-mask testbench.
+The current XRT host verifies `score_raw`, `score_scaled`, `score_softmax`, and
+`attn_out` when `v_full.txt` plus `attn_out.txt` or `attn_ref_float.txt` are
+present. `score_masked` remains useful for the legacy standalone causal-mask
+testbench.
 
 The real TinyLlama directories keep the same current-host input/output file
 names, plus `q_float.txt`, `k_float.txt`, `v_full.txt`, and

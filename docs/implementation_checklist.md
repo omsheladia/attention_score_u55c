@@ -941,10 +941,11 @@ synthetic `S = 8, 64, 128, 256, 512` and real TinyLlama
 It uses the same synthetic and real-vector inputs as the CPU baseline, validates
 GPU output against CPU output, and times score+softmax and full `softmax @ V`
 scopes. After installing a CUDA-enabled PyTorch build, the RTX 3050 Laptop GPU
-validated synthetic `S = 8, 64, 128, 256, 512` and
-`sim/real_tinyllama_tile/`. The current Linux run used for
-`docs/track_d_results.md` had no CUDA-visible GPU, so GPU timings are recorded
-as `N/A` there.
+validated synthetic `S = 8, 64, 128, 256, 512`, legacy
+`sim/real_tinyllama_tile/`, and full-sequence `sim/real_tinyllama_s16` /
+`sim/real_tinyllama_s64`. The Linux U55C report machine had no CUDA-visible
+GPU, so `docs/track_d_results.md` records Windows RTX 3050 GPU timings with
+that environment caveat.
 
 ### What to do
 
@@ -1019,7 +1020,7 @@ as `N/A` there.
 | Step | Effort | Testable on Windows | Prerequisite |
 |------|--------|---------------------|--------------|
 | D1 — CPU baseline | 1–2 hrs | Yes | Complete for synthetic and real S16/S64 |
-| D2 — GPU baseline | 1–2 hrs | Yes (needs CUDA GPU) | Infrastructure complete; current Linux run had CUDA unavailable |
+| D2 — GPU baseline | 1–2 hrs | Yes (needs CUDA GPU) | Verified on Windows RTX 3050; results table updated |
 | D3 — FPGA timing | 1–2 hrs | No (needs XRT) | Complete for synthetic S8-S512 and real S16/S64 |
 | D4 — Comparison | 1–2 hrs | Yes | Complete in `docs/track_d_results.md` |
 

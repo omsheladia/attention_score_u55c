@@ -591,7 +591,7 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
 
 **Track D — Complete for the current staged one-head design:**
 - `model/benchmark_cpu.py` verified synthetic S = 8, 64, 128, 256, 512 and real vectors S=16/S=64.
-- `model/benchmark_gpu.py` exists, but the current Linux run reported CUDA unavailable, so GPU timings are `N/A` in the current report.
+- `model/benchmark_gpu.py` was verified on the Windows RTX 3050 Laptop GPU; `docs/track_d_results.md` now includes those Windows GPU timings with a note that the Linux/U55C report machine had no CUDA-visible GPU.
 - `host/attention_score_chain_xrt.cpp` now prints `kernel_launch_wait_sum`, `host_dma_sync_gap`, and `total_chain`.
 - `docs/track_d_results.md` contains CPU/FPGA comparison tables, real-vector tables, HBM bank usage, and the performance interpretation.
 - Main conclusion: correct staged FPGA path, HBM banks `[0]` through `[7]` used, but slower than one-head CPU NumPy due kernel launch and HBM staging overhead.

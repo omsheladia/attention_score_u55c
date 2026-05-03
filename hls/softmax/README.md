@@ -7,7 +7,6 @@ This kernel is the stage after scaling:
 It performs row-wise softmax over the active key columns for one fixed `8 x 64`
 tile.
 
-This is correct for the current single-tile verification and for sequence
-lengths with only one K chunk (`S <= 64`). For `S > 64`, softmax must normalize
-across every key in the full row, so Track A calls for a new full-row softmax
-kernel/design before multi-K-chunk sequence tests can be considered correct.
+This is correct for the legacy single-tile verification and for tile-local
+softmax checks. For `S > 64`, softmax must normalize across every key in the
+full row, so the current tiled XRT path uses `hls/softmax_full_row/` instead.

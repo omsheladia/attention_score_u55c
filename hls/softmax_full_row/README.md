@@ -1,6 +1,6 @@
 # Full-Row Softmax HLS Kernel
 
-This kernel is the Track A Step 4 correctness bridge for sequence lengths with
+This kernel is the Track A Step 3 correctness bridge for sequence lengths with
 more than one 64-column K chunk.
 
 The existing `hls/softmax/` kernel normalizes one fixed `8 x 64` tile. That is
@@ -26,4 +26,6 @@ Vitis HLS:
 vitis_hls -f attention_score_u55c/hls/softmax_full_row/run_hls.tcl
 ```
 
-This kernel is not yet wired into the XRT host chain or `build_xclbin.sh`.
+This kernel is wired into the tiled XRT host chain and `build_xclbin.sh`.
+Synthetic `--seq-len` real-card runs pass for `S = 8, 64, 128, 256, 512`, and
+saved-vector real TinyLlama runs pass for `S=16` and `S=64`.

@@ -56,7 +56,8 @@ What is intentionally **not** implemented in this isolated flow:
 
 - full Q/K/V projection path on FPGA
 - live RoPE generation in the full runtime path
-- multi-sequence real TinyLlama V-vector export
+- larger real TinyLlama vector sweeps beyond the currently verified S=16/S=64
+  full-sequence directories
 - decoder-layer integration
 - full TinyLlama inference
 
@@ -259,8 +260,8 @@ verified run used the default 8-token prompt and wrote
 `sim/real_tinyllama_tile/`. Local C++ benches passed against that directory for
 `attention_score`, `mask_scale`, and `softmax`. Track B later added FPGA
 `softmax @ V` consumption of `v_full.txt` and comparison against
-`attn_ref_float.txt`; full multi-sequence real-vector tiling is still future
-work.
+`attn_ref_float.txt`; Track C later added full-sequence real-vector directories
+for `S=16` and `S=64`.
 
 On 2026-05-02, `sim/real_tinyllama_tile/` was run on the real U55C with the
 current 3-kernel XRT host and existing hardware bitstream UUID
@@ -276,8 +277,9 @@ score, mask+scale, and softmax. The current five-kernel xclbin also consumes
 The same day, `README.md`, `host/README.md`, `model/README.md`,
 `docs/implementation_checklist.md`, and `CLAUDE.md` were refreshed to reflect
 that real-card `sim/real_tinyllama_tile/` result. Track C Step 5 is now marked
-complete for the current single-tile 3-kernel design only; multi-length real
-vectors still require Track A host tiling with the full-row softmax kernel.
+complete for the current single-tile 3-kernel design only in that historical
+snapshot. Later Track A/Track B work added the full-row tiled host path and
+Track C verified full-sequence real-vector directories for `S=16` and `S=64`.
 
 On 2026-05-03, Track D Steps 1-2 benchmark infrastructure was added:
 
@@ -852,7 +854,19 @@ design:
   `host_dma_sync_gap`, and `total_chain`.
 - CPU baselines were run with `/home/advent/kmhatre/DT/bin/python`; GPU
   baseline was attempted, but this Linux environment reported
-  `CUDA is not available; GPU baseline skipped.`
+  `CUDA is not available; GPU baseline skipped.` This only applies to the Linux
+  Track D report machine; the CUDA script was separately verified on the
+  Windows RTX 3050 Laptop GPU.
+- GPU timings were later completed on Windows with `torch 2.11.0+cu128`,
+  CUDA 12.8, and the NVIDIA GeForce RTX 3050 Laptop GPU:
+  - synthetic full-attention timings: `S=8 0.3349 ms`,
+    `S=64 0.2507 ms`, `S=128 0.2998 ms`, `S=256 0.2726 ms`,
+    `S=512 0.2461 ms`
+  - real-vector full-attention timings:
+    `sim/real_tinyllama_s16 0.3278 ms`,
+    `sim/real_tinyllama_s64 0.3778 ms`
+  - these are recorded in `docs/track_d_results.md` as separate Windows GPU
+    baseline numbers, not same-host Linux/U55C measurements
 - Real U55C synthetic FPGA timings:
   - `S=8`: CPU `0.0322 ms`, FPGA total `0.803 ms`, compute `0.275 ms`
   - `S=64`: CPU `0.2920 ms`, FPGA total `2.864 ms`, compute `2.143 ms`
@@ -871,6 +885,10 @@ design:
   NumPy baseline because the staged design pays repeated kernel launch and HBM
   round-trip overhead. Next performance work should focus on fusion/dataflow
   and keeping intermediates resident on-card.
+
+On 2026-05-03, the live README files were refreshed to remove stale
+three-kernel/pre-Track-B wording and reflect the current staged five-kernel
+flow, real TinyLlama `S=16`/`S=64` vector results, and Track D GPU timing note.
 
 ## Best Next Step
 

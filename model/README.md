@@ -33,7 +33,7 @@ reference.
 - `benchmark_cpu.py`
   - Track D Step 1 CPU baseline
   - benchmarks synthetic scaling lengths and optional real exported vectors
-  - reports both current score+mask+scale+softmax scope and future +V scope
+  - reports both score+mask+scale+softmax and full `softmax @ V` scopes
 - `benchmark_gpu.py`
   - Track D Step 2 CUDA baseline
   - uses the same synthetic and real-vector inputs as the CPU baseline
@@ -276,6 +276,8 @@ CUDA GPU baseline, if a CUDA GPU is available:
 ```bash
 python model/benchmark_gpu.py
 python model/benchmark_gpu.py --vectors sim/real_tinyllama_tile
+python model/benchmark_gpu.py --vectors sim/real_tinyllama_s16
+python model/benchmark_gpu.py --vectors sim/real_tinyllama_s64
 ```
 
 The CPU script validates the tiled path against the brute-force NumPy path
@@ -294,9 +296,9 @@ NVIDIA GeForce RTX 3050 Laptop GPU
 ```
 
 The synthetic GPU run validated `S = 8, 64, 128, 256, 512` against the CPU
-reference. The real-vector GPU run matched
-`sim/real_tinyllama_tile/score_softmax.txt` with max difference
-`2.98023224e-08`.
+reference. Real-vector GPU runs have also been completed for the legacy
+single-tile directory and full-sequence `sim/real_tinyllama_s16` /
+`sim/real_tinyllama_s64` directories.
 
 The current CPU/GPU/FPGA comparison is recorded in:
 

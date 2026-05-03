@@ -29,7 +29,7 @@ This is still not a full TinyLlama runtime or model-level tokens/sec benchmark.
 - Python reference math for one attention-score tile
 - Python full-sequence tiled score/softmax reference checks
 - deterministic vector export for simulation and HLS C-sim
-- TinyLlama setup check for later real Q/K/V extraction
+- TinyLlama setup, Q/K/V extraction, quantization, and real-vector export
 - U55C-oriented HLS kernels for:
   - INT8 score GEMM
   - merged causal mask + score scaling
@@ -82,7 +82,7 @@ runtime keeps mask+scale, softmax, and V weighted sum as staged kernels.
 - `hls/softmax_full_row/`: full-row softmax kernel for tiled `S <= 512`
 - `hls/v_weighted_sum/`: Track B partial `softmax @ V` kernel
 - `host/`: native XRT host app and Linux build helpers
-- `sim/`: generated vectors for the isolated score path
+- `sim/`: generated synthetic and real-vector cases for the staged attention path
 - `rtl/`: notes for later RTL lowering
 - `backups/`: local preservation backups for known-good hardware runs
 

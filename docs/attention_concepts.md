@@ -71,8 +71,15 @@ After the raw score is computed, three more operations follow:
    values from making the softmax numerically unstable
 3. **Softmax** — convert each row into probabilities that sum to 1
 
-The softmax output is then multiplied by V to produce the final attended output
-— but that step (softmax @ V) is out of scope for this project.
+The softmax output is then multiplied by V to produce the final attended output:
+
+```
+attn_out = softmax(score) @ V
+```
+
+The current staged FPGA design implements this final `softmax @ V` step for one
+attention head with a V weighted-sum kernel. The full TinyLlama decoder around
+that one-head block remains out of scope.
 
 ---
 
@@ -225,8 +232,11 @@ tiles per head = Q-chunks × K-chunks
 | 512     | 64       | 8        | 512        | 16,384            | 360,448                 |
 | 2048    | 256      | 32       | 8,192      | 262,144           | 5,767,168               |
 
-This project currently runs **one tile of one head** — the hardware is correct
-and verified, but the host tiling loop does not yet exist.
+This project now supports the tiled staged flow for **one attention head**. The
+host tiling loop covers synthetic sequence lengths `S = 8, 64, 128, 256, 512`,
+and the legacy single-tile path remains useful as a sanity check. Real
+TinyLlama vector-mode runs are verified for the legacy single-tile directory
+and for current full-sequence directories at `S=16` and `S=64`.
 
 ### How the tile counts are derived
 
@@ -306,7 +316,7 @@ Quantize to INT8
                                          score_softmax_fp32  (S, S)
                                            │
                             ◀──────────────┘
-softmax @ V  (S, 64)   ← back on CPU, out of scope for this project
+softmax @ V  (S, 64)   staged FPGA V weighted-sum kernel
 Output projection
 Feed-forward layer
 ...
@@ -330,21 +340,29 @@ real hardware is available.
 
 ---
 
-## 12. What Needs to Be Built to Support This
+## 12. What Has Been Built, and What Remains
 
-The hardware kernels are already correct and verified. The missing piece is the
-**host-side tiling loop**, needed in two places:
+The current repo has the correctness-first tiled path built and verified for one
+attention head:
 
-1. **Python reference** (`model/attention_score_ref.py`) — add a function that
-   accepts full Q and K matrices of any seq_len, tiles them, calls
-   `compute_attention_score_tile` for each pair, and reassembles the full score
-   matrix. This is the software golden reference to verify correctness at each
-   test sequence length.
+1. **Python reference** (`model/attention_score_ref.py`) supports full-sequence
+   tiled score computation, full-row softmax, and `softmax @ V`. The
+   `--check-full-tiling` check covers `S = 8, 64, 128, 256, 512`.
 
-2. **XRT host app** (`host/attention_score_chain_xrt.cpp`) — add the same nested
-   tiling loop that calls the 4-stage FPGA kernel chain for each tile and writes
-   results back into the correct position in the output buffer.
+2. **XRT host app** (`host/attention_score_chain_xrt.cpp`) supports synthetic
+   `--seq-len` mode and saved-vector `--vectors` mode. It launches the staged
+   score, mask/scale, full-row softmax, and V weighted-sum kernels.
 
-The causal mask kernel already accepts `query_pos_base` and `key_pos_base` —
-these are set per tile as `q_chunk * 8` and `k_chunk * 64`, so the hardware
-already knows which positions to mask. No hardware changes are needed.
+3. **HLS kernels** include the score GEMM, merged mask/scale, full-row softmax
+   for `S <= 512`, and V weighted-sum stages.
+
+4. **Real TinyLlama vectors** can be exported from PyTorch Q/K/V hooks. The
+   legacy single-tile case and full-sequence `S=16` and `S=64` directories have
+   been run through the real U55C flow.
+
+What remains is performance and integration work rather than basic correctness:
+
+- reduce staged HBM round trips and repeated kernel launch overhead
+- run larger real-vector sweeps such as `S=128`, `S=256`, and `S=512`
+- connect the one-head block into a larger TinyLlama attention subgraph
+- eventually handle full decoder-layer integration and KV-cache-aware decode

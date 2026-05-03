@@ -27,7 +27,22 @@ GPU baseline:
 ```
 
 This run printed `CUDA is not available; GPU baseline skipped.` for the current
-Linux environment.
+Linux environment. GPU timings in the tables below were completed separately on
+the Windows laptop with:
+
+```text
+torch 2.11.0+cu128
+CUDA 12.8
+NVIDIA GeForce RTX 3050 Laptop GPU
+```
+
+Windows GPU commands:
+
+```powershell
+python model\benchmark_gpu.py --iterations 100 --warmup 10
+python model\benchmark_gpu.py --vectors sim\real_tinyllama_s16 --iterations 100 --warmup 10
+python model\benchmark_gpu.py --vectors sim\real_tinyllama_s64 --iterations 100 --warmup 10
+```
 
 FPGA synthetic sweep:
 
@@ -68,11 +83,11 @@ syncs, reads, host staging, and other non-kernel overhead observed by the host.
 
 | S | tiles | CPU full attn ms | GPU full attn ms | FPGA compute ms | Host/DMA gap ms | FPGA total ms | CPU/FPGA |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 8 | 1 | 0.0322 | N/A | 0.275 | 0.528 | 0.803 | 0.04x |
-| 64 | 8 | 0.2920 | N/A | 2.143 | 0.721 | 2.864 | 0.10x |
-| 128 | 32 | 2.5009 | N/A | 5.250 | 1.742 | 6.992 | 0.36x |
-| 256 | 128 | 3.9523 | N/A | 18.601 | 1.969 | 20.570 | 0.19x |
-| 512 | 512 | 12.3290 | N/A | 69.792 | 3.149 | 72.941 | 0.17x |
+| 8 | 1 | 0.0322 | 0.3349 | 0.275 | 0.528 | 0.803 | 0.04x |
+| 64 | 8 | 0.2920 | 0.2507 | 2.143 | 0.721 | 2.864 | 0.10x |
+| 128 | 32 | 2.5009 | 0.2998 | 5.250 | 1.742 | 6.992 | 0.36x |
+| 256 | 128 | 3.9523 | 0.2726 | 18.601 | 1.969 | 20.570 | 0.19x |
+| 512 | 512 | 12.3290 | 0.2461 | 69.792 | 3.149 | 72.941 | 0.17x |
 
 All FPGA runs printed:
 
@@ -86,8 +101,8 @@ XRT chain verification PASSED
 
 | vector dir | S | tiles | CPU full attn ms | GPU full attn ms | FPGA compute ms | Host/DMA gap ms | FPGA total ms | CPU/FPGA |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| `sim/real_tinyllama_s16` | 16 | 2 | 0.0426 | N/A | 0.582 | 0.906 | 1.488 | 0.03x |
-| `sim/real_tinyllama_s64` | 64 | 8 | 0.1523 | N/A | 1.722 | 1.372 | 3.094 | 0.05x |
+| `sim/real_tinyllama_s16` | 16 | 2 | 0.0426 | 0.3278 | 0.582 | 0.906 | 1.488 | 0.03x |
+| `sim/real_tinyllama_s64` | 64 | 8 | 0.1523 | 0.3778 | 1.722 | 1.372 | 3.094 | 0.05x |
 
 Both real-vector FPGA runs printed:
 
@@ -122,6 +137,9 @@ but does not yet keep the full attention pipeline resident on-card.
 
 - The current FPGA pipeline is correct for synthetic `S = 8, 64, 128, 256, 512`
   and real TinyLlama `S = 16, 64`.
+- The GPU baseline was completed on a separate Windows RTX 3050 Laptop GPU
+  environment. Treat it as a useful PyTorch GPU reference, not a same-host
+  measurement alongside the Linux/U55C FPGA runs.
 - The staged FPGA implementation is slower than the local CPU NumPy baseline
   for this one-head workload. That is expected for the current architecture:
   the work is small, kernels are launched many times, and intermediate data is

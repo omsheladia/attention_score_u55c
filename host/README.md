@@ -1,16 +1,22 @@
 # XRT Host Flow
 
 This folder is the host-side step for running the isolated attention-score
-chain on a U55C. The proven real-card path is still the single-tile three-kernel
-flow, while the current synthetic `hw_emu` path has advanced to a five-kernel
-attention-output flow.
+chain on a U55C. The current proven real-card path is the staged five-kernel
+one-head attention-output flow for synthetic `--seq-len` runs, plus saved-vector
+`--vectors` runs for synthetic and real TinyLlama-derived vectors.
 
 ```text
 Q_rot_int8, K_rot_int8
 -> attention_score_u55c_kernel
 -> mask_scale_u55c_kernel
--> softmax_u55c_kernel
+-> softmax_full_row_u55c_kernel
+-> v_weighted_sum_u55c_kernel
+-> attn_out_fp32
 ```
+
+The legacy single-tile `--vectors` path still uses `softmax_u55c_kernel` and
+can also run `v_weighted_sum_u55c_kernel` when `v_full.txt` and an attention
+reference are present.
 
 ## Files
 
@@ -39,7 +45,8 @@ Q_rot_int8, K_rot_int8
 - U55C platform installed
 - one linked `.xclbin` containing the runtime kernels
 - vectors already exported under `sim/attention_score_tile/` or
-  `sim/real_tinyllama_tile/`
+  real TinyLlama directories such as `sim/real_tinyllama_tile/`,
+  `sim/real_tinyllama_s16/`, or `sim/real_tinyllama_s64/`
 
 ## Example Linux Flow
 
@@ -140,15 +147,17 @@ XRT chain verification PASSED
 There are two useful meanings of "deployable" here:
 
 1. **Tile-demo deployable**
-   - enough to run this isolated three-kernel score path on the card
-   - this host app is meant for that stage
+   - enough to run the isolated staged attention path on the card
+   - this now includes score, mask/scale, softmax, and optional V weighted sum
 2. **Model deployable**
    - enough to run a meaningful end-to-end attention path inside the larger
      TinyLlama accelerator
    - that still needs more blocks and system integration
 
 Right now this workspace has reached the first meaning for a single tile and
-for synthetic tiled sequence lengths through final one-head `attn_out`. Track A
-Step 4 also added double-buffered pass-1 BO sets in the tiled host path. Track B
-Step 3 real hardware sequence sweeps pass for `S = 8, 64, 128, 256, 512`; the
-latest five-kernel S=512 run completed in `84.190 ms`.
+for synthetic tiled sequence lengths through final one-head `attn_out`. It also
+passes real TinyLlama-derived vector mode for the legacy single-tile case and
+full-sequence `S=16` / `S=64` directories. Track A Step 4 added
+double-buffered pass-1 BO sets in the tiled host path. Track B Step 3 real
+hardware sequence sweeps pass for `S = 8, 64, 128, 256, 512`; the latest
+five-kernel S=512 run completed in `84.190 ms`.
