@@ -21,6 +21,7 @@ This is not yet a full TinyLlama runtime or tokens/sec benchmark.
 
 - Python reference math for one attention-score tile
 - deterministic vector export for simulation and HLS C-sim
+- TinyLlama setup check for later real Q/K/V extraction
 - U55C-oriented HLS kernels for:
   - INT8 score GEMM
   - merged causal mask + score scaling
@@ -61,7 +62,7 @@ runtime keeps mask+scale and softmax as separate kernels.
 ## Layout
 
 - `docs/`: offload notes, mapping explanation, and exact FPGA run commands
-- `model/`: isolated Python reference and vector exporter
+- `model/`: isolated Python reference, vector exporter, and TinyLlama setup checker
 - `hls/attention_score/`: INT8 score GEMM kernel and testbench
 - `hls/mask_and_scale/`: current merged mask+scale kernel
 - `hls/causal_mask/`: legacy standalone mask kernel
@@ -77,19 +78,19 @@ runtime keeps mask+scale and softmax as separate kernels.
 The verified real-card command is:
 
 ```bash
-source attention_score_u55c/host/setup_2022_2_env.sh
+source host/setup_2022_2_env.sh
 unset XCL_EMULATION_MODE
 
-./attention_score_u55c/build/host_attention_score_chain \
-  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
-  --vectors attention_score_u55c/sim/attention_score_tile \
+./build/host_attention_score_chain \
+  --xclbin build/attention_score_chain.xclbin \
+  --vectors sim/attention_score_tile \
   --device 0
 ```
 
 Or use the helper:
 
 ```bash
-bash attention_score_u55c/host/run_hw.sh 0
+bash host/run_hw.sh 0
 ```
 
 The host app verifies FPGA outputs against the exported reference vectors:
@@ -121,23 +122,23 @@ backups/run_20260429_201240/
 
 ## Quick Start
 
-From the parent repo root, generate vectors and run the local C++ checks:
+From the repo root, generate vectors and run the local C++ checks:
 
 ```bash
-bash attention_score_u55c/host/run_local_csim.sh
+bash host/run_local_csim.sh
 ```
 
 Build the XRT host:
 
 ```bash
-source attention_score_u55c/host/setup_2022_2_env.sh
-bash attention_score_u55c/host/build_host.sh
+source host/setup_2022_2_env.sh
+bash host/build_host.sh
 ```
 
 Build hardware emulation:
 
 ```bash
-bash attention_score_u55c/host/build_xclbin.sh \
+bash host/build_xclbin.sh \
   hw_emu \
   /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
 ```
@@ -145,9 +146,21 @@ bash attention_score_u55c/host/build_xclbin.sh \
 Build real hardware:
 
 ```bash
-bash attention_score_u55c/host/build_xclbin.sh \
+bash host/build_xclbin.sh \
   hw \
   /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+```
+
+Check TinyLlama Python setup for Track C real-vector work:
+
+```bash
+python model/check_tinyllama_setup.py
+```
+
+Expected pass signal:
+
+```text
+TinyLlama forward pass OK
 ```
 
 For the full command runbook, see:

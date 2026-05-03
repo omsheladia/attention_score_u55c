@@ -464,18 +464,18 @@ Track B (V kernel) must be working before real V is useful.
 
 ### What to do
 
-- [ ] Install dependencies:
+- [x] Install dependencies:
   ```
   pip install torch transformers sentencepiece
   ```
-- [ ] Download TinyLlama-1.1B weights (HuggingFace):
+- [x] Download TinyLlama-1.1B weights (HuggingFace):
   ```python
   from transformers import AutoTokenizer, AutoModelForCausalLM
   model = AutoModelForCausalLM.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
   tokenizer = AutoTokenizer.from_pretrained("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
   ```
-- [ ] Confirm a basic forward pass runs without error on a short sentence
-- [ ] Note: model weights are ~2.2 GB — ensure enough disk space
+- [x] Confirm a basic forward pass runs without error on a short sentence
+- [x] Note: model weights are ~2.2 GB — ensure enough disk space
 
 ---
 

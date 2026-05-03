@@ -200,6 +200,28 @@ runtime. Updated files include `README.md`, `host/README.md`, `hls/README.md`,
 `hls/softmax/README.md`, and `sim/README.md`. The historical READMEs under
 `backups/run_20260429_201240/repo_snapshot/` were intentionally left unchanged.
 
+On 2026-05-02, Track C Step 1 was started with
+`model/check_tinyllama_setup.py`. The script checks for `torch`,
+`transformers`, and `sentencepiece`, loads
+`TinyLlama/TinyLlama-1.1B-Chat-v1.0` or a local model path, and runs one short
+forward pass. Local verification performed here was limited to `py_compile` and
+`--help`; the 2.2 GB model download/load and forward pass still need to be run
+in an environment with the dependencies and enough disk/RAM/GPU capacity. The
+current Python environment has `torch` and `transformers` discoverable but is
+missing `sentencepiece`.
+
+Later on 2026-05-02, the user installed the missing dependency and ran:
+`python model/check_tinyllama_setup.py`. TinyLlama loaded on CPU with
+`torch.float32`, the weights loaded successfully, the input shape was `(1, 8)`,
+the logits shape was `(1, 8, 32000)`, and the script printed
+`TinyLlama forward pass OK`. Track C Step 1 is therefore implemented and
+verified.
+
+The same day, `README.md`, `model/README.md`, and `host/README.md` were updated
+to mention the Track C TinyLlama setup checker and to use current repo-root
+paths (`host/...`, `model/...`, `sim/...`) instead of stale nested
+`attention_score_u55c/...` command paths.
+
 ## Tile And Sequence-Length Model
 
 The hardware tile shape remains fixed:
@@ -264,6 +286,7 @@ Key subfolders:
 
 - `model/attention_score_ref.py`
 - `model/export_attention_score_vectors.py`
+- `model/check_tinyllama_setup.py`
 
 These export deterministic vectors under:
 

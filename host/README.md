@@ -32,29 +32,29 @@ Q_rot_int8, K_rot_int8
 - XRT installed and sourced
 - U55C platform installed
 - one linked `.xclbin` containing the three runtime kernels
-- vectors already exported under `attention_score_u55c/sim/attention_score_tile/`
+- vectors already exported under `sim/attention_score_tile/`
 
 ## Example Linux Flow
 
 Local C++ simulation, no Vitis/XRT required:
 
 ```bash
-bash attention_score_u55c/host/run_local_csim.sh
+bash host/run_local_csim.sh
 ```
 
 Full U55C/XRT flow:
 
 ```bash
-source attention_score_u55c/host/setup_2022_2_env.sh
+source host/setup_2022_2_env.sh
 
-python3 attention_score_u55c/model/export_attention_score_vectors.py
+python3 model/export_attention_score_vectors.py
 
-bash attention_score_u55c/host/build_xclbin.sh hw_emu /path/to/u55c_platform.xpfm
-bash attention_score_u55c/host/build_host.sh
+bash host/build_xclbin.sh hw_emu /path/to/u55c_platform.xpfm
+bash host/build_host.sh
 
-./attention_score_u55c/build/host_attention_score_chain \
-  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
-  --vectors attention_score_u55c/sim/attention_score_tile \
+./build/host_attention_score_chain \
+  --xclbin build/attention_score_chain.xclbin \
+  --vectors sim/attention_score_tile \
   --device 0
 ```
 
@@ -64,7 +64,7 @@ Known-good real-card run after the U55C is on shell
 `xilinx_u55c_gen3x16_xdma_base_3`:
 
 ```bash
-bash attention_score_u55c/host/run_hw.sh 0
+bash host/run_hw.sh 0
 ```
 
 The host prints per-kernel timing and total chain timing using host wall-clock
