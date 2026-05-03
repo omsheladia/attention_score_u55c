@@ -644,7 +644,6 @@ Current pulled-state note:
 
 Not yet confirmed:
 
-- full-sequence real TinyLlama vector export beyond the current 8-token tile
 - automated synthetic Track A regression through multiple vector directories
 - XRT `hw_emu` run using `sim/real_tinyllama_tile/`
 - CPU/GPU/FPGA baseline comparison for final acceleration claims
@@ -652,11 +651,10 @@ Not yet confirmed:
 - full TinyLlama model execution
 
 So the project is now a proven **tiled one-head attention FPGA demo** for
-synthetic sequence lengths up to `S=512`, with saved-vector single-tile
-`attn_out` verification, but not yet a full TinyLlama hardware runtime.
-Track C Steps 1-3 are implemented and verified locally; Track C Step 4 is
-implemented for the current single-tile vector design and verified with local
-C++ benches plus real-card XRT runs through `attn_out`.
+synthetic sequence lengths up to `S=512`, with saved-vector real TinyLlama
+`attn_out` verification in both single-tile and tiled full-sequence modes, but
+not yet a full TinyLlama hardware runtime.
+Track C Steps 1-5 are now implemented for the current one-head staged design.
 
 On 2026-05-02, Track A Step 3 Part A was implemented in
 `model/attention_score_ref.py`. New helpers include
@@ -811,6 +809,39 @@ emulation:
   - `sim/real_tinyllama_tile`: `attn_ref_float.txt`, `total_chain 0.258 ms`,
     `Attention output verification PASSED`, `XRT chain verification PASSED`
 
+On 2026-05-03, Track C was extended beyond the legacy single-tile
+`sim/real_tinyllama_tile/` directory:
+
+- `model/export_real_vectors.py` now supports full-sequence tiled export when
+  `--seq-len <S>` is provided, up to the current full-row softmax limit
+  `S <= 512`.
+- full-sequence real-vector directories include `q_full.txt`, `k_full.txt`,
+  `v_full.txt`, full `score_raw.txt`, full `score_scaled.txt`, full
+  `score_softmax.txt`, quantized-pipeline `attn_out.txt`, full-float
+  TinyLlama `attn_ref_float.txt`, and first-tile compatibility files.
+- The XRT host now detects `q_full.txt`/`k_full.txt` in `--vectors <dir>` mode
+  and runs the tiled full-sequence path instead of the legacy single-tile path.
+- `model/check_tinyllama_setup.py`, `model/extract_tinyllama_qkv.py`, and
+  `model/export_real_vectors.py` now pass `torch_dtype=...` to Transformers
+  for compatibility with the 4.x stack used in this environment.
+- Generated and verified real TinyLlama full-sequence vector directories:
+  - `sim/real_tinyllama_s16`: `S=16`, q_chunks=2, k_chunks=1,
+    quantized-vs-float `attn_out` max error `2.67604024e-04`
+  - `sim/real_tinyllama_s64`: `S=64`, q_chunks=8, k_chunks=1,
+    quantized-vs-float `attn_out` max error `1.62767614e-04`
+- Real U55C runs passed using the existing five-kernel hardware xclbin:
+  - `--vectors sim/real_tinyllama_s16`: total `0.985 ms`,
+    `Tiled sequence verification PASSED`, `Attention output verification PASSED`,
+    `XRT chain verification PASSED`
+  - `--vectors sim/real_tinyllama_s64`: total `2.510 ms`,
+    `Tiled sequence verification PASSED`, `Attention output verification PASSED`,
+    `XRT chain verification PASSED`
+- Environment note: default `/usr/bin/python3` on this shared machine did not
+  have `torch`, `transformers`, or `sentencepiece`. Verification used the
+  existing `/home/advent/kmhatre/DT/bin/python` for `torch` plus temporary
+  `/tmp/attention_score_trackc_pydeps` for `transformers`/`sentencepiece`, and
+  `/tmp/attention_score_hf_cache` for the model cache.
+
 ## Best Next Step
 
 Track A Steps 1-4 are complete for the current staged design. Track A Step 5
@@ -818,7 +849,7 @@ remains a future fusion/dataflow milestone, not required before starting
 dependent work. Best next practical steps are:
 
 1. add/update CPU/GPU/FPGA comparison tables using the real U55C sequence sweep
-2. extend Track C real TinyLlama export beyond the current 8-token single tile
+2. add Track D comparison tables for synthetic and real-vector FPGA runs
 3. if more score-kernel speed is needed after that, prefer wider packing or
    on-chip fusion before chasing higher GEMM unroll, because the 64-bit packed
    interface produced the first material latency drop
@@ -828,11 +859,10 @@ dependent work. Best next practical steps are:
 With Track A Steps 1-4 working across synthetic sequence lengths, the next
 major engineering steps are:
 
-1. extend the existing Track C real-vector export beyond the current single-tile
-   path using the Track A tiled host path
-2. run real vectors through the same FPGA pipeline and compare `attn_out` to
-   PyTorch attention output
-3. Track D: collect CPU/GPU/FPGA timing baselines and speedup tables
+1. Track D: collect CPU/GPU/FPGA timing baselines and speedup tables
+2. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
+   if the demo needs a broader real-input sweep
+3. compare real-vector FPGA `attn_out` timings with CPU/GPU baselines
 4. merge kernels for performance if the staged HBM path becomes the bottleneck
 5. connect to a real TinyLlama attention subgraph
 6. add KV-cache-aware decode flow

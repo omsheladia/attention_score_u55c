@@ -818,12 +818,12 @@ Track B (V kernel) must be working before real V is useful.
 **Effort:** 1–2 hours (assuming Track A Step 3 is already working)  
 **Requires:** XRT on Linux, hw_emu or real hw
 
-**Current status:** implemented and verified for the current single-tile
-five-kernel Track B design using `sim/real_tinyllama_tile/`. The FPGA verifies
-score, softmax, and final `attn_out` against `attn_ref_float.txt` within
-quantization tolerance. Full multi-sentence and multi-length real TinyLlama
-coverage is now unblocked by Track A, but still requires extending the
-real-vector exporter beyond the current 8-token tile.
+**Current status:** implemented and verified for the five-kernel Track B
+design. The legacy single-tile directory `sim/real_tinyllama_tile/` verifies
+against `attn_ref_float.txt`; full-sequence tiled vector directories
+`sim/real_tinyllama_s16/` and `sim/real_tinyllama_s64/` verify against
+quantized-pipeline `attn_out.txt` while also carrying PyTorch full-float
+`attn_ref_float.txt` for inspection.
 
 ### What to do
 
@@ -841,7 +841,7 @@ real-vector exporter beyond the current 8-token tile.
       for the same head — should match within ~1e-3 (quantization error expected)
 - [x] Historical pre-Track-B check: compare FPGA softmax weights output against
       PyTorch softmax only, and note the limitation explicitly
-- [ ] Test on multiple sentences at different lengths
+- [x] Test on multiple sentences at different lengths
 
 Verified real-card helper run:
 
@@ -853,6 +853,13 @@ total_chain                 0.121 ms
 XRT chain verification PASSED
 ```
 
+Verified real-card full-sequence vector runs on 2026-05-03:
+
+| vector dir | S | q_chunks | k_chunks | total ms | pass signal |
+|---|---:|---:|---:|---:|---|
+| `sim/real_tinyllama_s16` | 16 | 2 | 1 | 0.985 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
+| `sim/real_tinyllama_s64` | 64 | 8 | 1 | 2.510 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
+
 ---
 
 ## Track C Priority Order Summary
@@ -863,10 +870,10 @@ XRT chain verification PASSED
 | C2 — Hook Q/K/V extraction | 2–3 hrs | Yes | C1 |
 | C3 — INT8 quantization | 1–2 hrs | Yes | C2 |
 | C4 — Export real vectors | 1 hr | Yes | C3 |
-| C5 — Run on FPGA | 1–2 hrs | No (needs XRT) | C4 for current single tile; Track A Step 3 for full tiling |
+| C5 — Run on FPGA | 1–2 hrs | No (needs XRT) | C4; Track A Step 3 for full tiling |
 
-Track C Steps 1–4 can all be done on Windows as pure Python work while
-Track A hardware bring-up is happening in parallel on the Linux machine.
+Track C Steps 1–4 can all be done on Windows as pure Python work. Step 5 needs
+Linux/XRT hardware for final FPGA validation.
 
 ---
 

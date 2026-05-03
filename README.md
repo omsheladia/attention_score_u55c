@@ -20,9 +20,9 @@ have passed. Track A Steps 1-4 are complete for the staged design. Track B
 Steps 1-3 are complete for synthetic `--seq-len` hardware emulation and real
 U55C hardware: Python `softmax @ V` reference/export, standalone
 `hls/v_weighted_sum/`, five-kernel xclbin integration, and final `attn_out`
-verification all pass. Current saved real TinyLlama single-tile vectors also
-verify through `attn_out`. Multi-length real-vector coverage is still pending,
-so this is not yet a full TinyLlama runtime or tokens/sec benchmark.
+verification all pass. Track C real TinyLlama vectors now run in both the legacy
+single-tile path and the tiled full-sequence vector path at `S=16` and `S=64`.
+This is still not a full TinyLlama runtime or model-level tokens/sec benchmark.
 
 ## What Is In Scope
 
@@ -47,7 +47,6 @@ so this is not yet a full TinyLlama runtime or tokens/sec benchmark.
 
 - Q/K/V projection GEMMs
 - RoPE generation
-- multi-length real TinyLlama V-vector mode
 - runtime controller integration
 - full TinyLlama model execution
 - model-level tokens/sec metrics
@@ -65,10 +64,11 @@ The clean hardware boundary is:
 4. Follow-on U55C kernels apply:
    - merged causal mask and scaling by `q_scale * k_scale * 1/sqrt(head_dim)`
    - softmax
+   - `softmax @ V` weighted-sum accumulation for one attention head
 
 That is the same split already suggested by the main repo's Python exporters:
 raw score accumulation is a clean INT8 x INT8 -> INT32 block, while the current
-runtime keeps mask+scale and softmax as separate kernels.
+runtime keeps mask+scale, softmax, and V weighted sum as staged kernels.
 
 ## Layout
 
@@ -79,6 +79,8 @@ runtime keeps mask+scale and softmax as separate kernels.
 - `hls/causal_mask/`: legacy standalone mask kernel
 - `hls/score_scale/`: legacy standalone scale kernel
 - `hls/softmax/`: current tile softmax kernel
+- `hls/softmax_full_row/`: full-row softmax kernel for tiled `S <= 512`
+- `hls/v_weighted_sum/`: Track B partial `softmax @ V` kernel
 - `host/`: native XRT host app and Linux build helpers
 - `sim/`: generated vectors for the isolated score path
 - `rtl/`: notes for later RTL lowering
@@ -152,6 +154,14 @@ total_chain                 0.258 ms
 Attention output verification PASSED
 XRT chain verification PASSED
 ```
+
+Real TinyLlama full-sequence vector directories have also been exported and
+verified on the real U55C through the tiled five-kernel path:
+
+| directory | S | q_chunks | k_chunks | total_chain ms | pass signal |
+|---|---:|---:|---:|---:|---|
+| `sim/real_tinyllama_s16` | 16 | 2 | 1 | 0.985 | `Attention output verification PASSED` |
+| `sim/real_tinyllama_s64` | 64 | 8 | 1 | 2.510 | `Attention output verification PASSED` |
 
 The preservation backup for the known-good hardware run is:
 
@@ -273,7 +283,7 @@ Expected pass signal:
 TinyLlama forward pass OK
 ```
 
-Export a real TinyLlama single-tile vector case for the current vector flow:
+Export a real TinyLlama single-tile vector case for the legacy vector flow:
 
 ```bash
 python model/export_real_vectors.py --local-files-only
@@ -281,6 +291,20 @@ python model/export_real_vectors.py --local-files-only
 
 This writes `sim/real_tinyllama_tile/`, which has been verified on the real U55C
 with `--vectors sim/real_tinyllama_tile`.
+
+Export real TinyLlama full-sequence vector cases for the tiled vector flow:
+
+```bash
+python model/export_real_vectors.py \
+  --seq-len 16 \
+  --output-dir sim/real_tinyllama_s16 \
+  --text "In a small laboratory, engineers compare attention kernels across hardware targets. The experiment records tokens, latency, and numerical accuracy for each sequence length before the final report is written."
+
+python model/export_real_vectors.py \
+  --seq-len 64 \
+  --output-dir sim/real_tinyllama_s64 \
+  --text "In a small laboratory, engineers compare attention kernels across hardware targets. The experiment records tokens, latency, and numerical accuracy for each sequence length before the final report is written. A second paragraph adds enough context for a longer TinyLlama prompt, describing how query, key, and value tensors move through the FPGA pipeline while software baselines measure the same attention head for validation."
+```
 
 For the full command runbook, see:
 
@@ -302,5 +326,4 @@ This block is easy to offload because:
 ## Next Work
 
 - Add CPU/GPU/FPGA comparison tables
-- Extend real TinyLlama vectors beyond the current 8-token single-tile case
 - Integrate toward a real TinyLlama attention subgraph

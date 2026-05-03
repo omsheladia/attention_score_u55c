@@ -81,6 +81,24 @@ std::vector<T> read_text_vector(const std::string& path, std::size_t elem_count)
   return values;
 }
 
+template <typename T>
+std::vector<T> read_text_vector_all(const std::string& path) {
+  std::ifstream handle(path);
+  if (!handle) {
+    throw std::runtime_error("Failed to open " + path);
+  }
+
+  std::vector<T> values;
+  long double raw_value = 0.0;
+  while (handle >> raw_value) {
+    values.push_back(static_cast<T>(raw_value));
+  }
+  if (values.empty()) {
+    throw std::runtime_error("No values found while reading " + path);
+  }
+  return values;
+}
+
 bool file_exists(const std::string& path) {
   std::ifstream handle(path);
   return static_cast<bool>(handle);
@@ -563,12 +581,41 @@ int run_single_tile(const Args& args, xrt::device& device, const xrt::uuid& uuid
   return 0;
 }
 
-int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& uuid) {
-  if (args.seq_len == 0) {
-    throw std::runtime_error("--seq-len must be positive");
+int run_tiled_inputs(
+    const std::string& label,
+    const std::vector<std::int8_t>& q_full,
+    const std::vector<std::int8_t>& k_full,
+    const std::vector<float>& v_full,
+    float scale,
+    const std::vector<std::int32_t>& raw_expected,
+    const std::vector<float>& logits_expected,
+    const std::vector<float>& softmax_expected,
+    const std::vector<float>& attn_out_expected,
+    float attn_out_tolerance,
+    xrt::device& device,
+    const xrt::uuid& uuid) {
+  if (q_full.empty() || k_full.empty() || v_full.empty()) {
+    throw std::runtime_error("Tiled inputs must not be empty");
+  }
+  if ((q_full.size() % kHeadDim) != 0 || (k_full.size() % kHeadDim) != 0 ||
+      (v_full.size() % kHeadDim) != 0) {
+    throw std::runtime_error("Tiled input sizes must be multiples of head_dim");
   }
 
-  const std::uint32_t seq_len = args.seq_len;
+  const std::uint32_t seq_len = static_cast<std::uint32_t>(q_full.size() / kHeadDim);
+  if (seq_len == 0) {
+    throw std::runtime_error("Tiled sequence length must be positive");
+  }
+  if ((k_full.size() / kHeadDim) != seq_len || (v_full.size() / kHeadDim) != seq_len) {
+    throw std::runtime_error("Current tiled host path expects Q, K, and V to share seq_len");
+  }
+  const std::size_t score_elems = static_cast<std::size_t>(seq_len) * seq_len;
+  const std::size_t attn_elems = static_cast<std::size_t>(seq_len) * kHeadDim;
+  if (raw_expected.size() != score_elems || logits_expected.size() != score_elems ||
+      softmax_expected.size() != score_elems || attn_out_expected.size() != attn_elems) {
+    throw std::runtime_error("Tiled reference file size mismatch");
+  }
+
   const std::uint32_t q_chunks =
       (seq_len + static_cast<std::uint32_t>(kScoreRowsPerTile) - 1U) /
       static_cast<std::uint32_t>(kScoreRowsPerTile);
@@ -576,28 +623,9 @@ int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& u
       (seq_len + static_cast<std::uint32_t>(kScoreColsPerTile) - 1U) /
       static_cast<std::uint32_t>(kScoreColsPerTile);
 
-  std::cout << "Running tiled synthetic sequence, S=" << seq_len
+  std::cout << "Running " << label << ", S=" << seq_len
             << ", q_chunks=" << q_chunks
             << ", k_chunks=" << k_chunks << "\n";
-
-  const auto q_full = make_synthetic_q(seq_len);
-  const auto k_full = make_synthetic_k(seq_len);
-  const auto v_full = make_synthetic_v(seq_len);
-  const float scale = total_scale(args.q_scale, args.k_scale);
-
-  std::vector<std::int32_t> raw_expected;
-  std::vector<float> logits_expected;
-  std::vector<float> softmax_expected;
-  compute_cpu_reference(
-      q_full,
-      k_full,
-      seq_len,
-      scale,
-      &raw_expected,
-      &logits_expected,
-      &softmax_expected);
-  std::vector<float> attn_out_expected;
-  compute_attn_out_reference(softmax_expected, v_full, seq_len, &attn_out_expected);
 
   auto score_kernel = xrt::kernel(device, uuid, "attention_score_u55c_kernel");
   auto mask_scale_kernel = xrt::kernel(device, uuid, "mask_scale_u55c_kernel");
@@ -808,13 +836,97 @@ int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& u
   compare_exact(raw_got, raw_expected, "full_score_raw");
   compare_float(logits_got, logits_expected, "full_score_scaled", 1.0e-4f);
   compare_float(softmax_got, softmax_expected, "full_score_softmax", 1.0e-4f);
-  compare_float(attn_out_got, attn_out_expected, "full_attn_out", 1.0e-4f);
+  compare_float(attn_out_got, attn_out_expected, "full_attn_out", attn_out_tolerance);
 
   print_timings(timings, total_chain_ms);
   std::cout << "Tiled sequence verification PASSED\n";
   std::cout << "Attention output verification PASSED\n";
   std::cout << "XRT chain verification PASSED\n";
   return 0;
+}
+
+int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& uuid) {
+  if (args.seq_len == 0) {
+    throw std::runtime_error("--seq-len must be positive");
+  }
+
+  const std::uint32_t seq_len = args.seq_len;
+  const auto q_full = make_synthetic_q(seq_len);
+  const auto k_full = make_synthetic_k(seq_len);
+  const auto v_full = make_synthetic_v(seq_len);
+  const float scale = total_scale(args.q_scale, args.k_scale);
+
+  std::vector<std::int32_t> raw_expected;
+  std::vector<float> logits_expected;
+  std::vector<float> softmax_expected;
+  compute_cpu_reference(
+      q_full,
+      k_full,
+      seq_len,
+      scale,
+      &raw_expected,
+      &logits_expected,
+      &softmax_expected);
+  std::vector<float> attn_out_expected;
+  compute_attn_out_reference(softmax_expected, v_full, seq_len, &attn_out_expected);
+
+  return run_tiled_inputs(
+      "tiled synthetic sequence",
+      q_full,
+      k_full,
+      v_full,
+      scale,
+      raw_expected,
+      logits_expected,
+      softmax_expected,
+      attn_out_expected,
+      1.0e-4f,
+      device,
+      uuid);
+}
+
+int run_tiled_vector_sequence(const Args& args, xrt::device& device, const xrt::uuid& uuid) {
+  const auto q_full = read_text_vector_all<std::int8_t>(args.vector_dir + "/q_full.txt");
+  const auto k_full = read_text_vector_all<std::int8_t>(args.vector_dir + "/k_full.txt");
+  const auto v_full = read_text_vector_all<float>(args.vector_dir + "/v_full.txt");
+  const std::uint32_t seq_len = static_cast<std::uint32_t>(q_full.size() / kHeadDim);
+  if (seq_len > kFullRowMaxCols) {
+    throw std::runtime_error("Full-sequence vector directory exceeds current max seq_len 512");
+  }
+
+  const std::size_t score_elems = static_cast<std::size_t>(seq_len) * seq_len;
+  const std::size_t attn_elems = static_cast<std::size_t>(seq_len) * kHeadDim;
+  const auto raw_expected =
+      read_text_vector<std::int32_t>(args.vector_dir + "/score_raw.txt", score_elems);
+  const auto logits_expected =
+      read_text_vector<float>(args.vector_dir + "/score_scaled.txt", score_elems);
+  const auto softmax_expected =
+      read_text_vector<float>(args.vector_dir + "/score_softmax.txt", score_elems);
+
+  std::vector<float> attn_out_expected;
+  float attn_out_tolerance = 1.0e-4f;
+  if (file_exists(args.vector_dir + "/attn_out.txt")) {
+    attn_out_expected = read_text_vector<float>(args.vector_dir + "/attn_out.txt", attn_elems);
+  } else {
+    attn_out_expected =
+        read_text_vector<float>(args.vector_dir + "/attn_ref_float.txt", attn_elems);
+    attn_out_tolerance = 1.0e-3f;
+  }
+
+  const auto meta = read_kernel_meta(args.vector_dir + "/kernel_meta.txt");
+  return run_tiled_inputs(
+      "tiled vector sequence from " + args.vector_dir,
+      q_full,
+      k_full,
+      v_full,
+      meta.total_scale,
+      raw_expected,
+      logits_expected,
+      softmax_expected,
+      attn_out_expected,
+      attn_out_tolerance,
+      device,
+      uuid);
 }
 
 }  // namespace
@@ -829,6 +941,10 @@ int main(int argc, char** argv) {
 
     if (args.seq_len != 0) {
       return run_tiled_sequence(args, device, uuid);
+    }
+    if (file_exists(args.vector_dir + "/q_full.txt") &&
+        file_exists(args.vector_dir + "/k_full.txt")) {
+      return run_tiled_vector_sequence(args, device, uuid);
     }
     return run_single_tile(args, device, uuid);
   } catch (const std::exception& ex) {

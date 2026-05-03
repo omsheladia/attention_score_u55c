@@ -1,17 +1,21 @@
 """
-Export real TinyLlama single-tile vectors for the current XRT chain.
+Export real TinyLlama vectors for the current XRT chain.
 
-This is Track C Step 4 for the current single-tile design. It uses TinyLlama as
-a PyTorch data source, extracts one layer/head, quantizes Q/K to INT8, keeps V
-as float32 for the Track B weighted-sum stage, and writes the same file names
-consumed by the existing host app:
+This is Track C Step 4/5 for the current design. It uses TinyLlama as a PyTorch
+data source, extracts one layer/head, quantizes Q/K to INT8, keeps V as float32
+for the Track B weighted-sum stage, and writes the file names consumed by the
+host app.
 
+For the legacy single-tile path it writes:
     q_tile.txt, k_tile.txt, kernel_meta.txt,
     score_raw.txt, score_masked.txt, score_scaled.txt, score_softmax.txt,
     v_full.txt, attn_ref_float.txt
 
-The current hardware/host path is one Q tile only, so this exporter requires
-the tokenized sequence length to be <= 8.
+For the full-sequence tiled path it also writes:
+    q_full.txt, k_full.txt, attn_out.txt
+
+The full-sequence path currently supports S <= 512, matching the full-row
+softmax kernel and XRT host path.
 """
 
 from __future__ import annotations
@@ -31,12 +35,16 @@ from attention_score_ref import (
     build_padded_q_tile,
     build_padded_score_tile,
     compute_attention_score_tile,
+    compute_full_attention,
+    compute_v_weighted_sum_partial,
+    max_abs_diff,
     pack_score_chunk,
     scale_scores,
     softmax_rows,
 )
 from check_tinyllama_setup import DEFAULT_MODEL_ID, DEFAULT_TEXT
 from export_attention_score_vectors import (
+    pad_float_matrix,
     write_kernel_meta,
     write_text_float_matrix,
     write_text_matrix,
@@ -54,6 +62,7 @@ from extract_tinyllama_qkv import (
 
 
 DEFAULT_OUTPUT_DIR = "sim/real_tinyllama_tile"
+MAX_FULL_SEQUENCE_LEN = 512
 
 
 def parse_args() -> argparse.Namespace:
@@ -68,7 +77,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--text",
         default=DEFAULT_TEXT,
-        help=f"Prompt text to export. Must tokenize to <= 8 tokens. Default: {DEFAULT_TEXT!r}",
+        help=f"Prompt text to export. Default: {DEFAULT_TEXT!r}",
+    )
+    parser.add_argument(
+        "--seq-len",
+        type=int,
+        default=None,
+        help=(
+            "Optional token count to export from the start of the prompt. "
+            f"When set, writes full-sequence tiled vectors. Max: {MAX_FULL_SEQUENCE_LEN}."
+        ),
     )
     parser.add_argument(
         "--layer",
@@ -133,6 +151,10 @@ def write_metadata(path: Path, metadata: dict[str, Any]) -> None:
         handle.write("\n")
 
 
+def max_abs_diff_float(lhs: list[list[float]], rhs: list[list[float]]) -> float:
+    return max_abs_diff(lhs, rhs)
+
+
 def main() -> None:
     args = parse_args()
     require_packages()
@@ -157,7 +179,7 @@ def main() -> None:
         args.model_id,
         cache_dir=args.cache_dir,
         local_files_only=args.local_files_only,
-        dtype=dtype,
+        torch_dtype=dtype,
     )
     model.to(device)
     model.eval()
@@ -171,14 +193,27 @@ def main() -> None:
     hook_handle = add_qkv_capture_hook(attn_module, captured)
 
     inputs = tokenizer(args.text, return_tensors="pt")
+    tokenized_seq_len = int(inputs["input_ids"].shape[1])
+    if args.seq_len is not None:
+        if args.seq_len <= 0:
+            raise SystemExit("--seq-len must be positive")
+        if args.seq_len > tokenized_seq_len:
+            raise SystemExit(
+                f"--seq-len {args.seq_len} exceeds tokenized prompt length {tokenized_seq_len}"
+            )
+        if args.seq_len > MAX_FULL_SEQUENCE_LEN:
+            raise SystemExit(
+                f"--seq-len must be <= {MAX_FULL_SEQUENCE_LEN} for the current full-row softmax path"
+            )
+        inputs = {name: value[:, : args.seq_len] for name, value in inputs.items()}
+    elif tokenized_seq_len > MAX_FULL_SEQUENCE_LEN:
+        raise SystemExit(
+            f"Prompt tokenized to {tokenized_seq_len}; current full-row softmax path supports "
+            f"at most {MAX_FULL_SEQUENCE_LEN} tokens. Use --seq-len to truncate."
+        )
     inputs = {name: value.to(device) for name, value in inputs.items()}
     input_ids = inputs["input_ids"].detach().cpu()
     seq_len = int(input_ids.shape[1])
-    if seq_len > SCORE_ROWS_PER_CHUNK:
-        raise SystemExit(
-            f"Current single-tile exporter requires seq_len <= {SCORE_ROWS_PER_CHUNK}, "
-            f"but prompt tokenized to {seq_len}. Use a shorter prompt or wait for Track A Step 3."
-        )
 
     print(f"Input ids shape: {tuple(input_ids.shape)}")
     try:
@@ -220,6 +255,106 @@ def main() -> None:
 
     q_int_matrix = tensor_to_int_matrix(quant["q_int8"])
     k_int_matrix = tensor_to_int_matrix(quant["k_int8"])
+    v_float_matrix = tensor_to_float_matrix(v_head.float())
+    attn_ref_float = tensor_to_float_matrix(attn_ref)
+
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    full_sequence_export = args.seq_len is not None or seq_len > SCORE_ROWS_PER_CHUNK
+    if full_sequence_export:
+        full = compute_full_attention(
+            q_int_matrix,
+            k_int_matrix,
+            v_float_matrix,
+            q_scale=quant["q_scale"],
+            k_scale=quant["k_scale"],
+        )
+
+        write_text_matrix(output_dir / "q_full.txt", q_int_matrix)
+        write_text_matrix(output_dir / "k_full.txt", k_int_matrix)
+        write_text_float_matrix(output_dir / "v_full.txt", v_float_matrix)
+        write_text_matrix(output_dir / "score_raw.txt", full.raw_scores)
+        write_text_float_matrix(output_dir / "score_scaled.txt", full.logits)
+        write_text_float_matrix(output_dir / "score_softmax.txt", full.softmax)
+        write_text_float_matrix(output_dir / "attn_out.txt", full.attn_out)
+        write_text_float_matrix(output_dir / "attn_ref_float.txt", attn_ref_float)
+        write_text_float_matrix(output_dir / "q_float.txt", tensor_to_float_matrix(q_head.float()))
+        write_text_float_matrix(output_dir / "k_float.txt", tensor_to_float_matrix(k_head.float()))
+
+        q_first = build_padded_q_tile(q_int_matrix[:SCORE_ROWS_PER_CHUNK])
+        k_first = build_padded_k_tile(k_int_matrix[:SCORE_K_TILE])
+        first_key_cols = min(SCORE_K_TILE, seq_len)
+        first_query_rows = min(SCORE_ROWS_PER_CHUNK, seq_len)
+        first_weights = [
+            row[:first_key_cols]
+            for row in full.softmax[:first_query_rows]
+        ]
+        first_v = v_float_matrix[:first_key_cols]
+        write_text_matrix(output_dir / "q_tile.txt", q_first)
+        write_text_matrix(output_dir / "k_tile.txt", k_first)
+        write_text_float_matrix(output_dir / "v_tile.txt", pad_float_matrix(first_v, SCORE_K_TILE, HEAD_DIM))
+        write_text_float_matrix(
+            output_dir / "v_partial_expected.txt",
+            pad_float_matrix(
+                compute_v_weighted_sum_partial(first_weights, first_v),
+                SCORE_ROWS_PER_CHUNK,
+                HEAD_DIM,
+            ),
+        )
+        write_kernel_meta(
+            output_dir / "kernel_meta.txt",
+            query_row_count=first_query_rows,
+            key_col_count=first_key_cols,
+            query_pos_base=0,
+            key_pos_base=0,
+            q_scale=quant["q_scale"],
+            k_scale=quant["k_scale"],
+        )
+
+        attn_ref_max_error = max_abs_diff_float(full.attn_out, attn_ref_float)
+        metadata = {
+            "source": "TinyLlama real Q/K/V extraction",
+            "mode": "full_sequence",
+            "model_id": args.model_id,
+            "text": args.text,
+            "input_ids": input_ids[0].tolist(),
+            "seq_len": seq_len,
+            "layer": args.layer,
+            "q_head": args.head,
+            "kv_head": kv_head,
+            "num_q_heads": num_q_heads,
+            "num_kv_heads": num_kv_heads,
+            "head_dim": HEAD_DIM,
+            "q_scale": quant["q_scale"],
+            "k_scale": quant["k_scale"],
+            "total_scale": quant["total_scale"],
+            "q_recon_max_error": quant["q_recon_max_error"],
+            "k_recon_max_error": quant["k_recon_max_error"],
+            "score_dequant_max_error": quant["score_max_error"],
+            "score_dequant_mean_error": quant["score_mean_error"],
+            "quantized_vs_float_attn_out_max_error": attn_ref_max_error,
+            "host_mode": "--vectors with q_full.txt/k_full.txt uses tiled full-sequence path",
+            "attn_out_output": "attn_out.txt is the quantized Q/K FPGA reference; attn_ref_float.txt is the full-float TinyLlama reference.",
+        }
+        write_metadata(output_dir / "metadata.json", metadata)
+
+        print(f"Logits shape: {tuple(outputs.logits.shape)}")
+        print(f"Captured Q_rot shape: {tuple(q_rot.shape)}")
+        print(f"Captured K_rot shape: {tuple(k_rot.shape)}")
+        print(f"Captured V shape: {tuple(v.shape)}")
+        print(f"Selected q_head shape: {tuple(q_head.shape)}")
+        print(f"Selected k_head shape: {tuple(k_head.shape)}")
+        print(f"Selected v_head shape: {tuple(v_head.shape)}")
+        print(f"q_scale: {quant['q_scale']:.12e}")
+        print(f"k_scale: {quant['k_scale']:.12e}")
+        print(f"total_scale: {quant['total_scale']:.12e}")
+        print(f"Score dequant max error: {quant['score_max_error']:.8e}")
+        print(f"Quantized-vs-float attn_out max error: {attn_ref_max_error:.8e}")
+        print(f"Wrote real TinyLlama full-sequence vectors to {output_dir}")
+        print("Real TinyLlama vector export OK")
+        return
+
     q_tile_padded = build_padded_q_tile(q_int_matrix)
     k_tile_padded = build_padded_k_tile(k_int_matrix)
 
@@ -236,9 +371,6 @@ def main() -> None:
     score_softmax = softmax_rows(score_scaled, meta.key_col_count, meta.query_row_count)
     score_packed = pack_score_chunk(score_raw)
 
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
     write_text_matrix(output_dir / "q_tile.txt", q_tile_padded)
     write_text_matrix(output_dir / "k_tile.txt", k_tile_padded)
     write_text_matrix(output_dir / "score_raw.txt", score_raw)
@@ -248,8 +380,8 @@ def main() -> None:
     write_text_float_matrix(output_dir / "score_softmax.txt", score_softmax)
     write_text_float_matrix(output_dir / "q_float.txt", tensor_to_float_matrix(q_head.float()))
     write_text_float_matrix(output_dir / "k_float.txt", tensor_to_float_matrix(k_head.float()))
-    write_text_float_matrix(output_dir / "v_full.txt", tensor_to_float_matrix(v_head.float()))
-    write_text_float_matrix(output_dir / "attn_ref_float.txt", tensor_to_float_matrix(attn_ref))
+    write_text_float_matrix(output_dir / "v_full.txt", v_float_matrix)
+    write_text_float_matrix(output_dir / "attn_ref_float.txt", attn_ref_float)
     write_kernel_meta(
         output_dir / "kernel_meta.txt",
         query_row_count=meta.query_row_count,
@@ -262,6 +394,7 @@ def main() -> None:
 
     metadata = {
         "source": "TinyLlama real Q/K/V extraction",
+        "mode": "single_tile",
         "model_id": args.model_id,
         "text": args.text,
         "input_ids": input_ids[0].tolist(),

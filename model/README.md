@@ -22,11 +22,11 @@ reference.
   - verifies one selected head against PyTorch scaled-dot-product attention
   - quantizes selected Q/K tensors to INT8 and reports scale/error metrics
 - `export_real_vectors.py`
-  - Track C Step 4 exporter for a real TinyLlama single-tile test case
-  - writes current-host-compatible `q_tile.txt`, `k_tile.txt`, `kernel_meta.txt`,
-    and expected score/mask-scale/softmax outputs
-  - also writes `v_full.txt` and `attn_ref_float.txt` for Track B vector-mode
-    `attn_out` verification
+  - Track C Step 4/5 exporter for real TinyLlama vector test cases
+  - keeps the legacy single-tile export for short prompts
+  - writes full-sequence tiled vector directories when `--seq-len <S>` is used
+  - also writes `v_full.txt`, quantized `attn_out.txt`, and
+    `attn_ref_float.txt` for Track B vector-mode `attn_out` verification
 - `benchmark_common.py`
   - shared Track D helpers for synthetic input generation, real-vector loading,
     tiled CPU math, brute-force CPU math, validation, and timing
@@ -164,7 +164,7 @@ TinyLlama Q/K/V extraction OK
 TinyLlama Q/K quantization OK
 ```
 
-## Real TinyLlama Single-Tile Vector Export
+## Real TinyLlama Vector Export
 
 Run:
 
@@ -178,9 +178,8 @@ This writes a current-design vector directory:
 sim/real_tinyllama_tile/
 ```
 
-The exporter requires the tokenized prompt to fit the current one-Q-tile host
-path (`S <= 8`). The verified local run used the default 8-token prompt and
-wrote:
+With no `--seq-len`, short prompts still use the legacy one-Q-tile vector path.
+The verified local run used the default 8-token prompt and wrote:
 
 ```text
 q_tile.txt
@@ -224,6 +223,32 @@ softmax_u55c_kernel         0.028 ms
 total_chain                 0.121 ms
 XRT chain verification PASSED
 ```
+
+For full-sequence tiled vector mode, pass `--seq-len <S>` and a prompt that
+tokenizes to at least `S` tokens. The exporter writes `q_full.txt`,
+`k_full.txt`, full `S x S` references, quantized `attn_out.txt`, and
+`attn_ref_float.txt` in addition to first-tile compatibility files.
+
+Verified exports:
+
+```bash
+python model/export_real_vectors.py \
+  --seq-len 16 \
+  --output-dir sim/real_tinyllama_s16 \
+  --text "In a small laboratory, engineers compare attention kernels across hardware targets. The experiment records tokens, latency, and numerical accuracy for each sequence length before the final report is written."
+
+python model/export_real_vectors.py \
+  --seq-len 64 \
+  --output-dir sim/real_tinyllama_s64 \
+  --text "In a small laboratory, engineers compare attention kernels across hardware targets. The experiment records tokens, latency, and numerical accuracy for each sequence length before the final report is written. A second paragraph adds enough context for a longer TinyLlama prompt, describing how query, key, and value tensors move through the FPGA pipeline while software baselines measure the same attention head for validation."
+```
+
+Verified real U55C vector-mode results:
+
+| directory | S | total_chain ms | pass signal |
+|---|---:|---:|---|
+| `sim/real_tinyllama_s16` | 16 | 0.985 | `Attention output verification PASSED` |
+| `sim/real_tinyllama_s64` | 64 | 2.510 | `Attention output verification PASSED` |
 
 ## CPU/GPU Baseline Benchmarks
 

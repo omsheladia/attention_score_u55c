@@ -4,7 +4,9 @@
 
 Isolated FPGA attention-score pipeline targeting the Xilinx Alveo U55C.
 Carved from a TinyLlama inference repo; the current verified runtime chain is a
-3-kernel single-tile pipeline.
+five-kernel staged one-head attention pipeline with legacy single-tile vector
+mode, synthetic tiled `--seq-len` mode, and real TinyLlama tiled `--vectors`
+mode.
 
 **Offload boundary:**
 ```
@@ -12,12 +14,14 @@ Q_rot_int8, K_rot_int8
   -> score_raw_int32      (INT8×INT8 GEMM)
   -> score_scaled_fp32    (merged causal mask + scale)
   -> score_softmax_fp32   (row-wise softmax)
+  -> attn_out_fp32        (softmax @ V)
 ```
 
 **Currently out of scope:** Q/K/V projections, RoPE generation, decoder integration.
-**Current Track B:** synthetic `--seq-len` hardware emulation and real U55C
-hardware now include softmax@V for one head. Current saved-vector directories
-also verify through final `attn_out`.
+**Current Tracks B/C:** synthetic `--seq-len` hardware emulation and real U55C
+hardware include softmax@V for one head. Saved-vector directories verify
+through final `attn_out`, including real TinyLlama full-sequence tiled vectors
+at S=16 and S=64.
 
 ---
 
@@ -31,10 +35,15 @@ hls/
   causal_mask/       legacy standalone causal mask
   score_scale/       legacy standalone FP32 scale
   softmax/           stage 3 — row-wise softmax
+  softmax_full_row/  full-row softmax for tiled S <= 512
+  v_weighted_sum/    stage 5 — partial softmax @ V
   common/            shared fixed-point types (fixed_types.hpp)
 host/       XRT host app, build scripts, vpp_link.cfg, bring-up guide
 sim/
   attention_score_tile/   exported reference vectors (txt + json)
+  real_tinyllama_tile/    legacy real TinyLlama single-tile case
+  real_tinyllama_s16/     real TinyLlama tiled S=16 case
+  real_tinyllama_s64/     real TinyLlama tiled S=64 case
 rtl/        placeholder for future RTL lowering
 docs/       offload design notes
 ```
@@ -574,11 +583,11 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
   `attn_ref_float.txt` with `total_chain 0.258 ms`.
 - Next: add CPU/GPU/FPGA comparison tables.
 
-**Track C — Steps 1–5 done for the current single-tile design; remaining full-tiling work:**
-- Steps 1–4 complete: TinyLlama loads on CPU, Q/K/V extraction via hook verified, INT8 Q/K quantization verified, `model/export_real_vectors.py` exports real vectors to `sim/real_tinyllama_tile/` (seq_len ≤ 8).
-- Step 5 current single-tile FPGA run complete: `sim/real_tinyllama_tile/` passed on the real U55C with `Attention output verification PASSED`, `XRT chain verification PASSED`, and 0.258 ms total-chain timing.
-- Step 4 tiling extension: unblocked by Track A host tiling; still needs exporter work for multi-sequence real TinyLlama vector directories.
-- Step 5 full-coverage extension: run multiple real-vector sequence lengths and compare `attn_out` against PyTorch reference
+**Track C — Steps 1–5 done for the current staged one-head design:**
+- Steps 1–4 complete: TinyLlama loads, Q/K/V extraction via hook is verified, INT8 Q/K quantization is verified, and `model/export_real_vectors.py` exports both legacy single-tile and full-sequence tiled real vectors.
+- Step 5 complete on the real U55C for `sim/real_tinyllama_tile`, `sim/real_tinyllama_s16`, and `sim/real_tinyllama_s64`.
+- Full-sequence vector-mode results: `S=16` total_chain `0.985 ms`; `S=64` total_chain `2.510 ms`; both printed `Tiled sequence verification PASSED`, `Attention output verification PASSED`, and `XRT chain verification PASSED`.
+- The exporter writes quantized-pipeline `attn_out.txt` plus PyTorch full-float `attn_ref_float.txt`; recorded quantized-vs-float max errors were `2.67604024e-04` for S=16 and `1.62767614e-04` for S=64.
 
 **Track D — Steps 1–2 done; remaining:**
 - Steps 1–2 complete: `model/benchmark_cpu.py` verified for synthetic S = 8, 64, 128, 256, 512 and real-vector input; `model/benchmark_gpu.py` verified on RTX 3050 Laptop GPU.

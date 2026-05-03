@@ -20,6 +20,18 @@ That generates vectors under:
 
 - `sim/real_tinyllama_tile/`
 
+For full-sequence real TinyLlama tiled-vector cases, run:
+
+```bash
+python3 model/export_real_vectors.py --seq-len 16 --output-dir sim/real_tinyllama_s16 --text "<prompt with at least 16 tokens>"
+python3 model/export_real_vectors.py --seq-len 64 --output-dir sim/real_tinyllama_s64 --text "<prompt with at least 64 tokens>"
+```
+
+Verified generated directories:
+
+- `sim/real_tinyllama_s16/`
+- `sim/real_tinyllama_s64/`
+
 The HLS C-sim testbench consumes:
 
 - `q_tile.txt`
@@ -35,7 +47,8 @@ The current XRT host verifies `score_raw`, `score_scaled`, and
 `score_softmax`. `score_masked` remains useful for the legacy standalone
 causal-mask testbench.
 
-The real TinyLlama directory keeps the same current-host input/output file
+The real TinyLlama directories keep the same current-host input/output file
 names, plus `q_float.txt`, `k_float.txt`, `v_full.txt`, and
-`attn_ref_float.txt` for inspection and later Track B work. The current
-single-tile real exporter requires `S <= 8`.
+`attn_ref_float.txt` for inspection. Full-sequence directories also include
+`q_full.txt`, `k_full.txt`, and quantized-pipeline `attn_out.txt`; the XRT host
+uses those files to enter tiled `--vectors` mode.

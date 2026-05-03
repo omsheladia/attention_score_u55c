@@ -213,7 +213,7 @@ def main() -> None:
         args.model_id,
         cache_dir=args.cache_dir,
         local_files_only=args.local_files_only,
-        dtype=dtype,
+        torch_dtype=dtype,
     )
     model.to(device)
     model.eval()
