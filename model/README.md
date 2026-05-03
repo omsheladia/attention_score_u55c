@@ -17,6 +17,11 @@ reference.
   - captures Q and K after RoPE and V after projection
   - verifies one selected head against PyTorch scaled-dot-product attention
   - quantizes selected Q/K tensors to INT8 and reports scale/error metrics
+- `export_real_vectors.py`
+  - Track C Step 4 exporter for a real TinyLlama single-tile test case
+  - writes current-host-compatible `q_tile.txt`, `k_tile.txt`, `kernel_meta.txt`,
+    and expected score/mask-scale/softmax outputs
+  - also writes `v_full.txt` for later Track B `softmax @ V` work
 
 The current XRT host verifies the three-kernel runtime outputs against:
 
@@ -93,4 +98,55 @@ Pass signals:
 ```text
 TinyLlama Q/K/V extraction OK
 TinyLlama Q/K quantization OK
+```
+
+## Real TinyLlama Single-Tile Vector Export
+
+Run:
+
+```bash
+python model/export_real_vectors.py --local-files-only
+```
+
+This writes a current-design vector directory:
+
+```text
+sim/real_tinyllama_tile/
+```
+
+The exporter requires the tokenized prompt to fit the current one-Q-tile host
+path (`S <= 8`). The verified local run used the default 8-token prompt and
+wrote:
+
+```text
+q_tile.txt
+k_tile.txt
+kernel_meta.txt
+score_raw.txt
+score_masked.txt
+score_scaled.txt
+score_softmax.txt
+score_packed.txt
+q_float.txt
+k_float.txt
+v_full.txt
+attn_ref_float.txt
+metadata.json
+```
+
+The current local C++ benches passed against that directory:
+
+```text
+attention_score test PASSED
+mask_scale test PASSED
+softmax test PASSED
+```
+
+The current XRT host should be able to consume the directory with:
+
+```bash
+./build/host_attention_score_chain \
+  --xclbin build/attention_score_chain.xclbin \
+  --vectors sim/real_tinyllama_tile \
+  --device 0
 ```

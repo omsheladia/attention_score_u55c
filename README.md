@@ -163,6 +163,15 @@ Expected pass signal:
 TinyLlama forward pass OK
 ```
 
+Export a real TinyLlama single-tile vector case for the current 3-kernel chain:
+
+```bash
+python model/export_real_vectors.py --local-files-only
+```
+
+This writes `sim/real_tinyllama_tile/`, which can be passed to the current host
+with `--vectors sim/real_tinyllama_tile`.
+
 For the full command runbook, see:
 
 ```text

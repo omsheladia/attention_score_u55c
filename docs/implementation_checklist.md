@@ -553,16 +553,17 @@ Track B (V kernel) must be working before real V is useful.
 
 ### What to do
 
-- [ ] Create `model/export_real_vectors.py` that:
+- [x] Create `model/export_real_vectors.py` that:
   - takes `--text`, `--layer`, and `--head` arguments
   - runs TinyLlama forward pass and hooks Q, K, and V as in Track C Step 2
   - quantizes Q/K as in Track C Step 3 (V stays float32)
-  - writes `q_tile.txt`, `k_tile.txt`, `v_tile.txt`, `kernel_meta.txt` and all
-    expected intermediate outputs in the same format as the synthetic exporter
+  - writes `q_tile.txt`, `k_tile.txt`, `v_full.txt`, `kernel_meta.txt` and all
+    expected current-chain intermediate outputs in the same format as the
+    synthetic exporter
   - writes `attn_out.txt` once Track B (V kernel) is complete by running the
     Python tiling reference including the V weighted sum pass
-- [ ] Run on a test sentence and confirm all output files are generated
-- [ ] Diff file format against the synthetic exporter — host app should read
+- [x] Run on a test sentence and confirm all output files are generated
+- [x] Diff file format against the synthetic exporter — host app should read
       them without any changes
 
 ---

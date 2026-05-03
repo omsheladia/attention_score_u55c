@@ -47,6 +47,7 @@ docs/       offload design notes
 | Vector export | [model/export_attention_score_vectors.py](model/export_attention_score_vectors.py) |
 | TinyLlama setup check | [model/check_tinyllama_setup.py](model/check_tinyllama_setup.py) |
 | Q/K/V extraction + INT8 quant | [model/extract_tinyllama_qkv.py](model/extract_tinyllama_qkv.py) |
+| Real vector export (single-tile) | [model/export_real_vectors.py](model/export_real_vectors.py) |
 | Score GEMM HLS | [hls/attention_score/attention_score_core_hls.cpp](hls/attention_score/attention_score_core_hls.cpp) |
 | Mask+scale HLS | [hls/mask_and_scale/mask_scale_core_hls.cpp](hls/mask_and_scale/mask_scale_core_hls.cpp) |
 | Causal mask HLS | [hls/causal_mask/causal_mask_core_hls.cpp](hls/causal_mask/causal_mask_core_hls.cpp) |
@@ -293,11 +294,15 @@ real `Q_rot` (RoPE-rotated), `K_rot` (RoPE-rotated), and `V` (projected,
 not RoPE-rotated) tensors. Quantize Q/K to INT8; V stays float32. Export in
 the same file format the host app already reads.
 
-Steps 1–3 are implemented: `model/check_tinyllama_setup.py` verifies the
-TinyLlama environment; `model/extract_tinyllama_qkv.py` extracts Q/K/V via a
-forward-hook, applies INT8 symmetric quantization to Q and K, and validates
-against PyTorch SDPA output. Remaining work is Step 4 (export real vectors to
-`sim/`) and Step 5 (run real vectors through the FPGA pipeline).
+Steps 1–4 are implemented for the current single-tile design:
+`model/check_tinyllama_setup.py` verifies the TinyLlama environment;
+`model/extract_tinyllama_qkv.py` extracts Q/K/V via a forward-hook, applies
+INT8 symmetric quantization to Q and K, and validates against PyTorch SDPA
+output; `model/export_real_vectors.py` exports real TinyLlama Q/K/V vectors
+to `sim/real_tinyllama_tile/` in the same file format the host app reads
+(currently limited to seq_len ≤ 8 — one Q tile — pending Track A Step 3).
+Remaining work is extending Step 4 to support the full tiling loop (blocked on
+Track A Step 3 + full-row softmax) and Step 5 (run real vectors on FPGA).
 
 **Track D — CPU/GPU baseline and benchmarking**
 Measure FPGA `attn_out` latency against CPU/GPU at S = 8, 64, 128, 256, 512.
@@ -387,10 +392,10 @@ in the implementation checklist.
 2. Implement V weighted-sum HLS kernel (`hls/v_weighted_sum/`)
 3. Update host app with three-pass tiling loop
 
-**Track C — Steps 1–3 done; remaining:**
-- Steps 1–3 complete: TinyLlama loads on CPU, Q/K/V extraction via hook verified, INT8 Q/K quantization verified.
-- Step 4: Export real Q/K/V vectors to `sim/` in existing file format
-- Step 5: Run real vectors through FPGA pipeline; compare `attn_out` against PyTorch reference
+**Track C — Steps 1–4 done (single-tile); remaining:**
+- Steps 1–4 complete: TinyLlama loads on CPU, Q/K/V extraction via hook verified, INT8 Q/K quantization verified, `model/export_real_vectors.py` exports real vectors to `sim/real_tinyllama_tile/` (seq_len ≤ 8).
+- Step 4 tiling extension: blocked on Track A Step 3 (full-row softmax + host tiling loop)
+- Step 5: Run real vectors through FPGA pipeline; compare softmax output (or `attn_out` once Track B is done) against PyTorch reference
 
 **Track D — Benchmarking:**
 1. CPU baseline in Python (runnable on Windows now)

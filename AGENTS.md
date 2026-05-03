@@ -242,6 +242,19 @@ error. The verified default run printed `q_scale 4.898416623473e-02`,
 score dequant max error `2.65718549e-02`, score dequant mean error
 `5.51600056e-03`, and `TinyLlama Q/K quantization OK`.
 
+Track C Step 4 was implemented for the current single-tile design with
+`model/export_real_vectors.py`. It exports a real TinyLlama-derived vector
+directory compatible with the current 3-kernel host flow:
+`q_tile.txt`, `k_tile.txt`, `kernel_meta.txt`, `score_raw.txt`,
+`score_masked.txt`, `score_scaled.txt`, `score_softmax.txt`,
+`score_packed.txt`, `metadata.json`, plus inspection/later-stage files
+`q_float.txt`, `k_float.txt`, `v_full.txt`, and `attn_ref_float.txt`. The
+verified run used the default 8-token prompt and wrote
+`sim/real_tinyllama_tile/`. Local C++ benches passed against that directory for
+`attention_score`, `mask_scale`, and `softmax`. This does not implement full
+sequence tiling or `softmax @ V`; it provides real Q/K inputs for the current
+single-tile 3-kernel design.
+
 ## Tile And Sequence-Length Model
 
 The hardware tile shape remains fixed:
@@ -308,6 +321,7 @@ Key subfolders:
 - `model/export_attention_score_vectors.py`
 - `model/check_tinyllama_setup.py`
 - `model/extract_tinyllama_qkv.py`
+- `model/export_real_vectors.py`
 
 These export deterministic vectors under:
 
