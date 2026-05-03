@@ -3,14 +3,14 @@
 ## Project Overview
 
 Isolated FPGA attention-score pipeline targeting the Xilinx Alveo U55C.
-Carved from a TinyLlama inference repo; implements one 4-stage tile chain only.
+Carved from a TinyLlama inference repo; the current verified runtime chain is a
+3-kernel single-tile pipeline.
 
 **Offload boundary:**
 ```
 Q_rot_int8, K_rot_int8
   -> score_raw_int32      (INT8×INT8 GEMM)
-  -> score_masked_int32   (causal mask)
-  -> score_scaled_fp32    (scale by q_scale * k_scale * 1/sqrt(head_dim))
+  -> score_scaled_fp32    (merged causal mask + scale)
   -> score_softmax_fp32   (row-wise softmax)
 ```
 
@@ -25,9 +25,10 @@ Q_rot_int8, K_rot_int8
 model/      Python reference math + deterministic vector export
 hls/
   attention_score/   stage 1 — INT8 score GEMM
-  causal_mask/       stage 2 — causal mask
-  score_scale/       stage 3 — FP32 scale
-  softmax/           stage 4 — row-wise softmax
+  mask_and_scale/    stage 2 — merged causal mask + FP32 scale
+  causal_mask/       legacy standalone causal mask
+  score_scale/       legacy standalone FP32 scale
+  softmax/           stage 3 — row-wise softmax
   common/            shared fixed-point types (fixed_types.hpp)
 host/       XRT host app, build scripts, vpp_link.cfg, bring-up guide
 sim/
@@ -67,7 +68,15 @@ docs/       offload design notes
 | score scale | PASS | PASS | PASS (~342 MHz, 3 DSP) |
 | softmax | PASS | PASS | PASS (~316 MHz, 9 DSP) — minor timing warning remains |
 
-Not yet run: `hw_emu`, real `hw` on U55C, full XRT host compile.
+XRT deployment status for the current 3-kernel chain:
+
+| Target | Result | Notes |
+|---|---|---|
+| host compile | PASS | `bash attention_score_u55c/host/build_host.sh` |
+| `hw_emu` xclbin | PASS | Vitis 2022.2, U55C platform `xilinx_u55c_gen3x16_xdma_3_202210_1` |
+| `hw_emu` run | PASS | `XRT chain verification PASSED`; emulation timing is simulator dominated |
+| real `hw` xclbin | PASS | hardware link took about 43 minutes |
+| real U55C run | PASS | device 0, shell `xilinx_u55c_gen3x16_xdma_base_3` |
 
 > Re-read HLS reports under `hls/build/.../syn/report/` before quoting numbers — the table above is a snapshot.
 
@@ -102,9 +111,80 @@ Not yet run: `hw_emu`, real `hw` on U55C, full XRT host compile.
   - Vitis HLS 2023.2 `csim` and `csynth` now pass for the merged kernel at
     `~330.91 MHz`, `3 DSP`, `6 BRAM_18K`
 - Still pending for this WIP:
-  - rebuilt `xclbin` and XRT runtime verification for the new 3-kernel chain
-  - a matching U55C platform `.xpfm` path for local `v++` was not found under
-    the checked local Vitis 2023.2 platform directories
+  - full-sequence tiling and full-row softmax for `S > 64`
+  - multi-vector regression and CPU/GPU/FPGA baseline tables
+
+### 2026-05-01 3-Kernel XRT Results
+
+Platform used:
+
+```text
+/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+```
+
+The rebuilt xclbin contains:
+
+```text
+attention_score_u55c_kernel
+mask_scale_u55c_kernel
+softmax_u55c_kernel
+```
+
+`xclbinutil --info` for the real hardware xclbin reports:
+
+```text
+Content: Bitstream
+UUID: 06fc7f72-fc9f-b542-28d3-aac2d65918ef
+HBM banks used: HBM[0] through HBM[4]
+Clocks: hbm_aclk 450 MHz, KERNEL_CLK 500 MHz, DATA_CLK 300 MHz
+```
+
+Hardware emulation passed:
+
+```text
+attention_score_u55c_kernel 1000.153 ms
+mask_scale_u55c_kernel      1000.076 ms
+softmax_u55c_kernel         1000.158 ms
+total_chain                 3000.421 ms
+XRT chain verification PASSED
+```
+
+The real U55C run passed. The first post-program run showed cold-launch timing:
+
+```text
+attention_score_u55c_kernel 6.998 ms
+mask_scale_u55c_kernel      0.085 ms
+softmax_u55c_kernel         0.200 ms
+total_chain                 7.302 ms
+XRT chain verification PASSED
+```
+
+Repeat direct run:
+
+```text
+attention_score_u55c_kernel 0.137 ms
+mask_scale_u55c_kernel      0.123 ms
+softmax_u55c_kernel         0.099 ms
+total_chain                 0.367 ms
+XRT chain verification PASSED
+```
+
+Verified `host/run_hw.sh` helper run:
+
+```text
+attention_score_u55c_kernel 0.043 ms
+mask_scale_u55c_kernel      0.025 ms
+softmax_u55c_kernel         0.086 ms
+total_chain                 0.159 ms
+XRT chain verification PASSED
+```
+
+Deployment notes:
+
+- `hw_emu` printed `Unable to find emconfig.json. Using default device ...`
+  despite `emconfigutil` creating `emconfig.json`; the run still passed.
+- Vitis 2022.2 `v++` softmax compile still reports one unsatisfied loop
+  constraint, but the 3-kernel `hw_emu` and real hardware runs both passed.
 
 ---
 
@@ -135,23 +215,31 @@ Repeat the pattern for `causal_mask`, `score_scale`, and `softmax` testbenches.
 
 ## FPGA Build & Run (Linux only)
 
-Full bring-up requires Linux with Vitis 2023.2 + XRT + U55C platform.
+Full bring-up requires Linux with Vitis/XRT + U55C platform. The current
+3-kernel xclbin was built and run with Vitis/XRT 2022.2 and the local U55C
+platform path below.
 Follow [host/LINUX_BRINGUP.md](host/LINUX_BRINGUP.md) step by step.
 
 **Short version:**
 ```bash
-source /tools/Xilinx/Vitis/2023.2/settings64.sh
-source /opt/xilinx/xrt/setup.sh
+source attention_score_u55c/host/setup_2022_2_env.sh
 
 # build xclbin (hw_emu first)
-bash host/build_xclbin.sh hw_emu /path/to/u55c_platform.xpfm
+bash attention_score_u55c/host/build_xclbin.sh hw_emu \
+  /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
 
 # build host app
-bash host/build_host.sh
+bash attention_score_u55c/host/build_host.sh
 
 # generate emconfig and run
-emconfigutil --platform /path/to/u55c_platform.xpfm --nd 1
-bash host/run_hw_emu.sh /path/to/u55c_platform.xpfm 0
+emconfigutil \
+  --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm \
+  --nd 1
+export XCL_EMULATION_MODE=hw_emu
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --vectors attention_score_u55c/sim/attention_score_tile \
+  --device 0
 ```
 
 Pass signal: `XRT chain verification PASSED`
@@ -229,7 +317,7 @@ bo.sync(FROM_DEVICE)               ◄─────  DMA result over PCIe → 
 
 HBM (High Bandwidth Memory) is the 16 GB memory physically on the U55C die.
 All kernel inputs and outputs pass through HBM. Intermediate results between
-the 4 kernel stages also pass through HBM in the current design.
+the 3 runtime kernel stages also pass through HBM in the current design.
 
 ---
 
@@ -270,7 +358,7 @@ in the implementation checklist.
 - 16-bank array partitioning for parallel SRAM reads in the current Track A WIP GEMM kernel
 
 **Does not exist:**
-- The 4 kernel stages run sequentially (no dataflow streaming between them)
+- The 3 runtime kernel stages run sequentially (no dataflow streaming between them)
 - Tiles are processed one at a time (no double buffering)
 - All 32 attention heads are processed sequentially (one kernel instance)
 
@@ -279,12 +367,12 @@ in the implementation checklist.
 ## Recommended Next Steps
 
 **Track A — Immediate:**
-1. Move to Linux (Vitis 2023.2 + XRT + U55C platform)
-2. Follow [host/LINUX_BRINGUP.md](host/LINUX_BRINGUP.md) — get `hw_emu` passing
-3. Increase GEMM UNROLL factor (1 line, re-synthesize)
-4. Add host tiling loop (two-pass: score/mask/scale then full-row softmax)
-5. Implement full-row softmax kernel — required for S > 64
-6. Merge causal mask + score scale into one kernel
+1. Add Python full-sequence tiling with full-row softmax reference
+2. Implement full-row softmax kernel — required for S > 64
+3. Add matching XRT host tiling loop for S = 8, 64, 128, 256, 512
+4. Add multi-vector regression and CPU/GPU/FPGA timing tables
+5. If more pre-softmax speed is needed, prefer wider packing/on-chip fusion
+   before chasing more GEMM unroll
 
 **Track B — Complete attention block:**
 1. Add `softmax @ V` Python reference and synthetic V export

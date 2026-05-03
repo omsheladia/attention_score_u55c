@@ -1,13 +1,12 @@
 # XRT Host Flow
 
 This folder is the first real host-side step for running the isolated
-four-kernel chain on a U55C:
+three-kernel chain on a U55C:
 
 ```text
 Q_rot_int8, K_rot_int8
 -> attention_score_u55c_kernel
--> causal_mask_u55c_kernel
--> score_scale_u55c_kernel
+-> mask_scale_u55c_kernel
 -> softmax_u55c_kernel
 ```
 
@@ -16,7 +15,7 @@ Q_rot_int8, K_rot_int8
 - `attention_score_chain_xrt.cpp`
   - native XRT C++ host app
   - loads one `.xclbin`
-  - launches the four kernels in sequence
+  - launches the three runtime kernels in sequence
   - compares device outputs against the exported reference vectors
 - `build_host.sh`
   - Linux host compile helper
@@ -32,7 +31,7 @@ Q_rot_int8, K_rot_int8
 - Linux machine
 - XRT installed and sourced
 - U55C platform installed
-- one linked `.xclbin` containing all four kernels
+- one linked `.xclbin` containing the three runtime kernels
 - vectors already exported under `attention_score_u55c/sim/attention_score_tile/`
 
 ## Example Linux Flow
@@ -69,19 +68,29 @@ bash attention_score_u55c/host/run_hw.sh 0
 ```
 
 The host prints per-kernel timing and total chain timing using host wall-clock
-measurements from launch through `wait()`, then verifies all intermediate
-outputs against the reference vectors.
+measurements from launch through `wait()`, then verifies `score_raw`,
+`score_scaled`, and `score_softmax` against the reference vectors.
+
+Latest verified helper timing for the three-kernel hardware xclbin:
+
+```text
+attention_score_u55c_kernel 0.043 ms
+mask_scale_u55c_kernel      0.025 ms
+softmax_u55c_kernel         0.086 ms
+total_chain                 0.159 ms
+```
 
 ## Deployable Meaning
 
 There are two useful meanings of "deployable" here:
 
 1. **Tile-demo deployable**
-   - enough to run this isolated four-kernel score path on the card
+   - enough to run this isolated three-kernel score path on the card
    - this host app is meant for that stage
 2. **Model deployable**
    - enough to run a meaningful end-to-end attention path inside the larger
      TinyLlama accelerator
    - that still needs more blocks and system integration
 
-Right now this workspace is very close to the first meaning, but not the second.
+Right now this workspace has reached the first meaning for a single tile, but
+not the second.

@@ -54,7 +54,7 @@ What is intentionally **not** implemented in this isolated flow:
 
 - full Q/K/V projection path on FPGA
 - live RoPE generation in the full runtime path
-- `softmax @ V` in the current verified four-kernel flow
+- `softmax @ V` in the current verified runtime flow
 - decoder-layer integration
 - full TinyLlama inference
 
@@ -146,6 +146,59 @@ On 2026-05-01, Track A Steps 1-2 were started in code:
 - `v++` exists locally, but no U55C `.xpfm` platform file was found under the
   checked local Vitis 2023.2 platform directories, so rebuilt `xclbin` / XRT
   verification for the new 3-kernel chain remains pending
+
+On 2026-05-01, the current 3-kernel chain was built and verified with Vitis/XRT
+2022.2 on Linux using platform:
+`/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm`.
+
+- `bash attention_score_u55c/host/build_xclbin.sh hw_emu <xpfm>` passed and
+  produced a HW Emulation Binary containing:
+  - `attention_score_u55c_kernel`
+  - `mask_scale_u55c_kernel`
+  - `softmax_u55c_kernel`
+- `bash attention_score_u55c/host/build_host.sh` passed.
+- `hw_emu` run passed with `XRT chain verification PASSED`.
+  Host wall-clock emulation timing was approximately:
+  - attention score: 1000.153 ms
+  - mask+scale: 1000.076 ms
+  - softmax: 1000.158 ms
+  - total chain: 3000.421 ms
+- `bash attention_score_u55c/host/build_xclbin.sh hw <xpfm>` passed and
+  produced a real hardware bitstream xclbin. Hardware link took about 43
+  minutes. `xclbinutil --info` reports content `Bitstream`, UUID
+  `06fc7f72-fc9f-b542-28d3-aac2d65918ef`, kernels
+  `attention_score_u55c_kernel`, `mask_scale_u55c_kernel`,
+  `softmax_u55c_kernel`, HBM banks `[0]` through `[4]` used, and clocks:
+  HBM 450 MHz, kernel 500 MHz, data 300 MHz.
+- Direct real-card run on device 0 passed with `XRT chain verification PASSED`.
+  The first post-program run showed a cold-looking total of 7.302 ms, dominated
+  by the first attention-score launch at 6.998 ms.
+- A repeat direct real-card run passed with timings:
+  - attention score: 0.137 ms
+  - mask+scale: 0.123 ms
+  - softmax: 0.099 ms
+  - total chain: 0.367 ms
+- The `host/run_hw.sh` helper was also verified on the real card and passed with
+  timings:
+  - attention score: 0.043 ms
+  - mask+scale: 0.025 ms
+  - softmax: 0.086 ms
+  - total chain: 0.159 ms
+- Deployment notes:
+  - `emconfigutil` created `emconfig.json`, but XRT printed
+    `Unable to find emconfig.json. Using default device ...` during `hw_emu`;
+    the emulation run still completed successfully.
+  - Vitis 2022.2 `v++` compile for the softmax kernel still reports
+    `Loop Constraint Status: All loop constraints were NOT satisfied` because
+    one loop reached II=4 vs target II=3, but the xclbin linked and both
+    `hw_emu` and hardware verification passed.
+
+On 2026-05-02, the live README files were refreshed for the verified 3-kernel
+runtime. Updated files include `README.md`, `host/README.md`, `hls/README.md`,
+`model/README.md`, `hls/mask_and_scale/README.md`,
+`hls/causal_mask/README.md`, `hls/score_scale/README.md`,
+`hls/softmax/README.md`, and `sim/README.md`. The historical READMEs under
+`backups/run_20260429_201240/repo_snapshot/` were intentionally left unchanged.
 
 ## Tile And Sequence-Length Model
 
@@ -481,7 +534,6 @@ Not yet confirmed:
 - full-sequence host tiling over `S = 8, 64, 128, 256, 512`
 - synthetic Track A regression through multiple vector directories
 - full-row softmax kernel/design for `S > 64`
-- merged mask-and-scale kernel end-to-end `xclbin` / XRT verification
 - `softmax @ V` / V weighted-sum stage
 - real TinyLlama `Q_rot` / `K_rot` extraction, V extraction, and INT8 Q/K export
 - CPU/GPU/FPGA baseline comparison for acceleration claims
@@ -496,11 +548,10 @@ full sequence-length attention accelerator or a full TinyLlama hardware runtime.
 Best next practical steps are Track A from
 `docs/implementation_checklist.md`:
 
-1. rebuild the `xclbin` and rerun the XRT host flow for the new 3-kernel chain
-   once a matching U55C platform `.xpfm` path is available to `v++`
-2. add Python full-sequence tiling with `softmax_full_rows(logits)`
+1. add Python full-sequence tiling with `softmax_full_rows(logits)`
+2. add a full-row softmax kernel/design for `S > 64`
 3. add the matching XRT host tiling loop for `S = 8, 64, 128, 256, 512`
-4. add a full-row softmax kernel/design for `S > 64`
+4. add multi-vector regression and CPU/GPU/FPGA baseline tables
 5. if more score-kernel speed is needed after that, prefer wider packing or
    on-chip fusion before chasing higher GEMM unroll, because the 64-bit packed
    interface produced the first material latency drop
