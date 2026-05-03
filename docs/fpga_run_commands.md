@@ -33,6 +33,8 @@ Q_rot_int8, K_rot_int8
 -> tiled attention_score_u55c_kernel launches
 -> tiled mask_scale_u55c_kernel launches
 -> softmax_full_row_u55c_kernel per Q chunk
+-> v_weighted_sum_u55c_kernel per Q/K chunk
+-> accumulated attn_out_fp32
 ```
 
 The XRT host verifies:
@@ -40,13 +42,16 @@ The XRT host verifies:
 - `score_raw.txt`
 - `score_scaled.txt`
 - `score_softmax.txt`
+- `attn_out.txt` when present, or `attn_ref_float.txt` for the real TinyLlama
+  tile
 
 for `--vectors <dir>` single-tile mode, and generated full-sequence raw,
-scaled-logit, and softmax references for `--seq-len <S>` tiled synthetic mode.
+scaled-logit, softmax, and attention-output references for `--seq-len <S>`
+tiled synthetic mode.
 
 The real TinyLlama vector directory also contains `v_full.txt` and
-`attn_ref_float.txt`, but those are for later `softmax @ V` work and are not
-consumed by the current xclbin.
+`attn_ref_float.txt`; `--vectors <dir>` mode now loads V and verifies final
+`attn_out` when those files are present.
 
 ## HBM Bank Mapping
 
@@ -61,6 +66,9 @@ tile scaled  -> HBM[3]
 tile prob    -> HBM[4]
 full logits  -> HBM[4]
 full prob    -> HBM[5]
+V weights    -> HBM[5]
+V tile       -> HBM[6]
+V partial    -> HBM[7]
 ```
 
 ## 1. Source The 2022.2 Environment
@@ -358,31 +366,51 @@ export XCL_EMULATION_MODE=hw_emu
   --seq-len 64 \
   --device 0
 
-./attention_score_u55c/build/host_attention_score_chain \
-  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
-  --seq-len 128 \
-  --device 0
 ```
 
-Verified `hw_emu` tiled results on 2026-05-02:
+Verified Track B five-kernel `hw_emu` tiled results on 2026-05-03:
 
 ```text
-S=8:   q_chunks=1,  k_chunks=1, Tiled sequence verification PASSED
-S=64:  q_chunks=8,  k_chunks=1, Tiled sequence verification PASSED
-S=128: q_chunks=16, k_chunks=2, Tiled sequence verification PASSED
+S=8:
+  q_chunks=1, k_chunks=1
+  attention_score_u55c_kernel 5000.436 ms
+  mask_scale_u55c_kernel      5000.568 ms
+  softmax_full_row_u55c_kernel38004.227 ms
+  v_weighted_sum_u55c_kernel  17001.735 ms
+  total_chain                 65214.673 ms
+  Tiled sequence verification PASSED
+  Attention output verification PASSED
+  XRT chain verification PASSED
+
+S=64:
+  q_chunks=8, k_chunks=1
+  attention_score_u55c_kernel 40005.170 ms
+  mask_scale_u55c_kernel      40004.529 ms
+  softmax_full_row_u55c_kernel336040.775 ms
+  v_weighted_sum_u55c_kernel  163019.968 ms
+  total_chain                 580737.286 ms
+  Tiled sequence verification PASSED
+  Attention output verification PASSED
+  XRT chain verification PASSED
 ```
+
+The five-kernel `hw_emu` run printed `Unable to find emconfig.json. Using
+default device ...` when `emconfig.json` was not present; the runs still passed.
 
 The current `build/attention_score_chain.xclbin` after this build is a
 hardware-emulation xclbin:
 
 ```text
 Content: HW Emulation Binary
-UUID: 1f6b30da-9112-3c47-7e52-a4a149705c10
+UUID: efd0739c-1861-0e5d-f6ae-aacf56b03c9f
 Kernels:
+  softmax_full_row_u55c_kernel
   attention_score_u55c_kernel
+  v_weighted_sum_u55c_kernel
   mask_scale_u55c_kernel
   softmax_u55c_kernel
-  softmax_full_row_u55c_kernel
+HBM banks used:
+  HBM[0] through HBM[7]
 ```
 
 ## 10. Build The Real Hardware `.xclbin`
@@ -395,11 +423,12 @@ bash attention_score_u55c/host/build_xclbin.sh \
   /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
 ```
 
-The hardware build uses the same four `v++ -c` compile commands and final
+The hardware build uses the same five `v++ -c` compile commands and final
 `v++ -l` link command as hardware emulation, with `-t hw` instead of
 `-t hw_emu`.
 
-The four-kernel tiled design has now been rebuilt and run on the real U55C card.
+The five-kernel Track B design has now been rebuilt and run on the real U55C
+card. The latest hardware build completed in `0h 59m 42s`.
 
 Output:
 
@@ -443,17 +472,22 @@ Opening device 0
 Running attention score kernel
 Running mask+scale kernel
 Running softmax kernel
+Running v weighted sum kernel
 Kernel timing summary (host wall-clock, launch through wait):
+Attention output verification PASSED
 XRT chain verification PASSED
 ```
 
-One verified real-card helper run printed:
+Verified real-card vector-mode run on the five-kernel xclbin printed:
 
 ```text
-attention_score_u55c_kernel 0.043 ms
-mask_scale_u55c_kernel      0.025 ms
-softmax_u55c_kernel         0.086 ms
-total_chain                 0.159 ms
+attention_score_u55c_kernel 0.066 ms
+mask_scale_u55c_kernel      0.081 ms
+softmax_u55c_kernel         0.117 ms
+v_weighted_sum_u55c_kernel  0.041 ms
+total_chain                 0.345 ms
+Attention output verification PASSED
+XRT chain verification PASSED
 ```
 
 ## 12. Run Real TinyLlama Vectors On The Real U55C
@@ -479,33 +513,21 @@ bash attention_score_u55c/host/run_hw.sh \
   attention_score_u55c/sim/real_tinyllama_tile
 ```
 
-Direct real-card run result on 2026-05-02:
+Direct real-card run result on 2026-05-03 with V verification:
 
 ```text
 Opening device 0
 Running attention score kernel
 Running mask+scale kernel
 Running softmax kernel
+Running v weighted sum kernel
 Kernel timing summary (host wall-clock, launch through wait):
-  attention_score_u55c_kernel 0.059 ms
-  mask_scale_u55c_kernel      0.029 ms
-  softmax_u55c_kernel         0.028 ms
-  total_chain                 0.121 ms
-XRT chain verification PASSED
-```
-
-Helper real-card run result on 2026-05-02:
-
-```text
-Opening device 0
-Running attention score kernel
-Running mask+scale kernel
-Running softmax kernel
-Kernel timing summary (host wall-clock, launch through wait):
-  attention_score_u55c_kernel 0.062 ms
-  mask_scale_u55c_kernel      0.024 ms
-  softmax_u55c_kernel         0.028 ms
-  total_chain                 0.121 ms
+  attention_score_u55c_kernel 0.053 ms
+  mask_scale_u55c_kernel      0.094 ms
+  softmax_u55c_kernel         0.029 ms
+  v_weighted_sum_u55c_kernel  0.041 ms
+  total_chain                 0.258 ms
+Attention output verification PASSED
 XRT chain verification PASSED
 ```
 
@@ -527,30 +549,36 @@ Kernels:
   softmax_u55c_kernel
 ```
 
-Expected xclbin details for the latest four-kernel `hw_emu` build:
+Expected xclbin details for the latest five-kernel `hw_emu` build:
 
 ```text
 Content: HW Emulation Binary
-UUID: 1f6b30da-9112-3c47-7e52-a4a149705c10
+UUID: efd0739c-1861-0e5d-f6ae-aacf56b03c9f
 Kernels:
+  softmax_full_row_u55c_kernel
   attention_score_u55c_kernel
+  v_weighted_sum_u55c_kernel
   mask_scale_u55c_kernel
   softmax_u55c_kernel
-  softmax_full_row_u55c_kernel
+HBM banks used:
+  HBM[0] through HBM[7]
 ```
 
-Expected xclbin details for the latest four-kernel real hardware build:
+Expected xclbin details for the latest five-kernel real hardware build:
 
 ```text
 Content: Bitstream
-UUID: d0099c1c-0481-4332-4772-0a89999bc1f8
+UUID: 45a627bf-33e6-b364-b9ef-2d17b4f5e0e1
 Kernels:
+  softmax_full_row_u55c_kernel
+  v_weighted_sum_u55c_kernel
   attention_score_u55c_kernel
   mask_scale_u55c_kernel
   softmax_u55c_kernel
-  softmax_full_row_u55c_kernel
 HBM banks used:
-  HBM[0] through HBM[5]
+  HBM[0] through HBM[7]
+Clocks:
+  hbm_aclk 450 MHz, KERNEL_CLK 500 MHz, DATA_CLK 300 MHz
 ```
 
 ## 14. Run Tiled Synthetic Sequences On The Real U55C
@@ -632,8 +660,33 @@ recomputed with the 2026-05-03 Step 4 totals:
 | 256 | 1,900,544 | 0.1623 |
 | 512 | 7,602,176 | 0.2112 |
 
-These are attention-score probabilities/sec metrics, not model tokens/sec.
-Tokens/sec still requires Track B `softmax @ V` and decode-loop integration.
+These are Track A attention-score probabilities/sec metrics, not model
+tokens/sec. Tokens/sec still requires real Q/K/V sequence coverage and
+decode-loop integration.
+
+Verified real-card results on 2026-05-03 after Track B Step 3 added the
+five-kernel `softmax @ V` stage:
+
+| S | q_chunks | k_chunks | total ms | attention score ms | mask+scale ms | full-row softmax ms | V weighted sum ms |
+|---|----------|----------|----------|--------------------|---------------|---------------------|-------------------|
+| 8 | 1 | 1 | 0.868 | 0.112 | 0.097 | 0.133 | 0.040 |
+| 64 | 8 | 1 | 2.328 | 0.289 | 0.206 | 0.670 | 0.333 |
+| 128 | 16 | 2 | 7.226 | 1.028 | 1.433 | 1.453 | 1.324 |
+| 256 | 32 | 4 | 21.269 | 3.247 | 6.471 | 3.837 | 4.903 |
+| 512 | 64 | 8 | 84.190 | 14.002 | 35.091 | 8.385 | 20.843 |
+
+All five Track B runs printed:
+
+```text
+Tiled sequence verification PASSED
+Attention output verification PASSED
+XRT chain verification PASSED
+```
+
+These are synthetic one-head full-attention measurements through final
+`attn_out`, not model tokens/sec. Multi-length real-vector coverage and
+decoder-loop integration are still required before model tokens/sec is
+meaningful.
 
 ## 15. Preserve A Known-Good Run
 
@@ -654,8 +707,9 @@ reports, device state, checksums, and the real hardware verification log.
 
 ## Current Benchmark Scope
 
-The current real-card FPGA run now includes a synthetic tiled attention-score
-sweep through `S = 512`. This is not yet a full tokens/sec measurement.
+The current real-card FPGA run now includes a synthetic tiled one-head
+full-attention sweep through `S = 512`, ending at `attn_out`. This is not yet a
+full model tokens/sec measurement.
 
 Verified synthetic vector parameters:
 
@@ -680,7 +734,6 @@ k_scale: 0.0174317248165607
 total_scale: 0.0001067348132716
 ```
 
-The next benchmarking step is to compare these FPGA score-probability timings
-against the CPU/GPU baselines, then add Track B `softmax @ V`. Tokens/sec is not
-meaningful yet because this design stops at attention probabilities and does not
-run full TinyLlama decoding.
+The next benchmarking step is to compare FPGA full-attention timings against
+the CPU/GPU baselines. Tokens/sec is not meaningful yet because this design
+still does not run full TinyLlama decoding.

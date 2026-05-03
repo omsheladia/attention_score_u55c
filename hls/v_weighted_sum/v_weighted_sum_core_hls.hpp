@@ -8,15 +8,6 @@
 namespace attention_score_u55c {
 namespace v_weighted_sum {
 
-// Compute one partial contribution: out += weights_tile @ v_tile
-//
-// weights_tile : (kScoreRowsPerTile x kScoreColsPerTile) float32
-//                One K-chunk slice of full-row softmax probabilities.
-// v_tile       : (kScoreColsPerTile x kHeadDim)           float32
-//                V values for this K-chunk.
-// out_tile     : (kScoreRowsPerTile x kHeadDim)           float32
-//                Partial attn_out contribution; host accumulates across chunks.
-
 void v_weighted_sum_core_hls(
     const float weights_tile[hls_common::kScoreRowsPerTile][hls_common::kScoreColsPerTile],
     const float v_tile[hls_common::kScoreColsPerTile][hls_common::kHeadDim],

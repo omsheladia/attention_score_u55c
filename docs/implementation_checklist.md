@@ -427,8 +427,8 @@ the V multiply requires accumulating partial results across K/V-chunks.
 
 ### What to do
 
-- [ ] Open `model/attention_score_ref.py`
-- [ ] Add `compute_v_weighted_sum(softmax_weights, v_full)` function:
+- [x] Open `model/attention_score_ref.py`
+- [x] Add `compute_v_weighted_sum(softmax_weights, v_full)` function:
   - accepts `softmax_weights` shape `(S, S)` and `v_full` shape `(S, 64)`
   - for each Q-chunk (8 rows at a time):
     - initialize `accumulator[8][64] = 0`
@@ -437,15 +437,28 @@ the V multiply requires accumulating partial results across K/V-chunks.
       - accumulate into `accumulator`
     - write `accumulator` into `attn_out[q_chunk*8 ..]`
   - returns `attn_out` shape `(S, 64)`
-- [ ] Update `export_attention_score_vectors.py` to:
+- [x] Update `export_attention_score_vectors.py` to:
   - generate a full synthetic V matrix of shape `(S, 64)` using the same
     deterministic pattern as Q/K
   - export `v_full.txt` — the complete `(S, 64)` V matrix for the sequence.
     Note: `v_tile.txt` naming is only meaningful for single-chunk (S ≤ 64);
     for multi-chunk sequences the host reads per-chunk slices from `v_full.txt`
   - export `attn_out.txt` as the new expected output — shape `(S, 64)`
-- [ ] Verify: `attn_out` from tiled function matches brute-force `softmax @ V`
+- [x] Verify: `attn_out` from tiled function matches brute-force `softmax @ V`
       computed directly in Python at S = 8, 64, 128, 256, 512
+
+Verified on 2026-05-03:
+
+```bash
+python3 model/attention_score_ref.py --check-full-tiling
+python3 model/export_attention_score_vectors.py --output-dir sim/attention_score_tile
+python3 model/export_attention_score_vectors.py --seq-len 128 --output-dir /tmp/attention_score_track_b_s128
+```
+
+The full-tiling check covered `S = 8, 64, 128, 256, 512`; raw-score,
+scaled-logit, softmax, and `attn_out` differences matched the brute-force
+reference with max `attn_out` diff `2.77555756e-17`. The exporter now writes
+`v_full.txt`, `v_tile.txt`, `v_partial_expected.txt`, and `attn_out.txt`.
 
 ---
 
@@ -458,19 +471,19 @@ the V multiply requires accumulating partial results across K/V-chunks.
 ### What to do
 
 #### HLS kernel
-- [ ] Create `hls/v_weighted_sum/v_weighted_sum_core_hls.hpp`
-- [ ] Create `hls/v_weighted_sum/v_weighted_sum_core_hls.cpp`:
+- [x] Create `hls/v_weighted_sum/v_weighted_sum_core_hls.hpp`
+- [x] Create `hls/v_weighted_sum/v_weighted_sum_core_hls.cpp`:
   - inputs: `weights_tile[8][64]` (float32), `v_tile[64][64]` (float32)
   - output: `out_tile[8][64]` (float32) — one **partial** contribution to
     `attn_out`; the kernel computes `out[row][d] = sum_col(weights[row][col]
     * v[col][d])` for the 64 columns in this K-chunk only. The host
     accumulates across all K-chunks to produce the final `attn_out` row.
   - add `#pragma HLS PIPELINE II=1` and `#pragma HLS ARRAY_PARTITION` on V tile
-- [ ] Add AXI interface pragmas (separate bundles for weights, V, output)
+- [x] Add AXI interface pragmas (separate bundles for weights, V, output)
 
 #### Testbench
-- [ ] Create `hls/v_weighted_sum/tb_v_weighted_sum.cpp`
-- [ ] This testbench verifies a **single K-chunk only** (the kernel computes
+- [x] Create `hls/v_weighted_sum/tb_v_weighted_sum.cpp`
+- [x] This testbench verifies a **single K-chunk only** (the kernel computes
       one partial contribution, not the full `attn_out`). Test as follows:
   - Use the existing `score_softmax.txt` (8×64 softmax weights, one K-chunk)
     and a synthetic `v_tile.txt` (64×64 V values)
@@ -478,14 +491,35 @@ the V multiply requires accumulating partial results across K/V-chunks.
     `partial = softmax_weights (8×64) @ v_tile (64×64)` → shape `(8, 64)`
   - Write expected partial output to `v_partial_expected.txt`
   - Confirm kernel output matches `v_partial_expected.txt`
-- [ ] Note: `attn_out.txt` (the final accumulated output) is only correct after
+- [x] Note: `attn_out.txt` (the final accumulated output) is only correct after
       the host sums all K-chunks — it cannot be used as the kernel-level
       expected output for multi-chunk sequences
 
 #### Vitis
-- [ ] Create `hls/v_weighted_sum/run_hls.tcl`
-- [ ] Run csim — confirm pass
-- [ ] Run csynth — record MHz and DSP count
+- [x] Create `hls/v_weighted_sum/run_hls.tcl`
+- [x] Run csim — confirm pass
+- [x] Run csynth — record MHz and DSP count
+
+Verified on 2026-05-03:
+
+```bash
+bash attention_score_u55c/host/run_local_csim.sh
+source attention_score_u55c/host/setup_2022_2_env.sh
+vitis_hls -f attention_score_u55c/hls/v_weighted_sum/run_hls.tcl
+```
+
+Results:
+
+- local C++ bench PASS, max diff `5.96046e-08`
+- Vitis HLS 2022.2 `csim PASS`
+- Vitis HLS 2022.2 `csynth PASS`
+- estimated Fmax: `342.47 MHz`
+- latency: `5600 cycles`
+- resources: `320 DSP`, `49 BRAM_18K`, `0 URAM`, `50454 FF`, `32358 LUT`
+- loop constraint status: all loop constraints satisfied
+
+This is a correctness-first, highly parallel kernel. DSP/BRAM tuning can be
+done later if the integrated xclbin needs a smaller resource point.
 
 ---
 
@@ -496,9 +530,9 @@ the V multiply requires accumulating partial results across K/V-chunks.
 
 ### What to do
 
-- [ ] Add `v_kernel` XRT object to `host/attention_score_chain_xrt.cpp`
-- [ ] Allocate HBM buffer for V input and `attn_out` output
-- [ ] Update the tiling loop to three passes. Do NOT run softmax inside the
+- [x] Add `v_kernel` XRT object to `host/attention_score_chain_xrt.cpp`
+- [x] Allocate HBM buffer for V input and partial `attn_out` output
+- [x] Update the tiling loop to three passes. Do NOT run softmax inside the
       inner K-chunk loop — it must see all S keys for a query row first:
   ```
   // pass 1 — score + mask + scale for all (q, k) tile pairs → logits
@@ -521,15 +555,114 @@ the V multiply requires accumulating partial results across K/V-chunks.
           accumulator += kernel output
       write accumulator → attn_out[q_chunk*8 ..]
   ```
-- [ ] Update `vpp_link.cfg` to include `v_weighted_sum_u55c_kernel`
-- [ ] Load `v_full.txt` and slice into per-K-chunk buffers inside the tiling
-      loop; compare final accumulated output against `attn_out.txt`
-- [ ] Test in hw_emu at S = 8, 64, 128
-- [ ] Update pass signal check to include `attn_out` verification
+- [x] Update `vpp_link.cfg` to include `v_weighted_sum_u55c_kernel`
+- [x] Generate deterministic synthetic V in `--seq-len` mode, slice it into
+      per-K-chunk buffers inside the tiling loop, and compare final accumulated
+      output against the host CPU `softmax @ V` reference
+- [x] Extend `--vectors <dir>` mode to load `v_full.txt` plus `attn_out.txt`
+      or `attn_ref_float.txt` for real-vector Track B verification
+- [x] Test in hw_emu at S = 8, 64, 128
+- [x] Build and test on real U55C hardware at S = 8, 64, 128, 256, 512
+- [x] Update pass signal check to include `attn_out` verification
 
 ### Expected result
 - FPGA now produces the complete attention output `(S, 64)` for one head
 - The output matches the Python tiling reference within float tolerance (~1e-4)
+
+### 2026-05-03 status
+
+Track B Step 3 is integrated for synthetic `--seq-len <S>` hardware emulation
+and real U55C hardware. The linked xclbin now contains five kernels:
+
+```text
+attention_score_u55c_kernel
+mask_scale_u55c_kernel
+softmax_u55c_kernel
+softmax_full_row_u55c_kernel
+v_weighted_sum_u55c_kernel
+```
+
+HBM placement uses banks `[0]` through `[7]`:
+
+```text
+Q HBM[0], K HBM[1], raw score HBM[2], scaled tile HBM[3],
+tile/full-row logits HBM[4], full-row probabilities / V weights HBM[5],
+V chunk HBM[6], V partial output HBM[7]
+```
+
+Verification commands:
+
+```bash
+source attention_score_u55c/host/setup_2022_2_env.sh
+bash attention_score_u55c/host/build_xclbin.sh \
+  hw_emu \
+  /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+bash attention_score_u55c/host/build_host.sh
+
+export XCL_EMULATION_MODE=hw_emu
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --seq-len 8 \
+  --device 0
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --seq-len 64 \
+  --device 0
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --seq-len 128 \
+  --device 0
+```
+
+Observed `hw_emu` results:
+
+| S | q_chunks | k_chunks | total_chain ms | result |
+|---|----------|----------|----------------|--------|
+| 8 | 1 | 1 | 65,214.673 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
+| 64 | 8 | 1 | 580,737.286 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
+| 128 | 16 | 2 | 1,657,498.336 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
+
+`hw_emu` also printed `Unable to find emconfig.json. Using default device ...`;
+the runs still passed.
+
+Real hardware build command:
+
+```bash
+source attention_score_u55c/host/setup_2022_2_env.sh
+unset XCL_EMULATION_MODE
+bash attention_score_u55c/host/build_xclbin.sh \
+  hw \
+  /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+```
+
+The five-kernel hardware link completed successfully in `0h 59m 42s`.
+`xclbinutil --info` reports content `Bitstream`, UUID
+`45a627bf-33e6-b364-b9ef-2d17b4f5e0e1`, clocks `hbm_aclk 450 MHz`,
+`KERNEL_CLK 500 MHz`, `DATA_CLK 300 MHz`, and HBM banks `[0]` through `[7]`
+used.
+
+Real U55C synthetic `--seq-len` sweep:
+
+| S | q_chunks | k_chunks | total_chain ms | result |
+|---|----------|----------|----------------|--------|
+| 8 | 1 | 1 | 0.868 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
+| 64 | 8 | 1 | 2.328 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
+| 128 | 16 | 2 | 7.226 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
+| 256 | 32 | 4 | 21.269 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
+| 512 | 64 | 8 | 84.190 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
+
+Saved-vector `--vectors <dir>` mode now also runs the V weighted-sum stage when
+the vector directory contains `v_full.txt` and either `attn_out.txt` or
+`attn_ref_float.txt`. The softmax output is copied from the tile-softmax HBM
+bank into the V-kernel weights HBM bank before launching
+`v_weighted_sum_u55c_kernel`.
+
+Verified real U55C vector-mode runs:
+
+| vector directory | expected output file | total_chain ms | result |
+|---|---|---:|---|
+| `sim/attention_score_tile` | `attn_out.txt` | 0.345 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
+| `sim/real_tinyllama_tile` | `attn_ref_float.txt` | 0.258 | `Attention output verification PASSED`; `XRT chain verification PASSED` |
 
 ---
 
@@ -537,9 +670,9 @@ the V multiply requires accumulating partial results across K/V-chunks.
 
 Once Track C Step 2 (PyTorch Q/K hook) is working:
 
-- [ ] Extend the hook to also capture `V` tensors from the same attention layer
-- [ ] Add V to `model/export_real_vectors.py`
-- [ ] Verify: FPGA `attn_out` matches PyTorch's own attention output
+- [x] Extend the hook to also capture `V` tensors from the same attention layer
+- [x] Add V to `model/export_real_vectors.py`
+- [x] Verify: FPGA `attn_out` matches PyTorch's own attention output
       (`torch.nn.functional.scaled_dot_product_attention`) for the same head
       within quantization tolerance (~1e-3)
 
@@ -551,8 +684,8 @@ Once Track C Step 2 (PyTorch Q/K hook) is working:
 |------|--------|---------------------|--------------|
 | B1 — Python reference | 1–2 hrs | Yes | Track A Step 3A |
 | B2 — V kernel HLS | 2–3 hrs | Local bench yes, csynth needs Vitis | B1 |
-| B3 — Host app update | 2–3 hrs | No (needs XRT) | Track A Step 3 + B2 |
-| B extension — Real V | 1 hr | Yes (Python), No (FPGA) | Track C Step 2 + B3 |
+| B3 — Host app update | Done for synthetic hw_emu, real U55C S=8..512, and vector mode | No (needs XRT) | Track A Step 3 + B2 |
+| B extension — Real V | Done for current single-tile real-vector export | Yes (Python), No (FPGA) | Track C Step 2 + B3 |
 
 ---
 
@@ -672,8 +805,8 @@ Track B (V kernel) must be working before real V is useful.
   - writes `q_tile.txt`, `k_tile.txt`, `v_full.txt`, `kernel_meta.txt` and all
     expected current-chain intermediate outputs in the same format as the
     synthetic exporter
-  - writes `attn_out.txt` once Track B (V kernel) is complete by running the
-    Python tiling reference including the V weighted sum pass
+  - writes `attn_ref_float.txt` using PyTorch's full-float attention reference
+    for the same head
 - [x] Run on a test sentence and confirm all output files are generated
 - [x] Diff file format against the synthetic exporter — host app should read
       them without any changes
@@ -686,9 +819,11 @@ Track B (V kernel) must be working before real V is useful.
 **Requires:** XRT on Linux, hw_emu or real hw
 
 **Current status:** implemented and verified for the current single-tile
-3-kernel design using `sim/real_tinyllama_tile/`. Full multi-sentence and
-multi-length real TinyLlama coverage is now unblocked by Track A, but still
-requires extending the real-vector exporter beyond the current 8-token tile.
+five-kernel Track B design using `sim/real_tinyllama_tile/`. The FPGA verifies
+score, softmax, and final `attn_out` against `attn_ref_float.txt` within
+quantization tolerance. Full multi-sentence and multi-length real TinyLlama
+coverage is now unblocked by Track A, but still requires extending the
+real-vector exporter beyond the current 8-token tile.
 
 ### What to do
 
@@ -701,11 +836,11 @@ requires extending the real-vector exporter beyond the current 8-token tile.
     --device 0
   ```
 - [x] Confirm `XRT chain verification PASSED`
-- [ ] If Track B is complete: compare FPGA `attn_out` against PyTorch's full
+- [x] If Track B is complete: compare FPGA `attn_out` against PyTorch's full
       attention output (`torch.nn.functional.scaled_dot_product_attention`)
       for the same head — should match within ~1e-3 (quantization error expected)
-- [x] If Track B is not yet complete: compare FPGA softmax weights output
-      against PyTorch softmax only, and note the limitation explicitly
+- [x] Historical pre-Track-B check: compare FPGA softmax weights output against
+      PyTorch softmax only, and note the limitation explicitly
 - [ ] Test on multiple sentences at different lengths
 
 Verified real-card helper run:
@@ -745,7 +880,8 @@ Step D3 (FPGA timing) requires Linux + XRT + hardware.
 **Scope:** Baselines should cover the same computation the FPGA handles.
 Once Track B is complete that means score + mask + scale + softmax + V weighted
 sum, and the comparison metric should be `attn_out` latency, not just softmax.
-Until Track B is done, compare score + softmax only and note the limitation.
+Track B is now complete for synthetic `--seq-len` hardware runs; real-vector
+comparisons still need `--vectors <dir>` V loading and `attn_out` verification.
 
 **Prerequisite:** Track A Step 3A (Python tiling) must be done so the baseline
 runs the same computation as the FPGA.
@@ -761,8 +897,8 @@ runs the same computation as the FPGA.
 **Status 2026-05-03:** Implemented as `model/benchmark_cpu.py` with shared
 helpers in `model/benchmark_common.py`. It supports synthetic scaling lengths
 and `--vectors sim/real_tinyllama_tile` real-input mode. The current verified
-CPU runs are software baselines only; final FPGA speedup claims still require
-Track A full-sequence tiling and Track B `softmax @ V` on FPGA.
+CPU runs are software baselines; final speedup claims can now compare them
+against the Track B five-kernel FPGA runs.
 
 ### What to do
 

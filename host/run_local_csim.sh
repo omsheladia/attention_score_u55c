@@ -53,6 +53,6 @@ g++ -O2 -std=c++17 \
 "$SIM_DIR/tb_score_scale" "$VECTOR_DIR"
 "$SIM_DIR/tb_softmax" "$VECTOR_DIR"
 "$SIM_DIR/tb_softmax_full_row"
-"$SIM_DIR/tb_v_weighted_sum"
+"$SIM_DIR/tb_v_weighted_sum" "$VECTOR_DIR"
 
 echo "Local attention-score C++ simulation chain PASSED"

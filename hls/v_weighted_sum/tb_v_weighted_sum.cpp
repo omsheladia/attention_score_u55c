@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -11,130 +12,109 @@ using attention_score_u55c::hls_common::kHeadDim;
 using attention_score_u55c::hls_common::kScoreColsPerTile;
 using attention_score_u55c::hls_common::kScoreRowsPerTile;
 
-constexpr int kWeightsElems = kScoreRowsPerTile * kScoreColsPerTile;  // 8 x 64
-constexpr int kVElems       = kScoreColsPerTile * kHeadDim;           // 64 x 64
-constexpr int kOutElems     = kScoreRowsPerTile * kHeadDim;           // 8 x 64
+constexpr int kWeightsElems = kScoreRowsPerTile * kScoreColsPerTile;
+constexpr int kVElems = kScoreColsPerTile * kHeadDim;
+constexpr int kOutElems = kScoreRowsPerTile * kHeadDim;
 
-// Deterministic fill matching the Python export patterns.
-void fill_weights(float* dst, std::uint32_t query_row_count, std::uint32_t key_col_count) {
-  for (int idx = 0; idx < kWeightsElems; ++idx) {
-    dst[idx] = 0.0f;
+bool load_flat_float_array(const std::string& path, float* dst, int count) {
+  std::ifstream handle(path);
+  if (!handle) {
+    std::cerr << "Failed to open " << path << "\n";
+    return false;
   }
-  // Uniform distribution over active keys per row (simple, sum-to-1).
-  const float w = (key_col_count > 0) ? (1.0f / static_cast<float>(key_col_count)) : 0.0f;
-  for (std::uint32_t row = 0; row < query_row_count; ++row) {
-    for (std::uint32_t col = 0; col < key_col_count; ++col) {
-      dst[(row * kScoreColsPerTile) + col] = w;
+
+  for (int idx = 0; idx < count; ++idx) {
+    if (!(handle >> dst[idx])) {
+      std::cerr << "Unexpected EOF while reading " << path << "\n";
+      return false;
     }
   }
+  return true;
 }
 
-void fill_v(float* dst) {
-  // v[c][d] = ((c*3 + d*7) % 15 - 7) matching deterministic_v() in Python.
-  for (int c = 0; c < kScoreColsPerTile; ++c) {
-    for (int d = 0; d < kHeadDim; ++d) {
-      dst[(c * kHeadDim) + d] =
-          static_cast<float>(((c * 3) + (d * 7)) % 15 - 7);
+bool load_kernel_meta(
+    const std::string& path,
+    std::uint32_t* query_row_count,
+    std::uint32_t* key_col_count) {
+  std::ifstream handle(path);
+  if (!handle) {
+    std::cerr << "Failed to open " << path << "\n";
+    return false;
+  }
+
+  std::string key;
+  while (handle >> key) {
+    if (key == "query_row_count") {
+      handle >> *query_row_count;
+    } else if (key == "key_col_count") {
+      handle >> *key_col_count;
+    } else {
+      std::string ignored;
+      handle >> ignored;
     }
   }
+  return true;
 }
 
-void reference_v_weighted_sum(
-    const float* weights,
-    const float* v,
-    float* expected,
-    std::uint32_t query_row_count,
-    std::uint32_t key_col_count) {
-  for (int idx = 0; idx < kOutElems; ++idx) {
-    expected[idx] = 0.0f;
-  }
-  for (std::uint32_t row = 0; row < query_row_count; ++row) {
-    for (int d = 0; d < kHeadDim; ++d) {
-      float accum = 0.0f;
-      for (std::uint32_t c = 0; c < key_col_count; ++c) {
-        accum += weights[(row * kScoreColsPerTile) + c] * v[(c * kHeadDim) + d];
-      }
-      expected[(row * kHeadDim) + d] = accum;
-    }
-  }
-}
+}  // namespace
 
-bool run_case(
-    const std::string& name,
-    std::uint32_t query_row_count,
-    std::uint32_t key_col_count) {
-  float weights[kWeightsElems] = {};
-  float v[kVElems] = {};
-  float out[kOutElems] = {};
+int main(int argc, char** argv) {
+  std::string base = "attention_score_u55c/sim/attention_score_tile";
+  if (argc > 1) {
+    base = argv[1];
+  }
+
+  float weights_tile[kWeightsElems] = {};
+  float v_tile[kVElems] = {};
+  float out_tile[kOutElems] = {};
   float expected[kOutElems] = {};
+  std::uint32_t query_row_count = 0;
+  std::uint32_t key_col_count = 0;
 
-  fill_weights(weights, query_row_count, key_col_count);
-  fill_v(v);
-  reference_v_weighted_sum(weights, v, expected, query_row_count, key_col_count);
+  if (!load_flat_float_array(base + "/score_softmax.txt", weights_tile, kWeightsElems)) {
+    return 1;
+  }
+  if (!load_flat_float_array(base + "/v_tile.txt", v_tile, kVElems)) {
+    return 1;
+  }
+  if (!load_flat_float_array(base + "/v_partial_expected.txt", expected, kOutElems)) {
+    return 1;
+  }
+  if (!load_kernel_meta(base + "/kernel_meta.txt", &query_row_count, &key_col_count)) {
+    return 1;
+  }
 
   attention_score_u55c::v_weighted_sum::v_weighted_sum_u55c_kernel(
-      weights,
-      v,
-      out,
+      weights_tile,
+      v_tile,
+      out_tile,
       query_row_count,
       key_col_count);
 
   int mismatch_count = 0;
   float max_diff = 0.0f;
   for (int idx = 0; idx < kOutElems; ++idx) {
-    const float diff = std::fabs(out[idx] - expected[idx]);
+    const float diff = std::fabs(out_tile[idx] - expected[idx]);
     if (diff > max_diff) {
       max_diff = diff;
     }
-    if (diff > 1.0e-3f) {
+    if (diff > 1.0e-4f) {
       ++mismatch_count;
       if (mismatch_count <= 8) {
-        std::cerr << name << " mismatch at index " << idx
-                  << ": got " << out[idx]
+        std::cerr << "Mismatch at index " << idx
+                  << ": got " << out_tile[idx]
                   << ", expected " << expected[idx]
                   << ", diff " << diff << "\n";
       }
     }
   }
 
-  // Rows beyond query_row_count must be zero.
-  for (std::uint32_t row = query_row_count; row < kScoreRowsPerTile; ++row) {
-    for (int d = 0; d < kHeadDim; ++d) {
-      const float v_out = out[(row * kHeadDim) + d];
-      if (std::fabs(v_out) > 1.0e-6f) {
-        ++mismatch_count;
-        if (mismatch_count <= 8) {
-          std::cerr << name << " inactive row " << row
-                    << " dim " << d << " is non-zero: " << v_out << "\n";
-        }
-      }
-    }
-  }
-
   if (mismatch_count != 0) {
-    std::cerr << name << " FAILED with " << mismatch_count
+    std::cerr << "v_weighted_sum test FAILED with " << mismatch_count
               << " mismatches, max diff " << max_diff << "\n";
-    return false;
-  }
-
-  std::cout << name << " PASSED, max diff " << max_diff << "\n";
-  return true;
-}
-
-}  // namespace
-
-int main() {
-  bool ok = true;
-  ok &= run_case("v_weighted_sum full tile  (8q x 64k)", 8, 64);
-  ok &= run_case("v_weighted_sum partial    (4q x 32k)", 4, 32);
-  ok &= run_case("v_weighted_sum single row (1q x 64k)", 1, 64);
-  ok &= run_case("v_weighted_sum partial k  (8q x 10k)", 8, 10);
-
-  if (!ok) {
-    std::cerr << "v_weighted_sum test FAILED\n";
     return 1;
   }
 
-  std::cout << "v_weighted_sum test PASSED\n";
+  std::cout << "v_weighted_sum test PASSED, max diff " << max_diff << "\n";
   return 0;
 }

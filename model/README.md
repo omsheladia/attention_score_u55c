@@ -7,8 +7,11 @@ reference.
   - small reference implementation for one score tile
   - includes raw score, causal mask, score scaling, and softmax helpers
   - includes Track A Step 3 full-sequence tiled score/softmax reference helpers
+  - includes Track B Step 1 `softmax @ V` reference helpers
 - `export_attention_score_vectors.py`
   - emits deterministic vectors under `sim/attention_score_tile/`
+  - exports Track B `v_full.txt`, `v_tile.txt`, `v_partial_expected.txt`, and
+    `attn_out.txt`
 - `check_tinyllama_setup.py`
   - Track C Step 1 setup checker for real-vector work
   - verifies `torch`, `transformers`, and `sentencepiece`
@@ -22,7 +25,8 @@ reference.
   - Track C Step 4 exporter for a real TinyLlama single-tile test case
   - writes current-host-compatible `q_tile.txt`, `k_tile.txt`, `kernel_meta.txt`,
     and expected score/mask-scale/softmax outputs
-  - also writes `v_full.txt` for later Track B `softmax @ V` work
+  - also writes `v_full.txt` and `attn_ref_float.txt` for Track B vector-mode
+    `attn_out` verification
 - `benchmark_common.py`
   - shared Track D helpers for synthetic input generation, real-vector loading,
     tiled CPU math, brute-force CPU math, validation, and timing
@@ -35,11 +39,18 @@ reference.
   - uses the same synthetic and real-vector inputs as the CPU baseline
   - exits cleanly when CUDA is unavailable
 
-The current XRT host verifies the three-kernel runtime outputs against:
+The current XRT host verifies the score/softmax runtime outputs against:
 
 - `score_raw.txt`
 - `score_scaled.txt`
 - `score_softmax.txt`
+
+Track B reference/export files are now also available:
+
+- `v_full.txt`
+- `v_tile.txt`
+- `v_partial_expected.txt`
+- `attn_out.txt`
 
 `score_masked.txt` is still exported for the legacy standalone mask kernel and
 for debugging, but the current hardware chain merges mask and scale into
@@ -63,7 +74,32 @@ python3 model/attention_score_ref.py --check-full-tiling
 
 The verified local run covered `S = 8, 64, 128, 256, 512` and matched the
 brute-force reference with zero max difference for raw scores, scaled logits,
-and softmax probabilities.
+and softmax probabilities; Track B `attn_out` max difference was
+`2.77555756e-17`.
+
+## Track B Softmax @ V Reference
+
+Track B Step 1 is implemented in `attention_score_ref.py`:
+
+- `deterministic_v_matrix(row_count)`
+- `compute_v_weighted_sum_partial(weights_tile, v_tile)`
+- `compute_v_weighted_sum(softmax_weights, v_full)`
+- `brute_force_v_weighted_sum(softmax_weights, v_full)`
+- `compute_full_attention(q_full, k_full, v_full, ...)`
+
+Generate the default single-tile vectors plus V/attention-output references:
+
+```bash
+python3 model/export_attention_score_vectors.py --output-dir sim/attention_score_tile
+```
+
+Generate a full-sequence synthetic Track B vector directory:
+
+```bash
+python3 model/export_attention_score_vectors.py \
+  --seq-len 128 \
+  --output-dir /tmp/attention_score_track_b_s128
+```
 
 ## TinyLlama Setup Check
 
@@ -231,4 +267,4 @@ reference. The real-vector GPU run matched
 `2.98023224e-08`.
 
 These are software baselines only. Final FPGA speedup tables still require
-Track A full-sequence tiling and Track B `softmax @ V` on FPGA.
+comparison against the current Track B five-kernel FPGA runs.

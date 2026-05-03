@@ -17,7 +17,7 @@ open_solution -reset "sol1"
 set_part {xcu55c-fsvh2892-2L-e}
 create_clock -period 4
 
-csim_design
+csim_design -argv "$root_dir/attention_score_u55c/sim/attention_score_tile"
 csynth_design
 
 exit

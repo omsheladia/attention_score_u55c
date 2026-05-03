@@ -43,6 +43,8 @@ Q_rot_int8, K_rot_int8
 -> score_masked_int32
 -> score_scaled_fp32
 -> score_softmax_fp32
+-> attn_out_fp32 in synthetic `--seq-len` mode and saved-vector `--vectors`
+   mode when V/reference files are present
 ```
 
 This is based on the attention-score path in the repo, mainly:
@@ -54,7 +56,7 @@ What is intentionally **not** implemented in this isolated flow:
 
 - full Q/K/V projection path on FPGA
 - live RoPE generation in the full runtime path
-- `softmax @ V` in the current verified runtime flow
+- multi-sequence real TinyLlama V-vector export
 - decoder-layer integration
 - full TinyLlama inference
 
@@ -63,7 +65,10 @@ What is intentionally **not** implemented in this isolated flow:
 Current correctness means:
 
 - the isolated 4-stage attention-score chain matches the local TinyLlama-derived
-  software reference vectors for the chosen tile format
+  software reference vectors in `--vectors <dir>` mode, including final
+  `attn_out` when V/reference files are present
+- the synthetic five-kernel `--seq-len` hardware-emulation path matches CPU
+  references through final one-head `attn_out`
 
 Current correctness does **not** mean:
 
@@ -245,16 +250,17 @@ score dequant max error `2.65718549e-02`, score dequant mean error
 
 Track C Step 4 was implemented for the current single-tile design with
 `model/export_real_vectors.py`. It exports a real TinyLlama-derived vector
-directory compatible with the current 3-kernel host flow:
+directory compatible with the current host flow:
 `q_tile.txt`, `k_tile.txt`, `kernel_meta.txt`, `score_raw.txt`,
 `score_masked.txt`, `score_scaled.txt`, `score_softmax.txt`,
-`score_packed.txt`, `metadata.json`, plus inspection/later-stage files
+`score_packed.txt`, `metadata.json`, plus inspection/Track B files
 `q_float.txt`, `k_float.txt`, `v_full.txt`, and `attn_ref_float.txt`. The
 verified run used the default 8-token prompt and wrote
 `sim/real_tinyllama_tile/`. Local C++ benches passed against that directory for
-`attention_score`, `mask_scale`, and `softmax`. This does not implement full
-sequence tiling or `softmax @ V`; it provides real Q/K inputs for the current
-single-tile 3-kernel design.
+`attention_score`, `mask_scale`, and `softmax`. Track B later added FPGA
+`softmax @ V` consumption of `v_full.txt` and comparison against
+`attn_ref_float.txt`; full multi-sequence real-vector tiling is still future
+work.
 
 On 2026-05-02, `sim/real_tinyllama_tile/` was run on the real U55C with the
 current 3-kernel XRT host and existing hardware bitstream UUID
@@ -263,9 +269,9 @@ current 3-kernel XRT host and existing hardware bitstream UUID
 timed attention score at 0.059 ms, mask+scale at 0.029 ms, softmax at 0.028 ms,
 and total chain at 0.121 ms. The helper run timed attention score at 0.062 ms,
 mask+scale at 0.024 ms, softmax at 0.028 ms, and total chain at 0.121 ms. This
-verifies real TinyLlama-derived Q/K through score, mask+scale, and softmax; the
-exported `v_full.txt` and `attn_ref_float.txt` remain for later Track B work and
-are not consumed by the current xclbin.
+was the earlier pre-Track-B verification of real TinyLlama-derived Q/K through
+score, mask+scale, and softmax. The current five-kernel xclbin also consumes
+`v_full.txt` and verifies final `attn_out` against `attn_ref_float.txt`.
 
 The same day, `README.md`, `host/README.md`, `model/README.md`,
 `docs/implementation_checklist.md`, and `CLAUDE.md` were refreshed to reflect
@@ -295,8 +301,8 @@ On 2026-05-03, Track D Steps 1-2 benchmark infrastructure was added:
     softmax diff `2.98023224e-07` and max `attn_out` diff `1.90734863e-06`
   - real-vector run matched `sim/real_tinyllama_tile/score_softmax.txt` with
     max difference `2.98023224e-08`
-- these are software baselines only; final speedup claims still require Track A
-  full-sequence FPGA tiling and Track B `softmax @ V` on FPGA
+- these are software baselines only; final speedup claims should now compare
+  them against the Track B five-kernel real U55C runs
 
 ## Tile And Sequence-Length Model
 
@@ -640,18 +646,17 @@ Not yet confirmed:
 
 - full-sequence real TinyLlama vector export beyond the current 8-token tile
 - automated synthetic Track A regression through multiple vector directories
-- `softmax @ V` / V weighted-sum stage (code done, pending lab PC verification)
 - XRT `hw_emu` run using `sim/real_tinyllama_tile/`
 - CPU/GPU/FPGA baseline comparison for final acceleration claims
 - full TinyLlama attention path
 - full TinyLlama model execution
 
-So the project is now a proven **tiled attention-score/softmax FPGA demo** for
-synthetic sequence lengths up to `S=512`, but not yet a full TinyLlama hardware
-runtime.
+So the project is now a proven **tiled one-head attention FPGA demo** for
+synthetic sequence lengths up to `S=512`, with saved-vector single-tile
+`attn_out` verification, but not yet a full TinyLlama hardware runtime.
 Track C Steps 1-3 are implemented and verified locally; Track C Step 4 is
-implemented for the current single-tile 3-kernel design and verified with local
-C++ benches plus a real-card XRT run.
+implemented for the current single-tile vector design and verified with local
+C++ benches plus real-card XRT runs through `attn_out`.
 
 On 2026-05-02, Track A Step 3 Part A was implemented in
 `model/attention_score_ref.py`. New helpers include
@@ -729,62 +734,109 @@ and real TinyLlama vector mode also still passed. Per-kernel mask/scale timing
 is now an overlapped host-observed window; use `total_chain` for Track A Step 4
 comparisons.
 
-## Track B Status (2026-05-03)
+Later on 2026-05-03, Track B Steps 1-2 were implemented and verified locally:
 
-Track B code is complete on a Windows development machine and committed but not
-yet pushed to remote. The following are done and verified locally:
+- `model/attention_score_ref.py` now includes:
+  - `deterministic_v_matrix(row_count)`
+  - `compute_v_weighted_sum_partial(weights_tile, v_tile)`
+  - `compute_v_weighted_sum(softmax_weights, v_full)`
+  - `brute_force_v_weighted_sum(softmax_weights, v_full)`
+  - `compute_full_attention(q_full, k_full, v_full, ...)`
+- `model/export_attention_score_vectors.py` now writes Track B files:
+  - `v_full.txt`
+  - `v_tile.txt`
+  - `v_partial_expected.txt`
+  - `attn_out.txt`
+  - optional full-sequence export via `--seq-len <S>`
+- Python verification with `python3 model/attention_score_ref.py --check-full-tiling`
+  passed for `S = 8, 64, 128, 256, 512`; max `attn_out` diff was
+  `2.77555756e-17`.
+- `hls/v_weighted_sum/` was added as the Track B partial weighted-sum kernel.
+  It consumes one `8 x 64` softmax-weight tile and one `64 x 64` V chunk, and
+  produces one partial `8 x 64` contribution.
+- `bash attention_score_u55c/host/run_local_csim.sh` passed, including
+  `v_weighted_sum test PASSED, max diff 5.96046e-08`.
+- Vitis HLS 2022.2 for `v_weighted_sum_u55c_kernel` passed `csim` and
+  `csynth`: estimated `342.47 MHz`, latency `5600 cycles`, resources
+  `320 DSP`, `49 BRAM_18K`, `0 URAM`, `50454 FF`, `32358 LUT`, and all loop
+  constraints satisfied.
 
-- `model/attention_score_ref.py`: `deterministic_v()` and
-  `compute_v_weighted_sum()` added; verified against brute-force at
-  `S = 8, 64, 128, 256, 512` with zero max error.
-- `model/export_attention_score_vectors.py`: `--seq-len` flag added; exports
-  `v_full.txt`, `softmax_weights.txt`, and `attn_out.txt` with built-in
-  brute-force check.
-- `hls/v_weighted_sum/`: new kernel (`weights[8×64] @ V[64×64] →
-  partial_out[8×64]`), 16-way MAC unroll, cyclic array partitioning on both
-  input arrays. Self-contained testbench passes all 4 cases under g++ on
-  Ubuntu WSL.
-- `host/attention_score_chain_xrt.cpp`: `make_synthetic_v()`,
-  `compute_cpu_attn_out()`, V kernel XRT object, Pass 3 V accumulation loop,
-  and `attn_out` tolerance comparison added to `run_tiled_sequence`.
-- `host/vpp_link.cfg`: `v_weighted_sum_u55c_kernel_1` assigned HBM[6/7/8].
-- `host/build_xclbin.sh`: `v++ -c` compile step and link step updated.
-- `host/run_local_csim.sh`: `tb_v_weighted_sum` added to g++ chain.
+Track B Step 3 was then integrated for synthetic `--seq-len` XRT hardware
+emulation:
 
-Not yet verified (requires lab PC):
-- Vitis csim and csynth for `v_weighted_sum_u55c_kernel`
-- xclbin rebuild with all 5 kernels
-- `hw_emu` run with `attn_out` verification
-- real U55C hardware run
+- `host/attention_score_chain_xrt.cpp` now opens
+  `v_weighted_sum_u55c_kernel`, generates deterministic synthetic V, slices
+  per-K V chunks, runs a three-pass tiled flow, accumulates partial V outputs on
+  the host, and verifies final `attn_out` against a CPU `softmax @ V`
+  reference.
+- `host/build_xclbin.sh` now compiles/links `v_weighted_sum_u55c_kernel`.
+- `host/vpp_link.cfg` maps `v_weighted_sum_u55c_kernel_1.weights_tile` to
+  `HBM[5]`, `v_tile` to `HBM[6]`, and `out_tile` to `HBM[7]`; the five-kernel
+  `hw_emu` xclbin uses HBM banks `[0]` through `[7]`.
+- The five-kernel `hw_emu` xclbin build passed with the U55C platform
+  `/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm`.
+- The XRT host build passed.
+- `hw_emu` passed for `--seq-len 8`: q_chunks=1, k_chunks=1,
+  `total_chain 65214.673 ms`, `Attention output verification PASSED`, and
+  `XRT chain verification PASSED`.
+- `hw_emu` passed for `--seq-len 64`: q_chunks=8, k_chunks=1,
+  `total_chain 580737.286 ms`, `Attention output verification PASSED`, and
+  `XRT chain verification PASSED`.
+- `hw_emu` passed for `--seq-len 128`: q_chunks=16, k_chunks=2,
+  `total_chain 1657498.336 ms`, `Attention output verification PASSED`, and
+  `XRT chain verification PASSED`.
+- `hw_emu` printed `Unable to find emconfig.json. Using default device ...`;
+  this did not block the passing runs.
+- The five-kernel real hardware xclbin build passed. Hardware link took
+  `0h 59m 42s`. `xclbinutil --info` reports content `Bitstream`, UUID
+  `45a627bf-33e6-b364-b9ef-2d17b4f5e0e1`, clocks `hbm_aclk 450 MHz`,
+  `KERNEL_CLK 500 MHz`, `DATA_CLK 300 MHz`, and HBM banks `[0]` through `[7]`
+  used.
+- Real U55C synthetic `--seq-len` runs passed:
+  - `S=8`: q_chunks=1, k_chunks=1, `total_chain 0.868 ms`
+  - `S=64`: q_chunks=8, k_chunks=1, `total_chain 2.328 ms`
+  - `S=128`: q_chunks=16, k_chunks=2, `total_chain 7.226 ms`
+  - `S=256`: q_chunks=32, k_chunks=4, `total_chain 21.269 ms`
+  - `S=512`: q_chunks=64, k_chunks=8, `total_chain 84.190 ms`
+  All printed `Tiled sequence verification PASSED`,
+  `Attention output verification PASSED`, and `XRT chain verification PASSED`.
+- `--vectors <dir>` mode now runs the V weighted-sum stage when the vector
+  directory contains `v_full.txt` and either `attn_out.txt` or
+  `attn_ref_float.txt`. Because tile softmax writes HBM[4] and the V kernel
+  weights port is mapped to HBM[5], the host copies the tile-softmax output
+  into the V weights BO before launching `v_weighted_sum_u55c_kernel`.
+- Real U55C saved-vector runs passed:
+  - `sim/attention_score_tile`: `attn_out.txt`, `total_chain 0.345 ms`,
+    `Attention output verification PASSED`, `XRT chain verification PASSED`
+  - `sim/real_tinyllama_tile`: `attn_ref_float.txt`, `total_chain 0.258 ms`,
+    `Attention output verification PASSED`, `XRT chain verification PASSED`
 
 ## Best Next Step
 
-Track A Steps 1-4 and Track B Steps 1-3 are code-complete. Best next practical
-steps are:
+Track A Steps 1-4 are complete for the current staged design. Track A Step 5
+remains a future fusion/dataflow milestone, not required before starting
+dependent work. Best next practical steps are:
 
-1. push Track B code and run on lab PC: Vitis csim/csynth for v_weighted_sum,
-   rebuild xclbin with 5 kernels, verify hw_emu and real card
-2. add/update CPU/GPU/FPGA comparison tables using the real U55C sequence sweep
-3. extend Track C real TinyLlama export beyond the current 8-token single tile
-4. if more score-kernel speed is needed after that, prefer wider packing or
-   on-chip fusion before chasing higher GEMM unroll
+1. add/update CPU/GPU/FPGA comparison tables using the real U55C sequence sweep
+2. extend Track C real TinyLlama export beyond the current 8-token single tile
+3. if more score-kernel speed is needed after that, prefer wider packing or
+   on-chip fusion before chasing higher GEMM unroll, because the 64-bit packed
+   interface produced the first material latency drop
 
 ## After That
 
 With Track A Steps 1-4 working across synthetic sequence lengths, the next
 major engineering steps are:
 
-1. Track B: add `softmax @ V` with a V weighted-sum HLS kernel
-2. export and verify `v_full.txt` and `attn_out.txt`
-3. extend the existing Track C real-vector export beyond the current single-tile
+1. extend the existing Track C real-vector export beyond the current single-tile
    path using the Track A tiled host path
-4. run real vectors through the same FPGA pipeline and compare `attn_out` to
+2. run real vectors through the same FPGA pipeline and compare `attn_out` to
    PyTorch attention output
-5. Track D: collect CPU/GPU/FPGA timing baselines and speedup tables
-6. merge kernels for performance if the staged HBM path becomes the bottleneck
-7. connect to a real TinyLlama attention subgraph
-8. add KV-cache-aware decode flow
-9. eventually integrate into a decoder-layer path
+3. Track D: collect CPU/GPU/FPGA timing baselines and speedup tables
+4. merge kernels for performance if the staged HBM path becomes the bottleneck
+5. connect to a real TinyLlama attention subgraph
+6. add KV-cache-aware decode flow
+7. eventually integrate into a decoder-layer path
 
 ## Current Repo State Relevant To This Effort
 

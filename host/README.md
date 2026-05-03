@@ -2,7 +2,8 @@
 
 This folder is the host-side step for running the isolated attention-score
 chain on a U55C. The proven real-card path is still the single-tile three-kernel
-flow:
+flow, while the current synthetic `hw_emu` path has advanced to a five-kernel
+attention-output flow.
 
 ```text
 Q_rot_int8, K_rot_int8
@@ -16,8 +17,10 @@ Q_rot_int8, K_rot_int8
 - `attention_score_chain_xrt.cpp`
   - native XRT C++ host app
   - loads one `.xclbin`
-  - launches the three runtime kernels in sequence for `--vectors <dir>`
-  - launches tiled score+mask+scale plus full-row softmax for `--seq-len <S>`
+  - launches score, mask/scale, softmax, and optional V weighted-sum kernels
+    for `--vectors <dir>`
+  - launches tiled score+mask+scale, full-row softmax, and V weighted sum for
+    synthetic `--seq-len <S>`
   - compares device outputs against exported vectors or generated synthetic
     full-sequence references
 - `build_host.sh`
@@ -62,7 +65,7 @@ bash host/build_host.sh
   --device 0
 ```
 
-Tiled synthetic `hw_emu` flow with full-row softmax:
+Tiled synthetic `hw_emu` flow with full-row softmax and V weighted sum:
 
 ```bash
 export XCL_EMULATION_MODE=hw_emu
@@ -73,12 +76,12 @@ export XCL_EMULATION_MODE=hw_emu
   --device 0
 ```
 
-Verified `hw_emu` sequence lengths so far:
+Verified five-kernel Track B `hw_emu` sequence lengths so far:
 
 ```text
-S=8
-S=64
-S=128
+S=8:  Attention output verification PASSED, total_chain 65214.673 ms
+S=64: Attention output verification PASSED, total_chain 580737.286 ms
+S=128: Attention output verification PASSED, total_chain 1657498.336 ms
 ```
 
 For first bring-up, `hw_emu` is the right target before `hw`.
@@ -92,16 +95,22 @@ bash host/run_hw.sh 0
 
 The host prints per-kernel timing and total chain timing using host wall-clock
 measurements from launch through `wait()`, then verifies `score_raw`,
-`score_scaled`, and `score_softmax` against the reference vectors.
+`score_scaled`, `score_softmax`, and, when present, `attn_out` /
+`attn_ref_float` against the reference vectors in `--vectors` mode. In
+synthetic `--seq-len` mode it also verifies final `attn_out` from the V
+weighted-sum stage.
 
-Latest verified synthetic-vector helper timing for the three-kernel hardware
+Latest verified synthetic-vector helper timing for the five-kernel hardware
 xclbin:
 
 ```text
-attention_score_u55c_kernel 0.043 ms
-mask_scale_u55c_kernel      0.025 ms
-softmax_u55c_kernel         0.086 ms
-total_chain                 0.159 ms
+attention_score_u55c_kernel 0.066 ms
+mask_scale_u55c_kernel      0.081 ms
+softmax_u55c_kernel         0.117 ms
+v_weighted_sum_u55c_kernel  0.041 ms
+total_chain                 0.345 ms
+Attention output verification PASSED
+XRT chain verification PASSED
 ```
 
 The same xclbin and host were also verified with the real TinyLlama-derived
@@ -117,10 +126,12 @@ bash host/run_hw.sh \
 That helper run printed:
 
 ```text
-attention_score_u55c_kernel 0.062 ms
-mask_scale_u55c_kernel      0.024 ms
-softmax_u55c_kernel         0.028 ms
-total_chain                 0.121 ms
+attention_score_u55c_kernel 0.053 ms
+mask_scale_u55c_kernel      0.094 ms
+softmax_u55c_kernel         0.029 ms
+v_weighted_sum_u55c_kernel  0.041 ms
+total_chain                 0.258 ms
+Attention output verification PASSED
 XRT chain verification PASSED
 ```
 
@@ -137,7 +148,7 @@ There are two useful meanings of "deployable" here:
    - that still needs more blocks and system integration
 
 Right now this workspace has reached the first meaning for a single tile and
-for synthetic tiled sequence lengths. Track A Step 4 also added double-buffered
-pass-1 BO sets in the tiled host path. Real hardware sequence sweeps pass for
-`S = 8, 64, 128, 256, 512`; the latest Step 4 S=512 run completed in
-`35.992 ms` with `7,283,396.31 scores/sec`.
+for synthetic tiled sequence lengths through final one-head `attn_out`. Track A
+Step 4 also added double-buffered pass-1 BO sets in the tiled host path. Track B
+Step 3 real hardware sequence sweeps pass for `S = 8, 64, 128, 256, 512`; the
+latest five-kernel S=512 run completed in `84.190 ms`.

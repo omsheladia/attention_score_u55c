@@ -25,6 +25,8 @@ constexpr std::size_t kFullRowMaxCols = 512;
 constexpr std::size_t kQTileElems = kScoreRowsPerTile * kHeadDim;
 constexpr std::size_t kKTileElems = kScoreColsPerTile * kHeadDim;
 constexpr std::size_t kScoreTileElems = kScoreRowsPerTile * kScoreColsPerTile;
+constexpr std::size_t kVTileElems = kScoreColsPerTile * kHeadDim;
+constexpr std::size_t kAttnOutTileElems = kScoreRowsPerTile * kHeadDim;
 constexpr float kMaskNegInf = -1000000000.0f;
 constexpr float kDefaultQScale = 0.03125f;
 constexpr float kDefaultKScale = 0.02734375f;
@@ -77,6 +79,11 @@ std::vector<T> read_text_vector(const std::string& path, std::size_t elem_count)
     values[idx] = static_cast<T>(raw_value);
   }
   return values;
+}
+
+bool file_exists(const std::string& path) {
+  std::ifstream handle(path);
+  return static_cast<bool>(handle);
 }
 
 KernelMeta read_kernel_meta(const std::string& path) {
@@ -238,6 +245,11 @@ std::int8_t deterministic_k_value(std::uint32_t col, std::uint32_t dim) {
   return static_cast<std::int8_t>(positive_mod(static_cast<int>(col * 7) - static_cast<int>(dim * 2), 15) - 7);
 }
 
+float deterministic_v_value(std::uint32_t row, std::uint32_t dim) {
+  const int raw = positive_mod(static_cast<int>(row * 11 + dim * 5), 23) - 11;
+  return static_cast<float>(raw) / 8.0f;
+}
+
 std::vector<std::int8_t> make_synthetic_q(std::uint32_t seq_len) {
   std::vector<std::int8_t> q(seq_len * kHeadDim);
   for (std::uint32_t row = 0; row < seq_len; ++row) {
@@ -262,28 +274,10 @@ std::vector<float> make_synthetic_v(std::uint32_t seq_len) {
   std::vector<float> v(seq_len * kHeadDim);
   for (std::uint32_t row = 0; row < seq_len; ++row) {
     for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
-      v[(row * kHeadDim) + dim] =
-          static_cast<float>(positive_mod(static_cast<int>(row * 3 + dim * 7), 15) - 7);
+      v[(row * kHeadDim) + dim] = deterministic_v_value(row, dim);
     }
   }
   return v;
-}
-
-std::vector<float> compute_cpu_attn_out(
-    const std::vector<float>& softmax_weights,
-    const std::vector<float>& v_full,
-    std::uint32_t seq_len) {
-  std::vector<float> attn_out(seq_len * kHeadDim, 0.0f);
-  for (std::uint32_t row = 0; row < seq_len; ++row) {
-    for (std::uint32_t d = 0; d < kHeadDim; ++d) {
-      float accum = 0.0f;
-      for (std::uint32_t col = 0; col < seq_len; ++col) {
-        accum += softmax_weights[(row * seq_len) + col] * v_full[(col * kHeadDim) + d];
-      }
-      attn_out[(row * kHeadDim) + d] = accum;
-    }
-  }
-  return attn_out;
 }
 
 float total_scale(float q_scale, float k_scale) {
@@ -334,6 +328,23 @@ void compute_cpu_reference(
   }
 }
 
+void compute_attn_out_reference(
+    const std::vector<float>& softmax,
+    const std::vector<float>& v_full,
+    std::uint32_t seq_len,
+    std::vector<float>* attn_out_expected) {
+  attn_out_expected->assign(seq_len * kHeadDim, 0.0f);
+  for (std::uint32_t row = 0; row < seq_len; ++row) {
+    for (std::uint32_t key = 0; key < seq_len; ++key) {
+      const float weight = softmax[(row * seq_len) + key];
+      for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+        (*attn_out_expected)[(row * kHeadDim) + dim] +=
+            weight * v_full[(key * kHeadDim) + dim];
+      }
+    }
+  }
+}
+
 void copy_q_tile(
     const std::vector<std::int8_t>& q_full,
     std::uint32_t seq_len,
@@ -362,6 +373,20 @@ void copy_k_tile(
   }
 }
 
+void copy_v_tile(
+    const std::vector<float>& v_full,
+    std::uint32_t seq_len,
+    std::uint32_t key_base,
+    std::vector<float>* v_tile) {
+  v_tile->assign(kVTileElems, 0.0f);
+  const std::uint32_t rows = std::min<std::uint32_t>(kScoreColsPerTile, seq_len - key_base);
+  for (std::uint32_t row = 0; row < rows; ++row) {
+    for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+      (*v_tile)[(row * kHeadDim) + dim] = v_full[((key_base + row) * kHeadDim) + dim];
+    }
+  }
+}
+
 std::vector<std::int32_t> read_i32_bo(xrt::bo& bo, std::size_t count) {
   std::vector<std::int32_t> values(count);
   bo.sync(XCL_BO_SYNC_BO_FROM_DEVICE);
@@ -386,10 +411,35 @@ int run_single_tile(const Args& args, xrt::device& device, const xrt::uuid& uuid
   const auto score_softmax_expected =
       read_text_vector<float>(args.vector_dir + "/score_softmax.txt", kScoreTileElems);
   const auto meta = read_kernel_meta(args.vector_dir + "/kernel_meta.txt");
+  const bool has_attn_out = file_exists(args.vector_dir + "/attn_out.txt");
+  const bool has_attn_ref = file_exists(args.vector_dir + "/attn_ref_float.txt");
+  const bool run_v_stage = file_exists(args.vector_dir + "/v_full.txt") && (has_attn_out || has_attn_ref);
+
+  std::vector<float> v_full;
+  std::vector<float> attn_out_expected;
+  float attn_out_tolerance = 1.0e-4f;
+  if (run_v_stage) {
+    v_full = read_text_vector<float>(
+        args.vector_dir + "/v_full.txt",
+        static_cast<std::size_t>(meta.key_col_count) * kHeadDim);
+    if (has_attn_out) {
+      attn_out_expected =
+          read_text_vector<float>(args.vector_dir + "/attn_out.txt", kAttnOutTileElems);
+    } else {
+      attn_out_expected = read_text_vector<float>(
+          args.vector_dir + "/attn_ref_float.txt",
+          static_cast<std::size_t>(meta.query_row_count) * kHeadDim);
+      attn_out_tolerance = 1.0e-3f;
+    }
+  }
 
   auto score_kernel = xrt::kernel(device, uuid, "attention_score_u55c_kernel");
   auto mask_scale_kernel = xrt::kernel(device, uuid, "mask_scale_u55c_kernel");
   auto softmax_kernel = xrt::kernel(device, uuid, "softmax_u55c_kernel");
+  std::optional<xrt::kernel> v_weighted_sum_kernel;
+  if (run_v_stage) {
+    v_weighted_sum_kernel.emplace(device, uuid, "v_weighted_sum_u55c_kernel");
+  }
 
   auto q_bo = xrt::bo(device, sizeof(std::int8_t) * q_tile.size(), score_kernel.group_id(0));
   auto k_bo = xrt::bo(device, sizeof(std::int8_t) * k_tile.size(), score_kernel.group_id(1));
@@ -399,6 +449,23 @@ int run_single_tile(const Args& args, xrt::device& device, const xrt::uuid& uuid
       xrt::bo(device, sizeof(float) * score_scaled_expected.size(), mask_scale_kernel.group_id(1));
   auto softmax_prob_bo =
       xrt::bo(device, sizeof(float) * score_softmax_expected.size(), softmax_kernel.group_id(1));
+  std::optional<xrt::bo> weights_tile_bo;
+  std::optional<xrt::bo> v_tile_bo;
+  std::optional<xrt::bo> attn_out_bo;
+  if (run_v_stage) {
+    weights_tile_bo.emplace(
+        device,
+        sizeof(float) * kScoreTileElems,
+        v_weighted_sum_kernel->group_id(0));
+    v_tile_bo.emplace(
+        device,
+        sizeof(float) * kVTileElems,
+        v_weighted_sum_kernel->group_id(1));
+    attn_out_bo.emplace(
+        device,
+        sizeof(float) * kAttnOutTileElems,
+        v_weighted_sum_kernel->group_id(2));
+  }
 
   q_bo.write(q_tile.data());
   k_bo.write(k_tile.data());
@@ -407,7 +474,7 @@ int run_single_tile(const Args& args, xrt::device& device, const xrt::uuid& uuid
 
   using Clock = std::chrono::steady_clock;
   std::vector<TimedStage> timings;
-  timings.reserve(4);
+  timings.reserve(run_v_stage ? 5 : 4);
   const auto chain_start = Clock::now();
 
   timings.push_back({"attention_score_u55c_kernel", run_timed("attention score kernel", [&]() {
@@ -438,6 +505,30 @@ int run_single_tile(const Args& args, xrt::device& device, const xrt::uuid& uuid
                             meta.key_col_count);
                       })});
 
+  if (run_v_stage) {
+    auto softmax_for_v = read_float_bo(softmax_prob_bo, score_softmax_expected.size());
+    weights_tile_bo->write(softmax_for_v.data());
+    weights_tile_bo->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+
+    std::vector<float> v_tile(kVTileElems, 0.0f);
+    for (std::uint32_t row = 0; row < meta.key_col_count; ++row) {
+      for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+        v_tile[(row * kHeadDim) + dim] = v_full[(row * kHeadDim) + dim];
+      }
+    }
+    v_tile_bo->write(v_tile.data());
+    v_tile_bo->sync(XCL_BO_SYNC_BO_TO_DEVICE);
+
+    timings.push_back({"v_weighted_sum_u55c_kernel", run_timed("v weighted sum kernel", [&]() {
+                         return (*v_weighted_sum_kernel)(
+                             *weights_tile_bo,
+                             *v_tile_bo,
+                             *attn_out_bo,
+                             meta.query_row_count,
+                             meta.key_col_count);
+                       })});
+  }
+
   const auto chain_stop = Clock::now();
   const double total_chain_ms =
       std::chrono::duration<double, std::milli>(chain_stop - chain_start).count();
@@ -449,8 +540,25 @@ int run_single_tile(const Args& args, xrt::device& device, const xrt::uuid& uuid
   compare_exact(score_raw_got, score_raw_expected, "score_raw");
   compare_float(score_scaled_got, score_scaled_expected, "score_scaled", 1.0e-4f);
   compare_float(score_softmax_got, score_softmax_expected, "score_softmax", 1.0e-4f);
+  if (run_v_stage) {
+    const auto attn_out_padded = read_float_bo(*attn_out_bo, kAttnOutTileElems);
+    if (attn_out_expected.size() == kAttnOutTileElems) {
+      compare_float(attn_out_padded, attn_out_expected, "attn_out", attn_out_tolerance);
+    } else {
+      std::vector<float> attn_out_active(attn_out_expected.size(), 0.0f);
+      for (std::uint32_t row = 0; row < meta.query_row_count; ++row) {
+        for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+          attn_out_active[(row * kHeadDim) + dim] = attn_out_padded[(row * kHeadDim) + dim];
+        }
+      }
+      compare_float(attn_out_active, attn_out_expected, "attn_out", attn_out_tolerance);
+    }
+  }
 
   print_timings(timings, total_chain_ms);
+  if (run_v_stage) {
+    std::cout << "Attention output verification PASSED\n";
+  }
   std::cout << "XRT chain verification PASSED\n";
   return 0;
 }
@@ -488,23 +596,25 @@ int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& u
       &raw_expected,
       &logits_expected,
       &softmax_expected);
-  const auto attn_out_expected = compute_cpu_attn_out(softmax_expected, v_full, seq_len);
+  std::vector<float> attn_out_expected;
+  compute_attn_out_reference(softmax_expected, v_full, seq_len, &attn_out_expected);
 
   auto score_kernel = xrt::kernel(device, uuid, "attention_score_u55c_kernel");
   auto mask_scale_kernel = xrt::kernel(device, uuid, "mask_scale_u55c_kernel");
   auto softmax_full_row_kernel = xrt::kernel(device, uuid, "softmax_full_row_u55c_kernel");
-  auto v_kernel = xrt::kernel(device, uuid, "v_weighted_sum_u55c_kernel");
+  auto v_weighted_sum_kernel = xrt::kernel(device, uuid, "v_weighted_sum_u55c_kernel");
 
   std::vector<std::int8_t> q_tile(kQTileElems);
   std::vector<std::int8_t> k_tile(kKTileElems);
   std::vector<float> full_row_logits(kScoreRowsPerTile * kFullRowMaxCols, 0.0f);
   std::vector<float> full_row_probs(kScoreRowsPerTile * kFullRowMaxCols, 0.0f);
+  std::vector<float> v_tile(kVTileElems, 0.0f);
+  std::vector<float> weights_tile(kScoreTileElems, 0.0f);
+  std::vector<float> attn_partial(kAttnOutTileElems, 0.0f);
   std::vector<std::int32_t> raw_got(seq_len * seq_len, 0);
   std::vector<float> logits_got(seq_len * seq_len, 0.0f);
   std::vector<float> softmax_got(seq_len * seq_len, 0.0f);
   std::vector<float> attn_out_got(seq_len * kHeadDim, 0.0f);
-  std::vector<float> weights_tile_buf(kScoreRowsPerTile * kScoreColsPerTile, 0.0f);
-  std::vector<float> v_tile_buf(kScoreColsPerTile * kHeadDim, 0.0f);
 
   std::vector<xrt::bo> q_bos;
   std::vector<xrt::bo> k_bos;
@@ -525,11 +635,11 @@ int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& u
   auto full_row_prob_bo =
       xrt::bo(device, sizeof(float) * full_row_probs.size(), softmax_full_row_kernel.group_id(1));
   auto weights_tile_bo =
-      xrt::bo(device, sizeof(float) * weights_tile_buf.size(), v_kernel.group_id(0));
+      xrt::bo(device, sizeof(float) * weights_tile.size(), v_weighted_sum_kernel.group_id(0));
   auto v_tile_bo =
-      xrt::bo(device, sizeof(float) * v_tile_buf.size(), v_kernel.group_id(1));
-  auto partial_out_bo =
-      xrt::bo(device, sizeof(float) * kScoreRowsPerTile * kHeadDim, v_kernel.group_id(2));
+      xrt::bo(device, sizeof(float) * v_tile.size(), v_weighted_sum_kernel.group_id(1));
+  auto attn_partial_bo =
+      xrt::bo(device, sizeof(float) * attn_partial.size(), v_weighted_sum_kernel.group_id(2));
 
   using Clock = std::chrono::steady_clock;
   std::vector<TimedStage> timings = {
@@ -637,6 +747,7 @@ int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& u
     }, false);
 
     const auto prob_tile = read_float_bo(full_row_prob_bo, full_row_probs.size());
+    std::vector<float> attn_accum(kAttnOutTileElems, 0.0f);
     for (std::uint32_t row = 0; row < query_rows; ++row) {
       const std::size_t global_row_base = (query_base + row) * seq_len;
       const std::size_t full_row_base = row * kFullRowMaxCols;
@@ -645,47 +756,47 @@ int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& u
       }
     }
 
-    // Pass 3 — V weighted sum for this Q-chunk, accumulating across K/V chunks.
-    std::vector<float> v_accum(kScoreRowsPerTile * kHeadDim, 0.0f);
-
-    for (std::uint32_t k = 0; k < k_chunks; ++k) {
-      const std::uint32_t key_base = k * static_cast<std::uint32_t>(kScoreColsPerTile);
+    for (std::uint32_t key_base = 0; key_base < seq_len; key_base += kScoreColsPerTile) {
       const std::uint32_t key_cols =
           std::min<std::uint32_t>(kScoreColsPerTile, seq_len - key_base);
-
-      std::fill(weights_tile_buf.begin(), weights_tile_buf.end(), 0.0f);
+      std::fill(weights_tile.begin(), weights_tile.end(), 0.0f);
       for (std::uint32_t row = 0; row < query_rows; ++row) {
-        for (std::uint32_t c = 0; c < key_cols; ++c) {
-          weights_tile_buf[(row * kScoreColsPerTile) + c] =
-              prob_tile[(row * kFullRowMaxCols) + key_base + c];
+        const std::size_t weights_row_base = row * kScoreColsPerTile;
+        const std::size_t full_row_base = row * kFullRowMaxCols;
+        for (std::uint32_t col = 0; col < key_cols; ++col) {
+          weights_tile[weights_row_base + col] = prob_tile[full_row_base + key_base + col];
         }
       }
 
-      std::fill(v_tile_buf.begin(), v_tile_buf.end(), 0.0f);
-      for (std::uint32_t c = 0; c < key_cols; ++c) {
-        for (std::uint32_t d = 0; d < kHeadDim; ++d) {
-          v_tile_buf[(c * kHeadDim) + d] = v_full[((key_base + c) * kHeadDim) + d];
-        }
-      }
-
-      weights_tile_bo.write(weights_tile_buf.data());
+      copy_v_tile(v_full, seq_len, key_base, &v_tile);
+      weights_tile_bo.write(weights_tile.data());
+      v_tile_bo.write(v_tile.data());
       weights_tile_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-      v_tile_bo.write(v_tile_buf.data());
       v_tile_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
       timings[3].milliseconds += run_timed("v weighted sum tile", [&]() {
-        return v_kernel(weights_tile_bo, v_tile_bo, partial_out_bo, query_rows, key_cols);
+        return v_weighted_sum_kernel(
+            weights_tile_bo,
+            v_tile_bo,
+            attn_partial_bo,
+            query_rows,
+            key_cols);
       }, false);
 
-      const auto partial_out = read_float_bo(partial_out_bo, kScoreRowsPerTile * kHeadDim);
-      for (std::size_t i = 0; i < v_accum.size(); ++i) {
-        v_accum[i] += partial_out[i];
+      const auto partial_tile = read_float_bo(attn_partial_bo, attn_partial.size());
+      for (std::uint32_t row = 0; row < query_rows; ++row) {
+        const std::size_t tile_row_base = row * kHeadDim;
+        for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+          attn_accum[tile_row_base + dim] += partial_tile[tile_row_base + dim];
+        }
       }
     }
 
     for (std::uint32_t row = 0; row < query_rows; ++row) {
-      for (std::uint32_t d = 0; d < kHeadDim; ++d) {
-        attn_out_got[((query_base + row) * kHeadDim) + d] = v_accum[(row * kHeadDim) + d];
+      const std::size_t global_row_base = (query_base + row) * kHeadDim;
+      const std::size_t tile_row_base = row * kHeadDim;
+      for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+        attn_out_got[global_row_base + dim] = attn_accum[tile_row_base + dim];
       }
     }
   }
@@ -697,10 +808,11 @@ int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& u
   compare_exact(raw_got, raw_expected, "full_score_raw");
   compare_float(logits_got, logits_expected, "full_score_scaled", 1.0e-4f);
   compare_float(softmax_got, softmax_expected, "full_score_softmax", 1.0e-4f);
-  compare_float(attn_out_got, attn_out_expected, "attn_out", 1.0e-3f);
+  compare_float(attn_out_got, attn_out_expected, "full_attn_out", 1.0e-4f);
 
   print_timings(timings, total_chain_ms);
-  std::cout << "Tiled sequence verification PASSED (score + softmax + attn_out)\n";
+  std::cout << "Tiled sequence verification PASSED\n";
+  std::cout << "Attention output verification PASSED\n";
   std::cout << "XRT chain verification PASSED\n";
   return 0;
 }

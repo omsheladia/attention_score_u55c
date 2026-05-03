@@ -3,24 +3,26 @@
 This folder is a focused U55C mini-workspace for the attention-score block:
 
 ```text
-Q_rot_int8, K_rot_int8, V_fp32
+Q_rot_int8, K_rot_int8
 -> score_raw_int32
 -> score_scaled_fp32
 -> score_softmax_fp32
--> attn_out_fp32          (Track B — pending lab PC verification)
+-> attn_out_fp32 (`--seq-len` synthetic Track B path in hw_emu and real hw)
 ```
 
 It mirrors the main repo layout on purpose, but keeps only the pieces needed to
 understand, build, and verify an isolated attention-score offload on a Xilinx
 Alveo U55C.
 
-The current state is a verified tile-level FPGA demo: local C++ tests, HLS
-`csim`/`csynth`, hardware emulation, and a real U55C hardware run have passed.
-This is not yet a full TinyLlama runtime or tokens/sec benchmark. Track A Step
-3 Part A, the Python full-sequence tiled score/softmax reference, is now
-implemented and verified for `S = 8, 64, 128, 256, 512`; the tiled XRT
-`hw_emu` path is verified for `S = 8, 64, 128`, and the real U55C tiled sweep
-is verified for `S = 8, 64, 128, 256, 512`.
+The current state is a verified tiled FPGA attention-score/softmax demo: local
+C++ tests, HLS `csim`/`csynth`, hardware emulation, and real U55C hardware runs
+have passed. Track A Steps 1-4 are complete for the staged design. Track B
+Steps 1-3 are complete for synthetic `--seq-len` hardware emulation and real
+U55C hardware: Python `softmax @ V` reference/export, standalone
+`hls/v_weighted_sum/`, five-kernel xclbin integration, and final `attn_out`
+verification all pass. Current saved real TinyLlama single-tile vectors also
+verify through `attn_out`. Multi-length real-vector coverage is still pending,
+so this is not yet a full TinyLlama runtime or tokens/sec benchmark.
 
 ## What Is In Scope
 
@@ -32,9 +34,11 @@ is verified for `S = 8, 64, 128, 256, 512`.
   - INT8 score GEMM
   - merged causal mask + score scaling
   - row-wise softmax
-  - full-row softmax up to `S = 512` for the next tiled host path
-- native XRT host app for the verified three-kernel chain
-- tiled XRT `hw_emu` path using full-row softmax for synthetic sequence lengths
+  - full-row softmax up to `S = 512`
+  - Track B partial `softmax @ V` weighted-sum kernel
+- native XRT host app for the verified score/softmax chain
+- tiled XRT `hw_emu` path using full-row softmax and V weighted sum for
+  synthetic sequence lengths
 - Linux helpers for local C++ checks, HLS/Vitis builds, hardware emulation, and
   real-card execution
 - HBM bank mapping for the chain buffers
@@ -43,10 +47,9 @@ is verified for `S = 8, 64, 128, 256, 512`.
 
 - Q/K/V projection GEMMs
 - RoPE generation
-- softmax @ V accumulation across full sequence (Track B code done, lab PC pending)
+- multi-length real TinyLlama V-vector mode
 - runtime controller integration
 - full TinyLlama model execution
-- multi-sequence-length benchmark sweeps
 - model-level tokens/sec metrics
 
 ## Offload Boundary
@@ -106,21 +109,26 @@ The host app verifies FPGA outputs against the exported reference vectors:
 - `score_raw.txt`: exact integer compare
 - `score_scaled.txt`: float compare with `1.0e-4` tolerance
 - `score_softmax.txt`: float compare with `1.0e-4` tolerance
+- `attn_out.txt` or `attn_ref_float.txt` when `v_full.txt` is present
 
 Expected pass signal:
 
 ```text
+Attention output verification PASSED
 XRT chain verification PASSED
 ```
 
-The current verified synthetic-vector helper run for the three-kernel chain
+The current verified synthetic-vector helper run for the five-kernel chain
 printed:
 
 ```text
-attention_score_u55c_kernel 0.043 ms
-mask_scale_u55c_kernel      0.025 ms
-softmax_u55c_kernel         0.086 ms
-total_chain                 0.159 ms
+attention_score_u55c_kernel 0.066 ms
+mask_scale_u55c_kernel      0.081 ms
+softmax_u55c_kernel         0.117 ms
+v_weighted_sum_u55c_kernel  0.041 ms
+total_chain                 0.345 ms
+Attention output verification PASSED
+XRT chain verification PASSED
 ```
 
 The real TinyLlama-derived single-tile vector directory has also been verified
@@ -136,10 +144,12 @@ bash host/run_hw.sh \
 That helper run printed:
 
 ```text
-attention_score_u55c_kernel 0.062 ms
-mask_scale_u55c_kernel      0.024 ms
-softmax_u55c_kernel         0.028 ms
-total_chain                 0.121 ms
+attention_score_u55c_kernel 0.053 ms
+mask_scale_u55c_kernel      0.094 ms
+softmax_u55c_kernel         0.029 ms
+v_weighted_sum_u55c_kernel  0.041 ms
+total_chain                 0.258 ms
+Attention output verification PASSED
 XRT chain verification PASSED
 ```
 
@@ -186,6 +196,20 @@ export XCL_EMULATION_MODE=hw_emu
   --device 0
 ```
 
+Latest Track B Step 3 `hw_emu` verification on 2026-05-03 used a five-kernel
+xclbin containing `attention_score_u55c_kernel`, `mask_scale_u55c_kernel`,
+`softmax_u55c_kernel`, `softmax_full_row_u55c_kernel`, and
+`v_weighted_sum_u55c_kernel`. It passed final `attn_out` verification:
+
+| S | q_chunks | k_chunks | total_chain ms | pass signal |
+|---|----------|----------|----------------|-------------|
+| 8 | 1 | 1 | 65,214.673 | `Attention output verification PASSED` |
+| 64 | 8 | 1 | 580,737.286 | `Attention output verification PASSED` |
+| 128 | 16 | 2 | 1,657,498.336 | `Attention output verification PASSED` |
+
+These are simulator-dominated hardware-emulation timings, not hardware
+performance numbers.
+
 Run the real-card synthetic sequence sweep:
 
 ```bash
@@ -202,17 +226,17 @@ done
 
 Latest real-card sweep after the Track A Step 4 double-buffered host pass:
 
-| S | total ms | tiles/sec | scores/sec |
-|---|----------|-----------|------------|
-| 8 | 0.510 | 1,960.78 | 125,490.20 |
-| 64 | 2.307 | 3,467.71 | 1,775,465.97 |
-| 128 | 5.238 | 6,109.20 | 3,127,911.42 |
-| 256 | 11.709 | 10,931.76 | 5,597,062.09 |
-| 512 | 35.992 | 14,225.38 | 7,283,396.31 |
+| S | total ms | pass signal |
+|---|----------|-------------|
+| 8 | 0.868 | `Attention output verification PASSED` |
+| 64 | 2.328 | `Attention output verification PASSED` |
+| 128 | 7.226 | `Attention output verification PASSED` |
+| 256 | 21.269 | `Attention output verification PASSED` |
+| 512 | 84.190 | `Attention output verification PASSED` |
 
-The Step 4 host path double-buffers the pass-1 score/mask-scale BO sets. These
-are attention-score/softmax metrics, not model tokens/sec; tokens/sec still
-requires Track B `softmax @ V` and decoder-loop integration.
+This five-kernel run produces one-head `attn_out` for synthetic Q/K/V inputs.
+It is still not model tokens/sec; tokens/sec requires real Q/K/V sequence
+coverage and decoder-loop integration.
 
 Build the XRT host:
 
@@ -249,7 +273,7 @@ Expected pass signal:
 TinyLlama forward pass OK
 ```
 
-Export a real TinyLlama single-tile vector case for the current 3-kernel chain:
+Export a real TinyLlama single-tile vector case for the current vector flow:
 
 ```bash
 python model/export_real_vectors.py --local-files-only
@@ -278,6 +302,5 @@ This block is easy to offload because:
 ## Next Work
 
 - Add CPU/GPU/FPGA comparison tables
-- Implement `softmax @ V`
 - Extend real TinyLlama vectors beyond the current 8-token single-tile case
 - Integrate toward a real TinyLlama attention subgraph

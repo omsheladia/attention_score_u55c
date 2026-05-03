@@ -1,13 +1,14 @@
 """
-Export real TinyLlama single-tile vectors for the current 3-kernel XRT chain.
+Export real TinyLlama single-tile vectors for the current XRT chain.
 
 This is Track C Step 4 for the current single-tile design. It uses TinyLlama as
 a PyTorch data source, extracts one layer/head, quantizes Q/K to INT8, keeps V
-as float32 for later Track B work, and writes the same file names consumed by
-the existing host app:
+as float32 for the Track B weighted-sum stage, and writes the same file names
+consumed by the existing host app:
 
     q_tile.txt, k_tile.txt, kernel_meta.txt,
-    score_raw.txt, score_masked.txt, score_scaled.txt, score_softmax.txt
+    score_raw.txt, score_masked.txt, score_scaled.txt, score_softmax.txt,
+    v_full.txt, attn_ref_float.txt
 
 The current hardware/host path is one Q tile only, so this exporter requires
 the tokenized sequence length to be <= 8.
@@ -282,8 +283,8 @@ def main() -> None:
         "k_recon_max_error": quant["k_recon_max_error"],
         "score_dequant_max_error": quant["score_max_error"],
         "score_dequant_mean_error": quant["score_mean_error"],
-        "current_design_scope": "single Q tile, current 3-kernel score/mask_scale/softmax chain",
-        "v_note": "v_full.txt is exported for later Track B; current XRT chain does not consume V.",
+        "current_design_scope": "single Q tile, score/mask_scale/softmax plus optional Track B V weighted-sum verification",
+        "v_note": "v_full.txt feeds the Track B V weighted-sum stage in --vectors mode; attn_ref_float.txt is the full-float PyTorch reference.",
     }
     write_metadata(output_dir / "metadata.json", metadata)
 

@@ -36,6 +36,14 @@ class FullAttentionScoreResult:
     softmax: list[list[float]]
 
 
+@dataclass(frozen=True)
+class FullAttentionResult:
+    raw_scores: list[list[int]]
+    logits: list[list[float]]
+    softmax: list[list[float]]
+    attn_out: list[list[float]]
+
+
 def compute_attention_score_tile(
     q_tile: list[list[int]],
     k_tile: list[list[int]],
@@ -175,6 +183,24 @@ def deterministic_full_sequence(seq_len: int) -> tuple[list[list[int]], list[lis
     return deterministic_tiles(seq_len, seq_len)
 
 
+def deterministic_v_matrix(row_count: int) -> list[list[float]]:
+    if row_count <= 0:
+        raise ValueError("row_count must be positive")
+    v_full = zeros_2d_float(row_count, HEAD_DIM, fill=0.0)
+    for row in range(row_count):
+        for dim in range(HEAD_DIM):
+            raw = ((row * 11) + (dim * 5)) % 23 - 11
+            v_full[row][dim] = float(raw) / 8.0
+    return v_full
+
+
+def deterministic_full_attention_inputs(
+    seq_len: int,
+) -> tuple[list[list[int]], list[list[int]], list[list[float]]]:
+    q_full, k_full = deterministic_full_sequence(seq_len)
+    return q_full, k_full, deterministic_v_matrix(seq_len)
+
+
 def _validate_full_inputs(q_full: list[list[int]], k_full: list[list[int]]) -> None:
     if not q_full or not k_full:
         raise ValueError("q_full and k_full must both be non-empty")
@@ -182,6 +208,24 @@ def _validate_full_inputs(q_full: list[list[int]], k_full: list[list[int]]) -> N
         raise ValueError(f"Expected all q_full rows to have length {HEAD_DIM}")
     if any(len(row) != HEAD_DIM for row in k_full):
         raise ValueError(f"Expected all k_full rows to have length {HEAD_DIM}")
+
+
+def _validate_v_matrix(v_full: list[list[float]]) -> None:
+    if not v_full:
+        raise ValueError("v_full must be non-empty")
+    if any(len(row) != HEAD_DIM for row in v_full):
+        raise ValueError(f"Expected all v_full rows to have length {HEAD_DIM}")
+
+
+def _validate_weight_matrix(weights: list[list[float]]) -> tuple[int, int]:
+    if not weights:
+        raise ValueError("softmax_weights must be non-empty")
+    key_count = len(weights[0])
+    if key_count == 0:
+        raise ValueError("softmax_weights must have at least one column")
+    if any(len(row) != key_count for row in weights):
+        raise ValueError("All softmax weight rows must have the same length")
+    return len(weights), key_count
 
 
 def _total_scale(
@@ -289,6 +333,114 @@ def compute_full_attention_score(
         raw_scores=raw_scores,
         logits=logits,
         softmax=softmax_full_rows(logits),
+    )
+
+
+def compute_v_weighted_sum_partial(
+    weights_tile: list[list[float]],
+    v_tile: list[list[float]],
+) -> list[list[float]]:
+    """Compute one 8 x 64 partial contribution for one K/V chunk."""
+
+    query_rows, key_cols = _validate_weight_matrix(weights_tile)
+    if query_rows > SCORE_ROWS_PER_CHUNK:
+        raise ValueError(f"weights_tile row count must be <= {SCORE_ROWS_PER_CHUNK}")
+    if key_cols > SCORE_K_TILE:
+        raise ValueError(f"weights_tile column count must be <= {SCORE_K_TILE}")
+    _validate_v_matrix(v_tile)
+    if len(v_tile) != key_cols:
+        raise ValueError(f"v_tile row count {len(v_tile)} must match key count {key_cols}")
+
+    partial = zeros_2d_float(query_rows, HEAD_DIM, fill=0.0)
+    for row_idx, weights_row in enumerate(weights_tile):
+        for key_idx, weight in enumerate(weights_row):
+            v_row = v_tile[key_idx]
+            for dim in range(HEAD_DIM):
+                partial[row_idx][dim] += float(weight) * float(v_row[dim])
+    return partial
+
+
+def compute_v_weighted_sum(
+    softmax_weights: list[list[float]],
+    v_full: list[list[float]],
+) -> list[list[float]]:
+    """Track B tiled softmax @ V reference.
+
+    The input weights are the full S x S softmax matrix from Track A, and
+    v_full is the S x 64 value matrix. The loop structure mirrors the intended
+    host/HLS split: process 8 query rows at a time and accumulate across 64-row
+    K/V chunks.
+    """
+
+    query_count, key_count = _validate_weight_matrix(softmax_weights)
+    _validate_v_matrix(v_full)
+    if len(v_full) != key_count:
+        raise ValueError(f"v_full row count {len(v_full)} must match key count {key_count}")
+
+    attn_out = zeros_2d_float(query_count, HEAD_DIM, fill=0.0)
+    for query_base in range(0, query_count, SCORE_ROWS_PER_CHUNK):
+        query_rows = min(SCORE_ROWS_PER_CHUNK, query_count - query_base)
+        accumulator = zeros_2d_float(query_rows, HEAD_DIM, fill=0.0)
+        for key_base in range(0, key_count, SCORE_K_TILE):
+            key_cols = min(SCORE_K_TILE, key_count - key_base)
+            weights_tile = [
+                softmax_weights[query_base + row][key_base : key_base + key_cols]
+                for row in range(query_rows)
+            ]
+            v_tile = v_full[key_base : key_base + key_cols]
+            partial = compute_v_weighted_sum_partial(weights_tile, v_tile)
+            for row in range(query_rows):
+                for dim in range(HEAD_DIM):
+                    accumulator[row][dim] += partial[row][dim]
+
+        for row in range(query_rows):
+            attn_out[query_base + row] = accumulator[row]
+    return attn_out
+
+
+def brute_force_v_weighted_sum(
+    softmax_weights: list[list[float]],
+    v_full: list[list[float]],
+) -> list[list[float]]:
+    query_count, key_count = _validate_weight_matrix(softmax_weights)
+    _validate_v_matrix(v_full)
+    if len(v_full) != key_count:
+        raise ValueError(f"v_full row count {len(v_full)} must match key count {key_count}")
+
+    attn_out = zeros_2d_float(query_count, HEAD_DIM, fill=0.0)
+    for row_idx, weights_row in enumerate(softmax_weights):
+        for key_idx, weight in enumerate(weights_row):
+            v_row = v_full[key_idx]
+            for dim in range(HEAD_DIM):
+                attn_out[row_idx][dim] += float(weight) * float(v_row[dim])
+    return attn_out
+
+
+def compute_full_attention(
+    q_full: list[list[int]],
+    k_full: list[list[int]],
+    v_full: list[list[float]],
+    q_scale: float = 0.03125,
+    k_scale: float = 0.02734375,
+    *,
+    query_pos_base: int = 0,
+    key_pos_base: int = 0,
+    attn_scale: float | None = None,
+) -> FullAttentionResult:
+    score = compute_full_attention_score(
+        q_full,
+        k_full,
+        q_scale=q_scale,
+        k_scale=k_scale,
+        query_pos_base=query_pos_base,
+        key_pos_base=key_pos_base,
+        attn_scale=attn_scale,
+    )
+    return FullAttentionResult(
+        raw_scores=score.raw_scores,
+        logits=score.logits,
+        softmax=score.softmax,
+        attn_out=compute_v_weighted_sum(score.softmax, v_full),
     )
 
 
@@ -409,27 +561,36 @@ def run_full_tiling_checks(
     k_scale: float,
     tolerance: float,
 ) -> None:
-    print("Full-sequence tiled attention-score checks")
-    print("seq_len,q_chunks,k_chunks,raw_diff,logit_diff,softmax_diff")
+    print("Full-sequence tiled attention checks")
+    print("seq_len,q_chunks,k_chunks,raw_diff,logit_diff,softmax_diff,attn_out_diff")
     for seq_len in lengths:
-        q_full, k_full = deterministic_full_sequence(seq_len)
+        q_full, k_full, v_full = deterministic_full_attention_inputs(seq_len)
         tiled = compute_full_attention_score(q_full, k_full, q_scale=q_scale, k_scale=k_scale)
         brute = brute_force_full_attention_score(q_full, k_full, q_scale=q_scale, k_scale=k_scale)
+        tiled_attn_out = compute_v_weighted_sum(tiled.softmax, v_full)
+        brute_attn_out = brute_force_v_weighted_sum(brute.softmax, v_full)
 
         raw_diff = max_abs_diff(tiled.raw_scores, brute.raw_scores)
         logit_diff = max_abs_diff(tiled.logits, brute.logits)
         softmax_diff = max_abs_diff(tiled.softmax, brute.softmax)
+        attn_out_diff = max_abs_diff(tiled_attn_out, brute_attn_out)
         print(
             f"{seq_len},"
             f"{math.ceil(seq_len / SCORE_ROWS_PER_CHUNK)},"
             f"{math.ceil(seq_len / SCORE_K_TILE)},"
             f"{raw_diff:.8e},"
             f"{logit_diff:.8e},"
-            f"{softmax_diff:.8e}"
+            f"{softmax_diff:.8e},"
+            f"{attn_out_diff:.8e}"
         )
-        if raw_diff > tolerance or logit_diff > tolerance or softmax_diff > tolerance:
+        if (
+            raw_diff > tolerance
+            or logit_diff > tolerance
+            or softmax_diff > tolerance
+            or attn_out_diff > tolerance
+        ):
             raise SystemExit(f"Full tiling check failed for S={seq_len}")
-    print("Full-sequence tiled attention-score checks PASSED")
+    print("Full-sequence tiled attention checks PASSED")
 
 
 def demo_inputs() -> tuple[list[list[int]], list[list[int]], ScoreTileMetadata]:
