@@ -13,9 +13,10 @@ reference.
   - verifies `torch`, `transformers`, and `sentencepiece`
   - loads TinyLlama and runs one short forward pass
 - `extract_tinyllama_qkv.py`
-  - Track C Step 2 extractor for real Q/K/V tensors
+  - Track C Steps 2-3 extractor and Q/K quantizer for real Q/K/V tensors
   - captures Q and K after RoPE and V after projection
   - verifies one selected head against PyTorch scaled-dot-product attention
+  - quantizes selected Q/K tensors to INT8 and reports scale/error metrics
 
 The current XRT host verifies the three-kernel runtime outputs against:
 
@@ -57,7 +58,7 @@ python model/check_tinyllama_setup.py --device cuda --dtype float16
 python model/check_tinyllama_setup.py --model-id /path/to/local/tinyllama --local-files-only
 ```
 
-## TinyLlama Q/K/V Extraction
+## TinyLlama Q/K/V Extraction And Q/K Quantization
 
 Run:
 
@@ -76,8 +77,20 @@ V:     (1, 4, 8, 64)
 For layer 0 / Q head 0, the script selected `q_head`, `k_head`, and `v_head`
 with shape `(8, 64)`, computed a causal attention reference with output shape
 `(8, 64)`, matched PyTorch scaled-dot-product attention with max difference
-`3.72529030e-09`, and printed:
+`3.72529030e-09`, quantized Q/K to INT8, and reported:
+
+```text
+q_scale: 4.898416623473e-02
+k_scale: 1.743172481656e-02
+Q reconstruction max error: 2.44865417e-02
+K reconstruction max error: 8.71065259e-03
+Score dequant max error: 2.65718549e-02
+Score dequant mean error: 5.51600056e-03
+```
+
+Pass signals:
 
 ```text
 TinyLlama Q/K/V extraction OK
+TinyLlama Q/K quantization OK
 ```

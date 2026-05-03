@@ -233,6 +233,15 @@ TinyLlama model on CPU with the default 8-token prompt and printed:
 `attn_out (8, 64)`, `SDPA max diff 3.72529030e-09`, and
 `TinyLlama Q/K/V extraction OK`.
 
+Track C Step 3 was then added to the same script. It applies per-tensor
+symmetric INT8 quantization to selected `q_head` and `k_head`, leaves `v_head`
+as float32, reports Q/K scales, reconstruction errors, and dequantized score
+error. The verified default run printed `q_scale 4.898416623473e-02`,
+`k_scale 1.743172481656e-02`, Q reconstruction max error
+`2.44865417e-02`, K reconstruction max error `8.71065259e-03`,
+score dequant max error `2.65718549e-02`, score dequant mean error
+`5.51600056e-03`, and `TinyLlama Q/K quantization OK`.
+
 ## Tile And Sequence-Length Model
 
 The hardware tile shape remains fixed:

@@ -1,9 +1,10 @@
 """
-Track C Step 2: extract real TinyLlama Q/K/V tensors from one attention layer.
+Track C Steps 2-3: extract real TinyLlama Q/K/V tensors and quantize Q/K.
 
 This script runs TinyLlama in PyTorch only. It does not interact with HLS, XRT,
 or the FPGA. The extracted tensors are the real-data counterpart to the
-synthetic Q/K vectors used by the isolated attention-score pipeline.
+synthetic Q/K vectors used by the isolated attention-score pipeline. Q and K
+are quantized to INT8 with per-tensor symmetric scales; V remains float32.
 """
 
 from __future__ import annotations
@@ -142,6 +143,52 @@ def causal_attention_reference(q_head: Any, k_head: Any, v_head: Any) -> tuple[A
     return scores, weights, attn_out
 
 
+def symmetric_int8_quantize(tensor: Any) -> tuple[Any, float]:
+    import torch
+
+    tensor_float = tensor.float()
+    max_abs = tensor_float.abs().max()
+    if max_abs.item() == 0.0:
+        scale = torch.tensor(1.0, dtype=torch.float32)
+    else:
+        scale = max_abs / 127.0
+    quantized = (tensor_float / scale).round().clamp(-128, 127).to(torch.int8)
+    return quantized, float(scale.item())
+
+
+def quantization_metrics(q_head: Any, k_head: Any) -> dict[str, Any]:
+    import torch
+
+    q_int8, q_scale = symmetric_int8_quantize(q_head)
+    k_int8, k_scale = symmetric_int8_quantize(k_head)
+
+    q_reconstructed = q_int8.float() * q_scale
+    k_reconstructed = k_int8.float() * k_scale
+
+    attn_scale = 1.0 / math.sqrt(float(q_head.shape[-1]))
+    total_scale = q_scale * k_scale * attn_scale
+    score_float = (q_head.float() @ k_head.float().transpose(0, 1)) * attn_scale
+    score_dequant = (q_int8.float() @ k_int8.float().transpose(0, 1)) * total_scale
+    score_abs_error = (score_dequant - score_float).abs()
+
+    if not torch.isfinite(score_dequant).all():
+        raise SystemExit("Quantized/dequantized score contains non-finite values")
+    if not torch.isfinite(score_abs_error).all():
+        raise SystemExit("Quantized score error contains non-finite values")
+
+    return {
+        "q_int8": q_int8,
+        "k_int8": k_int8,
+        "q_scale": q_scale,
+        "k_scale": k_scale,
+        "total_scale": total_scale,
+        "q_recon_max_error": (q_reconstructed - q_head.float()).abs().max().item(),
+        "k_recon_max_error": (k_reconstructed - k_head.float()).abs().max().item(),
+        "score_max_error": score_abs_error.max().item(),
+        "score_mean_error": score_abs_error.mean().item(),
+    }
+
+
 def main() -> None:
     args = parse_args()
     require_packages()
@@ -213,6 +260,7 @@ def main() -> None:
     k_head = k_rot[0, kv_head, :, :]
     v_head = v[0, kv_head, :, :]
     scores, weights, attn_ref = causal_attention_reference(q_head, k_head, v_head)
+    quant = quantization_metrics(q_head, k_head)
 
     sdpa_ref = torch.nn.functional.scaled_dot_product_attention(
         q_head.float().unsqueeze(0).unsqueeze(0),
@@ -236,6 +284,17 @@ def main() -> None:
     print(f"Reference weights shape: {tuple(weights.shape)}")
     print(f"Reference attn_out shape: {tuple(attn_ref.shape)}")
     print(f"SDPA max diff: {sdpa_max_diff:.8e}")
+    print(f"Q int8 shape: {tuple(quant['q_int8'].shape)}")
+    print(f"K int8 shape: {tuple(quant['k_int8'].shape)}")
+    print(f"Q int8 range: [{int(quant['q_int8'].min())}, {int(quant['q_int8'].max())}]")
+    print(f"K int8 range: [{int(quant['k_int8'].min())}, {int(quant['k_int8'].max())}]")
+    print(f"q_scale: {quant['q_scale']:.12e}")
+    print(f"k_scale: {quant['k_scale']:.12e}")
+    print(f"total_scale: {quant['total_scale']:.12e}")
+    print(f"Q reconstruction max error: {quant['q_recon_max_error']:.8e}")
+    print(f"K reconstruction max error: {quant['k_recon_max_error']:.8e}")
+    print(f"Score dequant max error: {quant['score_max_error']:.8e}")
+    print(f"Score dequant mean error: {quant['score_mean_error']:.8e}")
 
     if batch_size != 1:
         raise SystemExit(f"Expected batch size 1, got {batch_size}")
@@ -251,6 +310,7 @@ def main() -> None:
         raise SystemExit(f"Manual attention reference disagrees with SDPA: {sdpa_max_diff}")
 
     print("TinyLlama Q/K/V extraction OK")
+    print("TinyLlama Q/K quantization OK")
 
 
 if __name__ == "__main__":

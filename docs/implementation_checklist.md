@@ -524,19 +524,19 @@ Track B (V kernel) must be working before real V is useful.
 
 ### What to do
 
-- [ ] Apply per-tensor symmetric INT8 quantization to Q and K:
+- [x] Apply per-tensor symmetric INT8 quantization to Q and K:
   ```python
   q_scale = q_head.abs().max() / 127.0
   k_scale = k_head.abs().max() / 127.0
   q_int8  = (q_head / q_scale).round().clamp(-128, 127).to(torch.int8)
   k_int8  = (k_head / k_scale).round().clamp(-128, 127).to(torch.int8)
   ```
-- [ ] Verify the quantization error is small:
+- [x] Verify the quantization error is small:
   ```python
   q_reconstructed = q_int8.float() * q_scale
   print((q_reconstructed - q_head).abs().max())   # should be < 0.02
   ```
-- [ ] Confirm total_scale factor is correct:
+- [x] Confirm total_scale factor is correct:
   ```python
   total_scale  = float(q_scale) * float(k_scale) * (1.0 / 8.0)
   score_dequant = (q_int8.float() @ k_int8.float().T) * total_scale

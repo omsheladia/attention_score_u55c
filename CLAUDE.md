@@ -45,6 +45,8 @@ docs/       offload design notes
 |---|---|
 | Python reference | [model/attention_score_ref.py](model/attention_score_ref.py) |
 | Vector export | [model/export_attention_score_vectors.py](model/export_attention_score_vectors.py) |
+| TinyLlama setup check | [model/check_tinyllama_setup.py](model/check_tinyllama_setup.py) |
+| Q/K/V extraction + INT8 quant | [model/extract_tinyllama_qkv.py](model/extract_tinyllama_qkv.py) |
 | Score GEMM HLS | [hls/attention_score/attention_score_core_hls.cpp](hls/attention_score/attention_score_core_hls.cpp) |
 | Mask+scale HLS | [hls/mask_and_scale/mask_scale_core_hls.cpp](hls/mask_and_scale/mask_scale_core_hls.cpp) |
 | Causal mask HLS | [hls/causal_mask/causal_mask_core_hls.cpp](hls/causal_mask/causal_mask_core_hls.cpp) |
@@ -72,7 +74,7 @@ XRT deployment status for the current 3-kernel chain:
 
 | Target | Result | Notes |
 |---|---|---|
-| host compile | PASS | `bash attention_score_u55c/host/build_host.sh` |
+| host compile | PASS | `bash host/build_host.sh` |
 | `hw_emu` xclbin | PASS | Vitis 2022.2, U55C platform `xilinx_u55c_gen3x16_xdma_3_202210_1` |
 | `hw_emu` run | PASS | `XRT chain verification PASSED`; emulation timing is simulator dominated |
 | real `hw` xclbin | PASS | hardware link took about 43 minutes |
@@ -222,23 +224,23 @@ Follow [host/LINUX_BRINGUP.md](host/LINUX_BRINGUP.md) step by step.
 
 **Short version:**
 ```bash
-source attention_score_u55c/host/setup_2022_2_env.sh
+source host/setup_2022_2_env.sh
 
 # build xclbin (hw_emu first)
-bash attention_score_u55c/host/build_xclbin.sh hw_emu \
+bash host/build_xclbin.sh hw_emu \
   /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
 
 # build host app
-bash attention_score_u55c/host/build_host.sh
+bash host/build_host.sh
 
 # generate emconfig and run
 emconfigutil \
   --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm \
   --nd 1
 export XCL_EMULATION_MODE=hw_emu
-./attention_score_u55c/build/host_attention_score_chain \
-  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
-  --vectors attention_score_u55c/sim/attention_score_tile \
+./build/host_attention_score_chain \
+  --xclbin build/attention_score_chain.xclbin \
+  --vectors sim/attention_score_tile \
   --device 0
 ```
 
@@ -257,7 +259,7 @@ Pass signal: `XRT chain verification PASSED`
 
 ## What "Correct" Means Here
 
-Correctness is scoped to: the 4-stage tile chain matches the exported reference
+Correctness is scoped to: the 3-kernel runtime chain matches the exported reference
 vectors for the chosen tile format. It does **not** mean full TinyLlama attention
 or full model execution is verified.
 
@@ -290,6 +292,12 @@ Run TinyLlama inference via PyTorch, hook into one attention layer to extract
 real `Q_rot` (RoPE-rotated), `K_rot` (RoPE-rotated), and `V` (projected,
 not RoPE-rotated) tensors. Quantize Q/K to INT8; V stays float32. Export in
 the same file format the host app already reads.
+
+Steps 1–3 are implemented: `model/check_tinyllama_setup.py` verifies the
+TinyLlama environment; `model/extract_tinyllama_qkv.py` extracts Q/K/V via a
+forward-hook, applies INT8 symmetric quantization to Q and K, and validates
+against PyTorch SDPA output. Remaining work is Step 4 (export real vectors to
+`sim/`) and Step 5 (run real vectors through the FPGA pipeline).
 
 **Track D — CPU/GPU baseline and benchmarking**
 Measure FPGA `attn_out` latency against CPU/GPU at S = 8, 64, 128, 256, 512.
@@ -366,24 +374,23 @@ in the implementation checklist.
 
 ## Recommended Next Steps
 
-**Track A — Immediate:**
-1. Add Python full-sequence tiling with full-row softmax reference
-2. Implement full-row softmax kernel — required for S > 64
-3. Add matching XRT host tiling loop for S = 8, 64, 128, 256, 512
-4. Add multi-vector regression and CPU/GPU/FPGA timing tables
-5. If more pre-softmax speed is needed, prefer wider packing/on-chip fusion
-   before chasing more GEMM unroll
+**Track A — Steps 1–2 done; remaining:**
+- Steps 1–2 complete: UNROLL factor=16, merged mask+scale kernel, 3-kernel chain verified on hw_emu and real U55C hardware.
+- Step 3: Add Python full-sequence tiling with `softmax_full_rows()` reference
+- Step 4: Implement full-row softmax HLS kernel (`hls/softmax_full_row/`) — required for S > 64
+- Step 5: Add matching XRT host tiling loop for S = 8, 64, 128, 256, 512
+- Step 6: Add multi-vector regression and CPU/GPU/FPGA timing tables
+- If more pre-softmax speed is needed, prefer wider packing/on-chip fusion before chasing more GEMM unroll
 
 **Track B — Complete attention block:**
 1. Add `softmax @ V` Python reference and synthetic V export
-2. Implement V weighted sum HLS kernel
+2. Implement V weighted-sum HLS kernel (`hls/v_weighted_sum/`)
 3. Update host app with three-pass tiling loop
 
-**Track C — Real inputs (after Track A + B on hardware):**
-1. Extract real Q/K/V from TinyLlama via PyTorch hooks
-2. Quantize Q/K to INT8; V stays float32
-3. Export in existing file format and run through FPGA pipeline
-4. Compare FPGA `attn_out` against PyTorch reference
+**Track C — Steps 1–3 done; remaining:**
+- Steps 1–3 complete: TinyLlama loads on CPU, Q/K/V extraction via hook verified, INT8 Q/K quantization verified.
+- Step 4: Export real Q/K/V vectors to `sim/` in existing file format
+- Step 5: Run real vectors through FPGA pipeline; compare `attn_out` against PyTorch reference
 
 **Track D — Benchmarking:**
 1. CPU baseline in Python (runnable on Windows now)
