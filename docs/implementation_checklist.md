@@ -487,7 +487,7 @@ Track B (V kernel) must be working before real V is useful.
 
 ### What to do
 
-- [ ] Register a forward hook on one transformer layer's attention module to
+- [x] Register a forward hook on one transformer layer's attention module to
       intercept Q and K after RoPE rotation, and V after projection (V is not
       RoPE-rotated — it is the raw projected value tensor):
   ```python
@@ -496,18 +496,18 @@ Track B (V kernel) must be working before real V is useful.
       pass
   model.model.layers[0].self_attn.register_forward_hook(hook_fn)
   ```
-- [ ] Run a forward pass on a test sentence, e.g. `"The cat sat on the mat"`
-- [ ] Confirm captured Q shape is `(1, 32, S, 64)` — batch, heads, seq, head_dim
-- [ ] Confirm captured K shape is `(1, 4, S, 64)` — TinyLlama uses 4 KV heads
+- [x] Run a forward pass on a test sentence, e.g. `"The cat sat on the mat"`
+- [x] Confirm captured Q shape is `(1, 32, S, 64)` — batch, heads, seq, head_dim
+- [x] Confirm captured K shape is `(1, 4, S, 64)` — TinyLlama uses 4 KV heads
       (grouped query attention), so K is shared across groups of 8 Q heads
-- [ ] Confirm captured V shape is `(1, 4, S, 64)` — same layout as K
-- [ ] Extract one head's Q, K, and V:
+- [x] Confirm captured V shape is `(1, 4, S, 64)` — same layout as K
+- [x] Extract one head's Q, K, and V:
   ```python
   q_head = q_rot[0, 0, :, :]   # shape (S, 64), float32
   k_head = k_rot[0, 0, :, :]   # shape (S, 64), float32
   v_head = v[0, 0, :, :]       # shape (S, 64), float32
   ```
-- [ ] Verify against PyTorch's own attention output:
+- [x] Verify against PyTorch's own attention output:
   ```python
   score_ref  = (q_head @ k_head.T) / 8.0
   weights    = torch.softmax(score_ref, dim=-1)

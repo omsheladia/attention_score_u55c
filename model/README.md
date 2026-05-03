@@ -12,6 +12,10 @@ reference.
   - Track C Step 1 setup checker for real-vector work
   - verifies `torch`, `transformers`, and `sentencepiece`
   - loads TinyLlama and runs one short forward pass
+- `extract_tinyllama_qkv.py`
+  - Track C Step 2 extractor for real Q/K/V tensors
+  - captures Q and K after RoPE and V after projection
+  - verifies one selected head against PyTorch scaled-dot-product attention
 
 The current XRT host verifies the three-kernel runtime outputs against:
 
@@ -51,4 +55,29 @@ Useful options:
 ```bash
 python model/check_tinyllama_setup.py --device cuda --dtype float16
 python model/check_tinyllama_setup.py --model-id /path/to/local/tinyllama --local-files-only
+```
+
+## TinyLlama Q/K/V Extraction
+
+Run:
+
+```bash
+python model/extract_tinyllama_qkv.py --local-files-only
+```
+
+The verified local run loaded the cached TinyLlama model on CPU and captured:
+
+```text
+Q_rot: (1, 32, 8, 64)
+K_rot: (1, 4, 8, 64)
+V:     (1, 4, 8, 64)
+```
+
+For layer 0 / Q head 0, the script selected `q_head`, `k_head`, and `v_head`
+with shape `(8, 64)`, computed a causal attention reference with output shape
+`(8, 64)`, matched PyTorch scaled-dot-product attention with max difference
+`3.72529030e-09`, and printed:
+
+```text
+TinyLlama Q/K/V extraction OK
 ```

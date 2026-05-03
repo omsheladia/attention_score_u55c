@@ -222,6 +222,17 @@ to mention the Track C TinyLlama setup checker and to use current repo-root
 paths (`host/...`, `model/...`, `sim/...`) instead of stale nested
 `attention_score_u55c/...` command paths.
 
+Also on 2026-05-02, Track C Step 2 was implemented with
+`model/extract_tinyllama_qkv.py`. It registers a pre-hook on one TinyLlama
+attention layer, mirrors the installed Transformers Llama attention projection
+and RoPE code, captures `Q_rot`, `K_rot`, and projected `V`, maps Q heads to KV
+heads for grouped-query attention, and validates one selected head against
+PyTorch scaled-dot-product attention. The verified local run used the cached
+TinyLlama model on CPU with the default 8-token prompt and printed:
+`Q_rot (1, 32, 8, 64)`, `K_rot (1, 4, 8, 64)`, `V (1, 4, 8, 64)`,
+`attn_out (8, 64)`, `SDPA max diff 3.72529030e-09`, and
+`TinyLlama Q/K/V extraction OK`.
+
 ## Tile And Sequence-Length Model
 
 The hardware tile shape remains fixed:
@@ -287,6 +298,7 @@ Key subfolders:
 - `model/attention_score_ref.py`
 - `model/export_attention_score_vectors.py`
 - `model/check_tinyllama_setup.py`
+- `model/extract_tinyllama_qkv.py`
 
 These export deterministic vectors under:
 
