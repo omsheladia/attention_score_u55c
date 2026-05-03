@@ -573,24 +573,37 @@ Track B (V kernel) must be working before real V is useful.
 **Effort:** 1–2 hours (assuming Track A Step 3 is already working)  
 **Requires:** XRT on Linux, hw_emu or real hw
 
+**Current status:** implemented and verified for the current single-tile
+3-kernel design using `sim/real_tinyllama_tile/`. Full multi-sentence and
+multi-length coverage is still pending Track A tiling and full-row softmax.
+
 ### What to do
 
-- [ ] Copy the real vector files to the Linux machine
-- [ ] Pass the real vector directory to the host app:
+- [x] Use the real vector files on the Linux/U55C machine
+- [x] Pass the real vector directory to the host app:
   ```bash
   ./build/host_attention_score_chain \
     --xclbin build/attention_score_chain.xclbin \
-    --vectors /path/to/real_vectors \
-    --seq-len <S> \
+    --vectors sim/real_tinyllama_tile \
     --device 0
   ```
-- [ ] Confirm `XRT chain verification PASSED`
+- [x] Confirm `XRT chain verification PASSED`
 - [ ] If Track B is complete: compare FPGA `attn_out` against PyTorch's full
       attention output (`torch.nn.functional.scaled_dot_product_attention`)
       for the same head — should match within ~1e-3 (quantization error expected)
-- [ ] If Track B is not yet complete: compare FPGA softmax weights output
+- [x] If Track B is not yet complete: compare FPGA softmax weights output
       against PyTorch softmax only, and note the limitation explicitly
 - [ ] Test on multiple sentences at different lengths
+
+Verified real-card helper run:
+
+```text
+attention_score_u55c_kernel 0.062 ms
+mask_scale_u55c_kernel      0.024 ms
+softmax_u55c_kernel         0.028 ms
+total_chain                 0.121 ms
+XRT chain verification PASSED
+```
 
 ---
 
@@ -602,7 +615,7 @@ Track B (V kernel) must be working before real V is useful.
 | C2 — Hook Q/K/V extraction | 2–3 hrs | Yes | C1 |
 | C3 — INT8 quantization | 1–2 hrs | Yes | C2 |
 | C4 — Export real vectors | 1 hr | Yes | C3 |
-| C5 — Run on FPGA | 1–2 hrs | No (needs XRT) | Track A Step 3 + C4 |
+| C5 — Run on FPGA | 1–2 hrs | No (needs XRT) | C4 for current single tile; Track A Step 3 for full tiling |
 
 Track C Steps 1–4 can all be done on Windows as pure Python work while
 Track A hardware bring-up is happening in parallel on the Linux machine.

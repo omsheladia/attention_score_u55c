@@ -1,8 +1,8 @@
 # U55C FPGA Run Commands
 
 This is the command runbook for the isolated `attention_score_u55c` FPGA demo.
-It captures the steps and parameters used to build, emulate, and run the
-four-kernel attention-score chain on the real U55C.
+It captures the steps and parameters used to build, emulate, and run the current
+three-kernel attention-score chain on the real U55C.
 
 ## Verified Hardware State
 
@@ -20,10 +20,19 @@ four-kernel attention-score chain on the real U55C.
 ```text
 Q_rot_int8, K_rot_int8
 -> attention_score_u55c_kernel
--> causal_mask_u55c_kernel
--> score_scale_u55c_kernel
+-> mask_scale_u55c_kernel
 -> softmax_u55c_kernel
 ```
+
+The current XRT host verifies:
+
+- `score_raw.txt`
+- `score_scaled.txt`
+- `score_softmax.txt`
+
+The real TinyLlama vector directory also contains `v_full.txt` and
+`attn_ref_float.txt`, but those are for later `softmax @ V` work and are not
+consumed by the current three-kernel xclbin.
 
 ## HBM Bank Mapping
 
@@ -31,12 +40,11 @@ The link config used for the `.xclbin` is
 `attention_score_u55c/host/vpp_link.cfg`:
 
 ```text
-q_tile      -> HBM[0]
-k_tile      -> HBM[1]
-raw score   -> HBM[2]
-masked      -> HBM[3]
-scaled      -> HBM[4]
-prob out    -> HBM[5]
+q_tile       -> HBM[0]
+k_tile       -> HBM[1]
+raw score    -> HBM[2]
+scaled score -> HBM[3]
+prob out     -> HBM[4]
 ```
 
 ## 1. Source The 2022.2 Environment
@@ -65,11 +73,11 @@ xbmgmt examine
 platforminfo -p /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
 ```
 
-The real-card pass used device index `0`.
+The real-card passes used device index `0`.
 
-## 3. Export The Reference Vectors
+## 3. Export The Synthetic Reference Vectors
 
-Default verified case:
+Default verified synthetic case:
 
 ```bash
 python3 attention_score_u55c/model/export_attention_score_vectors.py \
@@ -95,21 +103,64 @@ attention_score_u55c/sim/attention_score_tile/kernel_meta.txt
 attention_score_u55c/sim/attention_score_tile/metadata.json
 ```
 
-## 4. Run Local C++ Verification
+## 4. Export The Real TinyLlama-Derived Vectors
 
-This regenerates vectors, builds the native C++ testbenches, and runs all four
-kernel testbenches against the vector directory:
+The current real-vector directory has already been exported at:
+
+```text
+attention_score_u55c/sim/real_tinyllama_tile/
+```
+
+To regenerate it:
+
+```bash
+python3 attention_score_u55c/model/export_real_vectors.py \
+  --output-dir attention_score_u55c/sim/real_tinyllama_tile
+```
+
+Default real-vector metadata:
+
+```text
+prompt: The cat sat on the mat.
+query_rows: 8
+key_cols: 8
+query_pos_base: 0
+key_pos_base: 0
+q_scale: 0.0489841662347317
+k_scale: 0.0174317248165607
+total_scale: 0.0001067348132716
+```
+
+The exported real-vector files include:
+
+```text
+q_tile.txt
+k_tile.txt
+kernel_meta.txt
+score_raw.txt
+score_masked.txt
+score_scaled.txt
+score_softmax.txt
+score_packed.txt
+metadata.json
+q_float.txt
+k_float.txt
+v_full.txt
+attn_ref_float.txt
+```
+
+## 5. Run Local C++ Verification
+
+This regenerates the default synthetic vectors, builds the native C++
+testbenches, and runs the local checks:
 
 ```bash
 bash attention_score_u55c/host/run_local_csim.sh
 ```
 
-Expanded commands used by that helper:
+For the current runtime path, the important local benches are:
 
 ```bash
-python3 attention_score_u55c/model/export_attention_score_vectors.py \
-  --output-dir attention_score_u55c/sim/attention_score_tile
-
 g++ -O2 -std=c++17 \
   attention_score_u55c/hls/attention_score/attention_score_core_hls.cpp \
   attention_score_u55c/hls/attention_score/tb_attention_score.cpp \
@@ -117,16 +168,10 @@ g++ -O2 -std=c++17 \
   -o attention_score_u55c/sim/tb_attention_score
 
 g++ -O2 -std=c++17 \
-  attention_score_u55c/hls/causal_mask/causal_mask_core_hls.cpp \
-  attention_score_u55c/hls/causal_mask/tb_causal_mask.cpp \
+  attention_score_u55c/hls/mask_and_scale/mask_scale_core_hls.cpp \
+  attention_score_u55c/hls/mask_and_scale/tb_mask_scale.cpp \
   -Iattention_score_u55c/hls/common \
-  -o attention_score_u55c/sim/tb_causal_mask
-
-g++ -O2 -std=c++17 \
-  attention_score_u55c/hls/score_scale/score_scale_core_hls.cpp \
-  attention_score_u55c/hls/score_scale/tb_score_scale.cpp \
-  -Iattention_score_u55c/hls/common \
-  -o attention_score_u55c/sim/tb_score_scale
+  -o attention_score_u55c/sim/tb_mask_scale
 
 g++ -O2 -std=c++17 \
   attention_score_u55c/hls/softmax/softmax_core_hls.cpp \
@@ -135,26 +180,39 @@ g++ -O2 -std=c++17 \
   -o attention_score_u55c/sim/tb_softmax
 
 attention_score_u55c/sim/tb_attention_score attention_score_u55c/sim/attention_score_tile
-attention_score_u55c/sim/tb_causal_mask attention_score_u55c/sim/attention_score_tile
-attention_score_u55c/sim/tb_score_scale attention_score_u55c/sim/attention_score_tile
+attention_score_u55c/sim/tb_mask_scale attention_score_u55c/sim/attention_score_tile
 attention_score_u55c/sim/tb_softmax attention_score_u55c/sim/attention_score_tile
 ```
 
-Expected pass signal:
+The same benches can be pointed at the real TinyLlama vectors:
+
+```bash
+attention_score_u55c/sim/tb_attention_score attention_score_u55c/sim/real_tinyllama_tile
+attention_score_u55c/sim/tb_mask_scale attention_score_u55c/sim/real_tinyllama_tile
+attention_score_u55c/sim/tb_softmax attention_score_u55c/sim/real_tinyllama_tile
+```
+
+Expected pass signal from the helper:
 
 ```text
 Local attention-score C++ simulation chain PASSED
 ```
 
-## 5. Run Vitis HLS C Simulation And Synthesis
+## 6. Run Vitis HLS C Simulation And Synthesis
 
 Each HLS Tcl script runs `csim_design` and `csynth_design` for one kernel.
 
 ```bash
 vitis_hls -f attention_score_u55c/hls/attention_score/run_hls.tcl
+vitis_hls -f attention_score_u55c/hls/mask_and_scale/run_hls.tcl
+vitis_hls -f attention_score_u55c/hls/softmax/run_hls.tcl
+```
+
+Legacy split-kernel HLS projects still exist for reference:
+
+```bash
 vitis_hls -f attention_score_u55c/hls/causal_mask/run_hls.tcl
 vitis_hls -f attention_score_u55c/hls/score_scale/run_hls.tcl
-vitis_hls -f attention_score_u55c/hls/softmax/run_hls.tcl
 ```
 
 The scripts use:
@@ -165,7 +223,7 @@ clock: 4 ns
 vector_dir: attention_score_u55c/sim/attention_score_tile
 ```
 
-## 6. Build The XRT Host App
+## 7. Build The XRT Host App
 
 ```bash
 bash attention_score_u55c/host/build_host.sh
@@ -188,7 +246,7 @@ Expected output:
 Built attention_score_u55c/build/host_attention_score_chain
 ```
 
-## 7. Build The Hardware Emulation `.xclbin`
+## 8. Build The Hardware Emulation `.xclbin`
 
 ```bash
 bash attention_score_u55c/host/build_xclbin.sh \
@@ -207,15 +265,9 @@ v++ -c -t hw_emu \
 
 v++ -c -t hw_emu \
   --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm \
-  -k causal_mask_u55c_kernel \
-  -o attention_score_u55c/build/causal_mask_u55c_kernel.xo \
-  attention_score_u55c/hls/causal_mask/causal_mask_core_hls.cpp
-
-v++ -c -t hw_emu \
-  --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm \
-  -k score_scale_u55c_kernel \
-  -o attention_score_u55c/build/score_scale_u55c_kernel.xo \
-  attention_score_u55c/hls/score_scale/score_scale_core_hls.cpp
+  -k mask_scale_u55c_kernel \
+  -o attention_score_u55c/build/mask_scale_u55c_kernel.xo \
+  attention_score_u55c/hls/mask_and_scale/mask_scale_core_hls.cpp
 
 v++ -c -t hw_emu \
   --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm \
@@ -232,12 +284,11 @@ v++ -l -t hw_emu \
   --config attention_score_u55c/host/vpp_link.cfg \
   -o attention_score_u55c/build/attention_score_chain.xclbin \
   attention_score_u55c/build/attention_score_u55c_kernel.xo \
-  attention_score_u55c/build/causal_mask_u55c_kernel.xo \
-  attention_score_u55c/build/score_scale_u55c_kernel.xo \
+  attention_score_u55c/build/mask_scale_u55c_kernel.xo \
   attention_score_u55c/build/softmax_u55c_kernel.xo
 ```
 
-## 8. Run Hardware Emulation
+## 9. Run Hardware Emulation
 
 One-command helper:
 
@@ -268,7 +319,7 @@ Expected pass signal:
 XRT chain verification PASSED
 ```
 
-## 9. Build The Real Hardware `.xclbin`
+## 10. Build The Real Hardware `.xclbin`
 
 ```bash
 unset XCL_EMULATION_MODE
@@ -278,7 +329,7 @@ bash attention_score_u55c/host/build_xclbin.sh \
   /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
 ```
 
-The hardware build uses the same four `v++ -c` compile commands and final
+The hardware build uses the same three `v++ -c` compile commands and final
 `v++ -l` link command as hardware emulation, with `-t hw` instead of
 `-t hw_emu`.
 
@@ -288,7 +339,7 @@ Output:
 attention_score_u55c/build/attention_score_chain.xclbin
 ```
 
-## 10. Run On The Real U55C
+## 11. Run Synthetic Vectors On The Real U55C
 
 Verified direct command:
 
@@ -322,42 +373,95 @@ Expected output includes:
 ```text
 Opening device 0
 Running attention score kernel
-Running causal mask kernel
-Running score scale kernel
+Running mask+scale kernel
 Running softmax kernel
 Kernel timing summary (host wall-clock, launch through wait):
 XRT chain verification PASSED
 ```
 
-One verified real-card run printed:
+One verified real-card helper run printed:
 
 ```text
-attention_score_u55c_kernel 0.110 ms
-causal_mask_u55c_kernel     0.029 ms
-score_scale_u55c_kernel     0.021 ms
-softmax_u55c_kernel         0.026 ms
-total_chain                 0.193 ms
+attention_score_u55c_kernel 0.043 ms
+mask_scale_u55c_kernel      0.025 ms
+softmax_u55c_kernel         0.086 ms
+total_chain                 0.159 ms
 ```
 
-## 11. Inspect The Built XCLBIN
+## 12. Run Real TinyLlama Vectors On The Real U55C
+
+Verified direct command:
+
+```bash
+source attention_score_u55c/host/setup_2022_2_env.sh
+unset XCL_EMULATION_MODE
+
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --vectors attention_score_u55c/sim/real_tinyllama_tile \
+  --device 0
+```
+
+Verified helper command:
+
+```bash
+bash attention_score_u55c/host/run_hw.sh \
+  0 \
+  attention_score_u55c/build/attention_score_chain.xclbin \
+  attention_score_u55c/sim/real_tinyllama_tile
+```
+
+Direct real-card run result on 2026-05-02:
+
+```text
+Opening device 0
+Running attention score kernel
+Running mask+scale kernel
+Running softmax kernel
+Kernel timing summary (host wall-clock, launch through wait):
+  attention_score_u55c_kernel 0.059 ms
+  mask_scale_u55c_kernel      0.029 ms
+  softmax_u55c_kernel         0.028 ms
+  total_chain                 0.121 ms
+XRT chain verification PASSED
+```
+
+Helper real-card run result on 2026-05-02:
+
+```text
+Opening device 0
+Running attention score kernel
+Running mask+scale kernel
+Running softmax kernel
+Kernel timing summary (host wall-clock, launch through wait):
+  attention_score_u55c_kernel 0.062 ms
+  mask_scale_u55c_kernel      0.024 ms
+  softmax_u55c_kernel         0.028 ms
+  total_chain                 0.121 ms
+XRT chain verification PASSED
+```
+
+## 13. Inspect The Built XCLBIN
 
 ```bash
 xclbinutil --info \
   --input attention_score_u55c/build/attention_score_chain.xclbin
 ```
 
-Expected kernels:
+Expected xclbin details for the current real hardware build:
 
 ```text
-attention_score_u55c_kernel
-causal_mask_u55c_kernel
-score_scale_u55c_kernel
-softmax_u55c_kernel
+Content: Bitstream
+UUID: 06fc7f72-fc9f-b542-28d3-aac2d65918ef
+Kernels:
+  attention_score_u55c_kernel
+  mask_scale_u55c_kernel
+  softmax_u55c_kernel
 ```
 
-## 12. Preserve A Known-Good Run
+## 14. Preserve A Known-Good Run
 
-The known-good preservation backup was created at:
+The older known-good preservation backup was created at:
 
 ```text
 attention_score_u55c/backups/run_20260429_201240/
@@ -369,15 +473,15 @@ Its manifest is:
 sed -n '1,220p' attention_score_u55c/backups/run_20260429_201240/MANIFEST.md
 ```
 
-The backup includes the verified `.xclbin`, host binary, vectors, logs, reports,
-device state, checksums, and the real hardware verification log.
+The backup includes the earlier verified `.xclbin`, host binary, vectors, logs,
+reports, device state, checksums, and the real hardware verification log.
 
 ## Current Benchmark Scope
 
 The current FPGA run is a verified single attention-score tile. It is not yet a
 multi-sequence-length benchmark or full tokens/sec measurement.
 
-Current active vector parameters:
+Verified synthetic vector parameters:
 
 ```text
 query_rows: 4
@@ -388,6 +492,20 @@ q_scale: 0.03125
 k_scale: 0.02734375
 ```
 
+Verified real TinyLlama vector parameters:
+
+```text
+query_rows: 8
+key_cols: 8
+query_pos_base: 0
+key_pos_base: 0
+q_scale: 0.0489841662347317
+k_scale: 0.0174317248165607
+total_scale: 0.0001067348132716
+```
+
 The next benchmarking step is to generate multiple vector directories with
 different `query_rows` and `key_cols`, run each through the host app, and report
-latency, tiles/sec, effective scores/sec, and HBM traffic estimates.
+latency, tiles/sec, effective scores/sec, and HBM traffic estimates. Tokens/sec
+is not meaningful yet because this design stops at attention probabilities and
+does not run `softmax @ V` or full TinyLlama decoding.

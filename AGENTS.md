@@ -255,6 +255,23 @@ verified run used the default 8-token prompt and wrote
 sequence tiling or `softmax @ V`; it provides real Q/K inputs for the current
 single-tile 3-kernel design.
 
+On 2026-05-02, `sim/real_tinyllama_tile/` was run on the real U55C with the
+current 3-kernel XRT host and existing hardware bitstream UUID
+`06fc7f72-fc9f-b542-28d3-aac2d65918ef`. Both the direct host invocation and
+`host/run_hw.sh` passed with `XRT chain verification PASSED`. The direct run
+timed attention score at 0.059 ms, mask+scale at 0.029 ms, softmax at 0.028 ms,
+and total chain at 0.121 ms. The helper run timed attention score at 0.062 ms,
+mask+scale at 0.024 ms, softmax at 0.028 ms, and total chain at 0.121 ms. This
+verifies real TinyLlama-derived Q/K through score, mask+scale, and softmax; the
+exported `v_full.txt` and `attn_ref_float.txt` remain for later Track B work and
+are not consumed by the current xclbin.
+
+The same day, `README.md`, `host/README.md`, `model/README.md`,
+`docs/implementation_checklist.md`, and `CLAUDE.md` were refreshed to reflect
+that real-card `sim/real_tinyllama_tile/` result. Track C Step 5 is now marked
+complete for the current single-tile 3-kernel design only; multi-length real
+vectors still require Track A tiling and full-row softmax.
+
 ## Tile And Sequence-Length Model
 
 The hardware tile shape remains fixed:
@@ -580,8 +597,9 @@ Current pulled-state note:
 
 - earlier planning assumed the target Linux machine attached to the U55C would
   be needed for full bring-up
-- the pulled `AGENTS.md` history now records successful `hw_emu` and real-card
-  verification of the single-tile four-kernel chain
+- the pulled `AGENTS.md` history records successful `hw_emu` and real-card
+  verification of the earlier single-tile four-kernel chain and the current
+  single-tile three-kernel chain
 - future `.xclbin` builds and hardware runs still require Linux, XRT, Vitis, and
   a matching U55C platform
 
@@ -593,13 +611,16 @@ Not yet confirmed:
 - synthetic Track A regression through multiple vector directories
 - full-row softmax kernel/design for `S > 64`
 - `softmax @ V` / V weighted-sum stage
-- real TinyLlama `Q_rot` / `K_rot` extraction, V extraction, and INT8 Q/K export
+- XRT `hw_emu` run using `sim/real_tinyllama_tile/`
 - CPU/GPU/FPGA baseline comparison for acceleration claims
 - full TinyLlama attention path
 - full TinyLlama model execution
 
 So the project is now a proven **single-tile isolated FPGA demo**, but not yet a
 full sequence-length attention accelerator or a full TinyLlama hardware runtime.
+Track C Steps 1-3 are implemented and verified locally; Track C Step 4 is
+implemented for the current single-tile 3-kernel design and verified with local
+C++ benches plus a real-card XRT run.
 
 ## Best Next Step
 
@@ -621,15 +642,15 @@ are:
 
 1. Track B: add `softmax @ V` with a V weighted-sum HLS kernel
 2. export and verify `v_full.txt` and `attn_out.txt`
-3. Track C: extract real TinyLlama Q/K/V with PyTorch hooks
-4. quantize/export real Q/K and keep V as float32
-5. run real vectors through the same FPGA pipeline and compare `attn_out` to
+3. extend the existing Track C real-vector export beyond the current single-tile
+   path once full-sequence tiling exists
+4. run real vectors through the same FPGA pipeline and compare `attn_out` to
    PyTorch attention output
-6. Track D: collect CPU/GPU/FPGA timing baselines and speedup tables
-7. add double-buffering or merge kernels for performance
-8. connect to a real TinyLlama attention subgraph
-9. add KV-cache-aware decode flow
-10. eventually integrate into a decoder-layer path
+5. Track D: collect CPU/GPU/FPGA timing baselines and speedup tables
+6. add double-buffering or merge kernels for performance
+7. connect to a real TinyLlama attention subgraph
+8. add KV-cache-aware decode flow
+9. eventually integrate into a decoder-layer path
 
 ## Current Repo State Relevant To This Effort
 
@@ -643,8 +664,11 @@ At the time of writing:
 - `docs/implementation_checklist.md` now treats full-row softmax as required
   for `S > 64`, adds `softmax @ V` as Track B, upgrades real inputs to Q/K/V,
   and adds CPU/GPU/FPGA baseline work
-- `AGENTS.md` has been updated to reconcile the pulled real-hardware history
-  with those current scope docs
+- Track C Steps 1-3 are already implemented in `model/check_tinyllama_setup.py`
+  and `model/extract_tinyllama_qkv.py`
+- Track C Step 4 has a current-design exporter in `model/export_real_vectors.py`
+  that writes `sim/real_tinyllama_tile/` and has passed local C++ benches plus
+  a real-card XRT run for attention score, mask+scale, and softmax
 
 Agents should avoid redoing exploration that this file already captures unless
 something materially changed.

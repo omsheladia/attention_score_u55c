@@ -142,11 +142,21 @@ mask_scale test PASSED
 softmax test PASSED
 ```
 
-The current XRT host should be able to consume the directory with:
+The current XRT host has consumed this directory successfully on the real U55C:
 
 ```bash
 ./build/host_attention_score_chain \
   --xclbin build/attention_score_chain.xclbin \
   --vectors sim/real_tinyllama_tile \
   --device 0
+```
+
+Verified real-card result:
+
+```text
+attention_score_u55c_kernel 0.059 ms
+mask_scale_u55c_kernel      0.029 ms
+softmax_u55c_kernel         0.028 ms
+total_chain                 0.121 ms
+XRT chain verification PASSED
 ```

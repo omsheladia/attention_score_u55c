@@ -75,7 +75,7 @@ runtime keeps mask+scale and softmax as separate kernels.
 
 ## Current Verification
 
-The verified real-card command is:
+The verified synthetic-vector real-card command is:
 
 ```bash
 source host/setup_2022_2_env.sh
@@ -105,13 +105,34 @@ Expected pass signal:
 XRT chain verification PASSED
 ```
 
-The current verified real-card helper run for the three-kernel chain printed:
+The current verified synthetic-vector helper run for the three-kernel chain
+printed:
 
 ```text
 attention_score_u55c_kernel 0.043 ms
 mask_scale_u55c_kernel      0.025 ms
 softmax_u55c_kernel         0.086 ms
 total_chain                 0.159 ms
+```
+
+The real TinyLlama-derived single-tile vector directory has also been verified
+on the real U55C:
+
+```bash
+bash host/run_hw.sh \
+  0 \
+  build/attention_score_chain.xclbin \
+  sim/real_tinyllama_tile
+```
+
+That helper run printed:
+
+```text
+attention_score_u55c_kernel 0.062 ms
+mask_scale_u55c_kernel      0.024 ms
+softmax_u55c_kernel         0.028 ms
+total_chain                 0.121 ms
+XRT chain verification PASSED
 ```
 
 The preservation backup for the known-good hardware run is:
@@ -169,7 +190,7 @@ Export a real TinyLlama single-tile vector case for the current 3-kernel chain:
 python model/export_real_vectors.py --local-files-only
 ```
 
-This writes `sim/real_tinyllama_tile/`, which can be passed to the current host
+This writes `sim/real_tinyllama_tile/`, which has been verified on the real U55C
 with `--vectors sim/real_tinyllama_tile`.
 
 For the full command runbook, see:

@@ -32,7 +32,8 @@ Q_rot_int8, K_rot_int8
 - XRT installed and sourced
 - U55C platform installed
 - one linked `.xclbin` containing the three runtime kernels
-- vectors already exported under `sim/attention_score_tile/`
+- vectors already exported under `sim/attention_score_tile/` or
+  `sim/real_tinyllama_tile/`
 
 ## Example Linux Flow
 
@@ -71,13 +72,34 @@ The host prints per-kernel timing and total chain timing using host wall-clock
 measurements from launch through `wait()`, then verifies `score_raw`,
 `score_scaled`, and `score_softmax` against the reference vectors.
 
-Latest verified helper timing for the three-kernel hardware xclbin:
+Latest verified synthetic-vector helper timing for the three-kernel hardware
+xclbin:
 
 ```text
 attention_score_u55c_kernel 0.043 ms
 mask_scale_u55c_kernel      0.025 ms
 softmax_u55c_kernel         0.086 ms
 total_chain                 0.159 ms
+```
+
+The same xclbin and host were also verified with the real TinyLlama-derived
+single-tile vectors:
+
+```bash
+bash host/run_hw.sh \
+  0 \
+  build/attention_score_chain.xclbin \
+  sim/real_tinyllama_tile
+```
+
+That helper run printed:
+
+```text
+attention_score_u55c_kernel 0.062 ms
+mask_scale_u55c_kernel      0.024 ms
+softmax_u55c_kernel         0.028 ms
+total_chain                 0.121 ms
+XRT chain verification PASSED
 ```
 
 ## Deployable Meaning

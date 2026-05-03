@@ -79,7 +79,7 @@ XRT deployment status for the current 3-kernel chain:
 | `hw_emu` xclbin | PASS | Vitis 2022.2, U55C platform `xilinx_u55c_gen3x16_xdma_3_202210_1` |
 | `hw_emu` run | PASS | `XRT chain verification PASSED`; emulation timing is simulator dominated |
 | real `hw` xclbin | PASS | hardware link took about 43 minutes |
-| real U55C run | PASS | device 0, shell `xilinx_u55c_gen3x16_xdma_base_3` |
+| real U55C run | PASS | device 0, shell `xilinx_u55c_gen3x16_xdma_base_3`; synthetic and real TinyLlama single-tile vectors pass |
 
 > Re-read HLS reports under `hls/build/.../syn/report/` before quoting numbers — the table above is a snapshot.
 
@@ -179,6 +179,16 @@ attention_score_u55c_kernel 0.043 ms
 mask_scale_u55c_kernel      0.025 ms
 softmax_u55c_kernel         0.086 ms
 total_chain                 0.159 ms
+XRT chain verification PASSED
+```
+
+Verified real TinyLlama-derived vector run using `sim/real_tinyllama_tile/`:
+
+```text
+attention_score_u55c_kernel 0.062 ms
+mask_scale_u55c_kernel      0.024 ms
+softmax_u55c_kernel         0.028 ms
+total_chain                 0.121 ms
 XRT chain verification PASSED
 ```
 
@@ -301,8 +311,10 @@ INT8 symmetric quantization to Q and K, and validates against PyTorch SDPA
 output; `model/export_real_vectors.py` exports real TinyLlama Q/K/V vectors
 to `sim/real_tinyllama_tile/` in the same file format the host app reads
 (currently limited to seq_len ≤ 8 — one Q tile — pending Track A Step 3).
-Remaining work is extending Step 4 to support the full tiling loop (blocked on
-Track A Step 3 + full-row softmax) and Step 5 (run real vectors on FPGA).
+The current single-tile real-vector directory has passed on the real U55C with
+`XRT chain verification PASSED` and a 0.121 ms helper total-chain timing.
+Remaining work is extending Step 4/5 to the full tiling loop, multiple sequence
+lengths, and later `attn_out` comparison once Track B exists.
 
 **Track D — CPU/GPU baseline and benchmarking**
 Measure FPGA `attn_out` latency against CPU/GPU at S = 8, 64, 128, 256, 512.
@@ -392,10 +404,11 @@ in the implementation checklist.
 2. Implement V weighted-sum HLS kernel (`hls/v_weighted_sum/`)
 3. Update host app with three-pass tiling loop
 
-**Track C — Steps 1–4 done (single-tile); remaining:**
+**Track C — Steps 1–5 done for the current single-tile design; remaining full-tiling work:**
 - Steps 1–4 complete: TinyLlama loads on CPU, Q/K/V extraction via hook verified, INT8 Q/K quantization verified, `model/export_real_vectors.py` exports real vectors to `sim/real_tinyllama_tile/` (seq_len ≤ 8).
+- Step 5 current single-tile FPGA run complete: `sim/real_tinyllama_tile/` passed on the real U55C with `XRT chain verification PASSED` and 0.121 ms total-chain helper timing.
 - Step 4 tiling extension: blocked on Track A Step 3 (full-row softmax + host tiling loop)
-- Step 5: Run real vectors through FPGA pipeline; compare softmax output (or `attn_out` once Track B is done) against PyTorch reference
+- Step 5 full-coverage extension: run multiple real-vector sequence lengths; compare softmax output now, or `attn_out` once Track B is done, against PyTorch reference
 
 **Track D — Benchmarking:**
 1. CPU baseline in Python (runnable on Windows now)
