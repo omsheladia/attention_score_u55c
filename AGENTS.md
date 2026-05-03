@@ -890,6 +890,12 @@ On 2026-05-03, the live README files were refreshed to remove stale
 three-kernel/pre-Track-B wording and reflect the current staged five-kernel
 flow, real TinyLlama `S=16`/`S=64` vector results, and Track D GPU timing note.
 
+The architecture diagram at `docs/attention_architecture.drawio` was also
+refreshed from the older score-only sketch to the current one-head staged
+pipeline: host/XRT, HBM banks `[0]` through `[7]`, `attention_score`,
+`mask_scale`, `softmax_full_row`, `v_weighted_sum`, final `attn_out`, tiling
+model, verification tolerances, and scope boundary.
+
 ## Best Next Step
 
 Track A Steps 1-4 are complete for the current staged design. Track A Step 5
