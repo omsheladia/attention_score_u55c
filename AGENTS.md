@@ -640,7 +640,7 @@ Not yet confirmed:
 
 - full-sequence real TinyLlama vector export beyond the current 8-token tile
 - automated synthetic Track A regression through multiple vector directories
-- `softmax @ V` / V weighted-sum stage
+- `softmax @ V` / V weighted-sum stage (code done, pending lab PC verification)
 - XRT `hw_emu` run using `sim/real_tinyllama_tile/`
 - CPU/GPU/FPGA baseline comparison for final acceleration claims
 - full TinyLlama attention path
@@ -729,18 +729,45 @@ and real TinyLlama vector mode also still passed. Per-kernel mask/scale timing
 is now an overlapped host-observed window; use `total_chain` for Track A Step 4
 comparisons.
 
+## Track B Status (2026-05-03)
+
+Track B code is complete on a Windows development machine and committed but not
+yet pushed to remote. The following are done and verified locally:
+
+- `model/attention_score_ref.py`: `deterministic_v()` and
+  `compute_v_weighted_sum()` added; verified against brute-force at
+  `S = 8, 64, 128, 256, 512` with zero max error.
+- `model/export_attention_score_vectors.py`: `--seq-len` flag added; exports
+  `v_full.txt`, `softmax_weights.txt`, and `attn_out.txt` with built-in
+  brute-force check.
+- `hls/v_weighted_sum/`: new kernel (`weights[8×64] @ V[64×64] →
+  partial_out[8×64]`), 16-way MAC unroll, cyclic array partitioning on both
+  input arrays. Self-contained testbench passes all 4 cases under g++ on
+  Ubuntu WSL.
+- `host/attention_score_chain_xrt.cpp`: `make_synthetic_v()`,
+  `compute_cpu_attn_out()`, V kernel XRT object, Pass 3 V accumulation loop,
+  and `attn_out` tolerance comparison added to `run_tiled_sequence`.
+- `host/vpp_link.cfg`: `v_weighted_sum_u55c_kernel_1` assigned HBM[6/7/8].
+- `host/build_xclbin.sh`: `v++ -c` compile step and link step updated.
+- `host/run_local_csim.sh`: `tb_v_weighted_sum` added to g++ chain.
+
+Not yet verified (requires lab PC):
+- Vitis csim and csynth for `v_weighted_sum_u55c_kernel`
+- xclbin rebuild with all 5 kernels
+- `hw_emu` run with `attn_out` verification
+- real U55C hardware run
+
 ## Best Next Step
 
-Track A Steps 1-4 are complete for the current staged design. Track A Step 5
-remains a future fusion/dataflow milestone, not required before starting
-dependent work. Best next practical steps are:
+Track A Steps 1-4 and Track B Steps 1-3 are code-complete. Best next practical
+steps are:
 
-1. start Track B `softmax @ V` so the FPGA produces `attn_out`
+1. push Track B code and run on lab PC: Vitis csim/csynth for v_weighted_sum,
+   rebuild xclbin with 5 kernels, verify hw_emu and real card
 2. add/update CPU/GPU/FPGA comparison tables using the real U55C sequence sweep
 3. extend Track C real TinyLlama export beyond the current 8-token single tile
 4. if more score-kernel speed is needed after that, prefer wider packing or
-   on-chip fusion before chasing higher GEMM unroll, because the 64-bit packed
-   interface produced the first material latency drop
+   on-chip fusion before chasing higher GEMM unroll
 
 ## After That
 

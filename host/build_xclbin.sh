@@ -43,12 +43,18 @@ v++ -c -t "$TARGET" --platform "$PLATFORM" \
   -o "$BUILD_DIR/softmax_full_row_u55c_kernel.xo" \
   attention_score_u55c/hls/softmax_full_row/softmax_full_row_hls.cpp
 
+v++ -c -t "$TARGET" --platform "$PLATFORM" \
+  -k v_weighted_sum_u55c_kernel \
+  -o "$BUILD_DIR/v_weighted_sum_u55c_kernel.xo" \
+  attention_score_u55c/hls/v_weighted_sum/v_weighted_sum_core_hls.cpp
+
 v++ -l -t "$TARGET" --platform "$PLATFORM" \
   --config attention_score_u55c/host/vpp_link.cfg \
   -o "$BUILD_DIR/attention_score_chain.xclbin" \
   "$BUILD_DIR/attention_score_u55c_kernel.xo" \
   "$BUILD_DIR/mask_scale_u55c_kernel.xo" \
   "$BUILD_DIR/softmax_u55c_kernel.xo" \
-  "$BUILD_DIR/softmax_full_row_u55c_kernel.xo"
+  "$BUILD_DIR/softmax_full_row_u55c_kernel.xo" \
+  "$BUILD_DIR/v_weighted_sum_u55c_kernel.xo"
 
 echo "Built $BUILD_DIR/attention_score_chain.xclbin"

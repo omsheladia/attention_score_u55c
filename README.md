@@ -3,10 +3,11 @@
 This folder is a focused U55C mini-workspace for the attention-score block:
 
 ```text
-Q_rot_int8, K_rot_int8
+Q_rot_int8, K_rot_int8, V_fp32
 -> score_raw_int32
 -> score_scaled_fp32
 -> score_softmax_fp32
+-> attn_out_fp32          (Track B — pending lab PC verification)
 ```
 
 It mirrors the main repo layout on purpose, but keeps only the pieces needed to
@@ -42,7 +43,7 @@ is verified for `S = 8, 64, 128, 256, 512`.
 
 - Q/K/V projection GEMMs
 - RoPE generation
-- weighted sum with V
+- softmax @ V accumulation across full sequence (Track B code done, lab PC pending)
 - runtime controller integration
 - full TinyLlama model execution
 - multi-sequence-length benchmark sweeps

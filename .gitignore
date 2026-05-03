@@ -8,6 +8,10 @@ sim/tb_causal_mask
 sim/tb_score_scale
 sim/tb_softmax
 sim/tb_softmax_full_row
+sim/tb_v_weighted_sum
+
+# Generated full-sequence reference vectors (regenerate with --seq-len 0)
+sim/seq_*/
 
 # Vitis/XRT build outputs
 build/

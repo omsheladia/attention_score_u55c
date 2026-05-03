@@ -336,6 +336,58 @@ def deterministic_tiles(
     return q_tile, k_tile
 
 
+def deterministic_v(seq_len: int) -> list[list[float]]:
+    """Deterministic float32 V matrix of shape (seq_len, HEAD_DIM).
+
+    Uses a different pattern from Q/K so V values are independent.
+    """
+    v = [[0.0] * HEAD_DIM for _ in range(seq_len)]
+    for row in range(seq_len):
+        for dim in range(HEAD_DIM):
+            v[row][dim] = float(((row * 3) + (dim * 7)) % 15 - 7)
+    return v
+
+
+def compute_v_weighted_sum(
+    softmax_weights: list[list[float]],
+    v_full: list[list[float]],
+) -> list[list[float]]:
+    """Tiled softmax_weights @ v_full -> attn_out.
+
+    Mirrors the FPGA V-kernel: one (8 x SCORE_K_TILE) weight tile and one
+    (SCORE_K_TILE x HEAD_DIM) V tile per call, accumulating partial results
+    across all K/V chunks before writing the final attn_out row.
+
+    softmax_weights : (S, S)        full-row softmax probabilities
+    v_full          : (S, HEAD_DIM) value matrix (float32)
+    Returns attn_out: (S, HEAD_DIM)
+    """
+    s = len(softmax_weights)
+    head_dim = len(v_full[0]) if v_full else HEAD_DIM
+    attn_out = zeros_2d_float(s, head_dim)
+
+    for q_start in range(0, s, SCORE_ROWS_PER_CHUNK):
+        q_end = min(q_start + SCORE_ROWS_PER_CHUNK, s)
+        q_count = q_end - q_start
+        accum = zeros_2d_float(q_count, head_dim)
+
+        for k_start in range(0, s, SCORE_K_TILE):
+            k_end = min(k_start + SCORE_K_TILE, s)
+            k_count = k_end - k_start
+            for r in range(q_count):
+                for d in range(head_dim):
+                    for c in range(k_count):
+                        accum[r][d] += (
+                            softmax_weights[q_start + r][k_start + c]
+                            * v_full[k_start + c][d]
+                        )
+
+        for r in range(q_count):
+            attn_out[q_start + r] = accum[r][:]
+
+    return attn_out
+
+
 def shape_2d(tile: list[list[int]] | list[list[float]]) -> tuple[int, int]:
     return len(tile), len(tile[0]) if tile else 0
 

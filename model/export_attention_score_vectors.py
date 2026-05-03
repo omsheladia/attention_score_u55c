@@ -22,7 +22,12 @@ from attention_score_ref import (
     build_padded_q_tile,
     build_padded_score_tile,
     compute_attention_score_tile,
+    compute_full_attention_score,
+    compute_v_weighted_sum,
+    deterministic_full_sequence,
     deterministic_tiles,
+    deterministic_v,
+    max_abs_diff,
     pack_score_chunk,
     scale_scores,
     softmax_rows,
@@ -74,11 +79,64 @@ def write_kernel_meta(
         handle.write(f"total_scale {total_scale:.16f}\n")
 
 
+def export_full_sequence(
+    output_dir: Path,
+    seq_len: int,
+    q_scale: float,
+    k_scale: float,
+) -> None:
+    """Export full-sequence Track B vectors: v_full.txt and attn_out.txt."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    q_full, k_full = deterministic_full_sequence(seq_len)
+    v_full = deterministic_v(seq_len)
+
+    result = compute_full_attention_score(q_full, k_full, q_scale=q_scale, k_scale=k_scale)
+    attn_out = compute_v_weighted_sum(result.softmax, v_full)
+
+    # Brute-force verification of attn_out
+    bf_attn_out = [[0.0] * HEAD_DIM for _ in range(seq_len)]
+    for i in range(seq_len):
+        for d in range(HEAD_DIM):
+            for j in range(seq_len):
+                bf_attn_out[i][d] += result.softmax[i][j] * v_full[j][d]
+    max_err = max_abs_diff(attn_out, bf_attn_out)
+    if max_err > 1e-4:
+        raise RuntimeError(
+            f"attn_out tiled vs brute-force mismatch at S={seq_len}: max_err={max_err:.2e}"
+        )
+    print(f"  S={seq_len}: attn_out verification PASSED (max_err={max_err:.2e})")
+
+    write_text_float_matrix(output_dir / "q_full.txt",
+                            [[float(v) for v in row] for row in q_full])
+    write_text_float_matrix(output_dir / "k_full.txt",
+                            [[float(v) for v in row] for row in k_full])
+    write_text_float_matrix(output_dir / "v_full.txt", v_full)
+    write_text_float_matrix(output_dir / "softmax_weights.txt", result.softmax)
+    write_text_float_matrix(output_dir / "attn_out.txt", attn_out)
+
+    with (output_dir / "metadata.json").open("w", encoding="utf-8") as handle:
+        json.dump({
+            "seq_len": seq_len,
+            "head_dim": HEAD_DIM,
+            "q_scale": q_scale,
+            "k_scale": k_scale,
+            "pattern_q": "q[row,dim]=((row*5)+(dim*3))%15-7",
+            "pattern_k": "k[col,dim]=((col*7)-(dim*2))%15-7",
+            "pattern_v": "v[row,dim]=((row*3)+(dim*7))%15-7",
+            "offload_boundary": "Q_rot_int8, K_rot_int8, V_fp32 -> attn_out_fp32",
+            "attn_out_verification": f"max_err={max_err:.2e}",
+        }, handle, indent=2)
+        handle.write("\n")
+
+    print(f"  Wrote full-sequence vectors (S={seq_len}) to {output_dir}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Export isolated attention-score vectors.")
     parser.add_argument(
         "--output-dir",
-        default="attention_score_u55c/sim/attention_score_tile",
+        default="sim/attention_score_tile",
         help="Where to write the generated case files.",
     )
     parser.add_argument("--query-rows", type=int, default=4, help="Active query rows, <= 8.")
@@ -87,7 +145,24 @@ def main() -> None:
     parser.add_argument("--key-pos-base", type=int, default=0, help="Base key position.")
     parser.add_argument("--q-scale", type=float, default=0.03125, help="Quantized Q dequant scale.")
     parser.add_argument("--k-scale", type=float, default=0.02734375, help="Quantized K dequant scale.")
+    parser.add_argument(
+        "--seq-len",
+        type=int,
+        default=None,
+        help=(
+            "Export full-sequence Track B vectors (v_full.txt, attn_out.txt) "
+            "at the given sequence length. Use 0 to run all: S=8,64,128,256,512."
+        ),
+    )
     args = parser.parse_args()
+
+    # Full-sequence export (Track B)
+    if args.seq_len is not None:
+        seq_lengths = [8, 64, 128, 256, 512] if args.seq_len == 0 else [args.seq_len]
+        base_dir = Path(args.output_dir).parent
+        for s in seq_lengths:
+            export_full_sequence(base_dir / f"seq_{s}", s, args.q_scale, args.k_scale)
+        return
 
     if not (1 <= args.query_rows <= SCORE_ROWS_PER_CHUNK):
         raise ValueError(f"--query-rows must be in [1, {SCORE_ROWS_PER_CHUNK}]")

@@ -8,14 +8,14 @@ Carved from a TinyLlama inference repo; the current verified runtime chain is a
 
 **Offload boundary:**
 ```
-Q_rot_int8, K_rot_int8
+Q_rot_int8, K_rot_int8, V_fp32
   -> score_raw_int32      (INT8×INT8 GEMM)
   -> score_scaled_fp32    (merged causal mask + scale)
-  -> score_softmax_fp32   (row-wise softmax)
+  -> score_softmax_fp32   (full-row softmax up to S=512)
+  -> attn_out_fp32        (softmax @ V weighted sum)  ← Track B, pending lab PC
 ```
 
 **Currently out of scope:** Q/K/V projections, RoPE generation, decoder integration.
-**Planned (Track B):** softmax@V to complete the full attention block for one head.
 
 ---
 
@@ -26,13 +26,16 @@ model/      Python reference math + deterministic vector export
 hls/
   attention_score/   stage 1 — INT8 score GEMM
   mask_and_scale/    stage 2 — merged causal mask + FP32 scale
+  softmax_full_row/  stage 3 — full-row softmax up to S=512
+  v_weighted_sum/    stage 4 — softmax@V partial weighted sum (Track B)
   causal_mask/       legacy standalone causal mask
   score_scale/       legacy standalone FP32 scale
-  softmax/           stage 3 — row-wise softmax
+  softmax/           legacy tile softmax
   common/            shared fixed-point types (fixed_types.hpp)
 host/       XRT host app, build scripts, vpp_link.cfg, bring-up guide
 sim/
   attention_score_tile/   exported reference vectors (txt + json)
+  real_tinyllama_tile/    real TinyLlama Q/K/V vectors (single tile)
 rtl/        placeholder for future RTL lowering
 docs/       offload design notes
 ```
@@ -52,6 +55,8 @@ docs/       offload design notes
 | GPU attention baseline | [model/benchmark_gpu.py](model/benchmark_gpu.py) |
 | Score GEMM HLS | [hls/attention_score/attention_score_core_hls.cpp](hls/attention_score/attention_score_core_hls.cpp) |
 | Mask+scale HLS | [hls/mask_and_scale/mask_scale_core_hls.cpp](hls/mask_and_scale/mask_scale_core_hls.cpp) |
+| Full-row softmax HLS | [hls/softmax_full_row/softmax_full_row_hls.cpp](hls/softmax_full_row/softmax_full_row_hls.cpp) |
+| V weighted sum HLS | [hls/v_weighted_sum/v_weighted_sum_core_hls.cpp](hls/v_weighted_sum/v_weighted_sum_core_hls.cpp) |
 | Causal mask HLS | [hls/causal_mask/causal_mask_core_hls.cpp](hls/causal_mask/causal_mask_core_hls.cpp) |
 | Score scale HLS | [hls/score_scale/score_scale_core_hls.cpp](hls/score_scale/score_scale_core_hls.cpp) |
 | Softmax HLS | [hls/softmax/softmax_core_hls.cpp](hls/softmax/softmax_core_hls.cpp) |
@@ -69,19 +74,22 @@ docs/       offload design notes
 |---|---|---|---|
 | score GEMM | PASS | PASS | PASS (~342 MHz, 32 DSP, ~1312 cycles after 64-bit packed I/O) |
 | mask+scale | PASS | PASS | PASS (~331 MHz, 3 DSP) |
-| causal mask | PASS | PASS | PASS (~331 MHz, 0 DSP) |
-| score scale | PASS | PASS | PASS (~342 MHz, 3 DSP) |
-| softmax | PASS | PASS | PASS (~316 MHz, 9 DSP) — minor timing warning remains |
+| softmax full-row | PASS | PASS | PASS (~316 MHz, 9 DSP) |
+| **v_weighted_sum** | **PASS (g++ WSL)** | **pending lab PC** | **pending lab PC** |
+| causal mask | PASS | PASS | PASS (~331 MHz, 0 DSP) — legacy |
+| score scale | PASS | PASS | PASS (~342 MHz, 3 DSP) — legacy |
+| softmax | PASS | PASS | PASS (~316 MHz, 9 DSP) — legacy |
 
-XRT deployment status for the current 3-kernel chain:
+XRT deployment status:
 
 | Target | Result | Notes |
 |---|---|---|
 | host compile | PASS | `bash host/build_host.sh` |
-| `hw_emu` xclbin | PASS | Vitis 2022.2, U55C platform `xilinx_u55c_gen3x16_xdma_3_202210_1` |
-| `hw_emu` run | PASS | `XRT chain verification PASSED`; emulation timing is simulator dominated |
-| real `hw` xclbin | PASS | hardware link took about 43 minutes |
-| real U55C run | PASS | device 0, shell `xilinx_u55c_gen3x16_xdma_base_3`; synthetic and real TinyLlama single-tile vectors pass |
+| `hw_emu` xclbin (4-kernel) | PASS | Vitis 2022.2, U55C platform `xilinx_u55c_gen3x16_xdma_3_202210_1` |
+| `hw_emu` run (4-kernel, S=8/64/128) | PASS | `Tiled sequence verification PASSED` |
+| real `hw` xclbin (4-kernel) | PASS | hardware link ~45 min |
+| real U55C run (4-kernel, S=8/64/128/256/512) | PASS | all sizes verified |
+| **5-kernel xclbin (+ v_weighted_sum)** | **pending lab PC** | rebuild needed after Track B push |
 
 > Re-read HLS reports under `hls/build/.../syn/report/` before quoting numbers — the table above is a snapshot.
 
@@ -115,9 +123,9 @@ XRT deployment status for the current 3-kernel chain:
   - local merged-kernel bench passes against `score_scaled.txt`
   - Vitis HLS 2023.2 `csim` and `csynth` now pass for the merged kernel at
     `~330.91 MHz`, `3 DSP`, `6 BRAM_18K`
-- Still pending for this WIP:
+- Still pending:
   - CPU/GPU/FPGA baseline tables using the real U55C sequence sweep
-  - Track B `softmax @ V`
+  - Track B lab PC verification (Vitis csim/csynth + xclbin rebuild + hw run)
   - full multi-sequence real TinyLlama vector export
 
 ### 2026-05-02 Track A Step 3 Part A
