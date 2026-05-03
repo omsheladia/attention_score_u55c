@@ -134,16 +134,36 @@ def load_v_matrix(path: Path, min_rows: int) -> np.ndarray:
 def load_vector_case(vector_dir: str | Path) -> BenchmarkCase:
     vector_path = Path(vector_dir)
     meta = read_kernel_meta(vector_path / "kernel_meta.txt")
-    query_rows = int(meta["query_row_count"])
-    key_cols = int(meta["key_col_count"])
-    if query_rows != key_cols:
-        raise ValueError(
-            "Benchmark vector mode expects one square self-attention case; "
-            f"got query_row_count={query_rows}, key_col_count={key_cols}"
-        )
 
-    q_padded = load_matrix(vector_path / "q_tile.txt", Q_TILE_ROWS, HEAD_DIM, int)
-    k_padded = load_matrix(vector_path / "k_tile.txt", K_TILE_COLS, HEAD_DIM, int)
+    q_full_path = vector_path / "q_full.txt"
+    k_full_path = vector_path / "k_full.txt"
+    if q_full_path.exists() and k_full_path.exists():
+        q_values = load_flat_values(q_full_path, int)
+        k_values = load_flat_values(k_full_path, int)
+        if len(q_values) % HEAD_DIM != 0 or len(k_values) % HEAD_DIM != 0:
+            raise ValueError("q_full.txt and k_full.txt value counts must be divisible by HEAD_DIM")
+        query_rows = len(q_values) // HEAD_DIM
+        key_cols = len(k_values) // HEAD_DIM
+        if query_rows != key_cols:
+            raise ValueError(
+                "Benchmark vector mode expects one square self-attention case; "
+                f"got q_full rows={query_rows}, k_full rows={key_cols}"
+            )
+        q_int8 = np.asarray(q_values, dtype=np.int32).reshape(query_rows, HEAD_DIM).astype(np.int8)
+        k_int8 = np.asarray(k_values, dtype=np.int32).reshape(key_cols, HEAD_DIM).astype(np.int8)
+    else:
+        query_rows = int(meta["query_row_count"])
+        key_cols = int(meta["key_col_count"])
+        if query_rows != key_cols:
+            raise ValueError(
+                "Benchmark vector mode expects one square self-attention case; "
+                f"got query_row_count={query_rows}, key_col_count={key_cols}"
+            )
+        q_padded = load_matrix(vector_path / "q_tile.txt", Q_TILE_ROWS, HEAD_DIM, int)
+        k_padded = load_matrix(vector_path / "k_tile.txt", K_TILE_COLS, HEAD_DIM, int)
+        q_int8 = q_padded[:query_rows, :].astype(np.int8)
+        k_int8 = k_padded[:key_cols, :].astype(np.int8)
+
     v_path = vector_path / "v_full.txt"
     if v_path.exists():
         v_float = load_v_matrix(v_path, query_rows)
@@ -152,8 +172,8 @@ def load_vector_case(vector_dir: str | Path) -> BenchmarkCase:
 
     return BenchmarkCase(
         name=f"{vector_path.name}:S={query_rows}",
-        q_int8=q_padded[:query_rows, :].astype(np.int8),
-        k_int8=k_padded[:key_cols, :].astype(np.int8),
+        q_int8=q_int8,
+        k_int8=k_int8,
         v_float=v_float.astype(np.float32),
         q_scale=float(meta["q_scale"]),
         k_scale=float(meta["k_scale"]),
@@ -165,8 +185,16 @@ def load_expected_softmax(vector_dir: str | Path, seq_len: int) -> np.ndarray | 
     path = Path(vector_dir) / "score_softmax.txt"
     if not path.exists():
         return None
-    padded = load_matrix(path, Q_TILE_ROWS, K_TILE_COLS, float)
-    return padded[:seq_len, :seq_len].astype(np.float32)
+    value_count = len(load_flat_values(path, float))
+    if value_count == seq_len * seq_len:
+        return load_matrix(path, seq_len, seq_len, float).astype(np.float32)
+    if value_count == Q_TILE_ROWS * K_TILE_COLS:
+        padded = load_matrix(path, Q_TILE_ROWS, K_TILE_COLS, float)
+        return padded[:seq_len, :seq_len].astype(np.float32)
+    raise ValueError(
+        f"{path} has {value_count} values; expected {seq_len * seq_len} full-sequence "
+        f"or {Q_TILE_ROWS * K_TILE_COLS} padded tile values"
+    )
 
 
 def apply_causal_mask_and_scale(raw_scores: np.ndarray, total_scale: float) -> np.ndarray:

@@ -794,6 +794,11 @@ k_scale: 0.0174317248165607
 total_scale: 0.0001067348132716
 ```
 
-The next benchmarking step is to compare FPGA full-attention timings against
-the CPU/GPU baselines. Tokens/sec is not meaningful yet because this design
-still does not run full TinyLlama decoding.
+The current CPU/GPU/FPGA comparison is recorded in:
+
+```text
+attention_score_u55c/docs/track_d_results.md
+```
+
+Tokens/sec is not meaningful yet because this design still does not run full
+TinyLlama decoding.

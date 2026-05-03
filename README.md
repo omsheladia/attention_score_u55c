@@ -325,5 +325,5 @@ This block is easy to offload because:
 
 ## Next Work
 
-- Add CPU/GPU/FPGA comparison tables
+- Use `docs/track_d_results.md` for the current CPU/GPU/FPGA comparison
 - Integrate toward a real TinyLlama attention subgraph

@@ -903,9 +903,9 @@ runs the same computation as the FPGA.
 
 **Status 2026-05-03:** Implemented as `model/benchmark_cpu.py` with shared
 helpers in `model/benchmark_common.py`. It supports synthetic scaling lengths
-and `--vectors sim/real_tinyllama_tile` real-input mode. The current verified
-CPU runs are software baselines; final speedup claims can now compare them
-against the Track B five-kernel FPGA runs.
+and full-sequence `--vectors` real-input mode. Verified CPU runs now include
+synthetic `S = 8, 64, 128, 256, 512` and real TinyLlama
+`sim/real_tinyllama_s16` / `sim/real_tinyllama_s64`.
 
 ### What to do
 
@@ -942,7 +942,9 @@ It uses the same synthetic and real-vector inputs as the CPU baseline, validates
 GPU output against CPU output, and times score+softmax and full `softmax @ V`
 scopes. After installing a CUDA-enabled PyTorch build, the RTX 3050 Laptop GPU
 validated synthetic `S = 8, 64, 128, 256, 512` and
-`sim/real_tinyllama_tile/`.
+`sim/real_tinyllama_tile/`. The current Linux run used for
+`docs/track_d_results.md` had no CUDA-visible GPU, so GPU timings are recorded
+as `N/A` there.
 
 ### What to do
 
@@ -967,20 +969,20 @@ validated synthetic `S = 8, 64, 128, 256, 512` and
 
 ### What to do
 
-- [ ] Add wall-clock timing to `host/attention_score_chain_xrt.cpp`:
+- [x] Add wall-clock timing to `host/attention_score_chain_xrt.cpp`:
   - total time: first DMA-to-device → last DMA-from-device
   - compute-only time: kernel launches only, excluding DMA
   - use `std::chrono::high_resolution_clock`
-- [ ] Run at S = 8, 64, 128, 256, 512 and record both times
-- [ ] Record results:
+- [x] Run at S = 8, 64, 128, 256, 512 and record both times
+- [x] Record results:
 
   | S | FPGA total (ms) | FPGA compute only (ms) | DMA (ms) |
   |---|---|---|---|
-  | 8 | | | |
-  | 64 | | | |
-  | 128 | | | |
-  | 256 | | | |
-  | 512 | | | |
+  | 8 | 0.803 | 0.275 | 0.528 |
+  | 64 | 2.864 | 2.143 | 0.721 |
+  | 128 | 6.992 | 5.250 | 1.742 |
+  | 256 | 20.570 | 18.601 | 1.969 |
+  | 512 | 72.941 | 69.792 | 3.149 |
 
 ---
 
@@ -991,7 +993,7 @@ validated synthetic `S = 8, 64, 128, 256, 512` and
 
 ### What to do
 
-- [ ] Combine results into one comparison table:
+- [x] Combine results into one comparison table:
 
   | S | CPU (ms) | GPU (ms) | FPGA total (ms) | FPGA compute (ms) | Speedup vs CPU |
   |---|---|---|---|---|---|
@@ -1001,11 +1003,12 @@ validated synthetic `S = 8, 64, 128, 256, 512` and
   | 256 | | | | | |
   | 512 | | | | | |
 
-- [ ] Plot latency vs sequence length on a log-log scale — confirm S² growth
-- [ ] Identify whether FPGA time is DMA-dominated or compute-dominated:
+- [x] Record latency-vs-sequence data for log-log plotting and S² analysis in
+      `docs/track_d_results.md`
+- [x] Identify whether FPGA time is DMA-dominated or compute-dominated:
   - DMA-dominated → double buffering (Track A Step 4) is the right next step
   - compute-dominated → more unrolling or dataflow merge (Track A Steps 1/5)
-- [ ] Note honest limitations:
+- [x] Note honest limitations:
   - FPGA processes one head sequentially; GPU batches all 32 heads in parallel
   - comparison is for the isolated pipeline only, not full attention
 
@@ -1015,11 +1018,13 @@ validated synthetic `S = 8, 64, 128, 256, 512` and
 
 | Step | Effort | Testable on Windows | Prerequisite |
 |------|--------|---------------------|--------------|
-| D1 — CPU baseline | 1–2 hrs | Yes | Implemented; final comparison still waits for Track A/B |
-| D2 — GPU baseline | 1–2 hrs | Yes (needs CUDA GPU) | Implemented and verified on RTX 3050 |
-| D3 — FPGA timing | 1–2 hrs | No (needs XRT) | Track A Step 3 |
-| D4 — Comparison | 1–2 hrs | Yes | D1 + D3 |
+| D1 — CPU baseline | 1–2 hrs | Yes | Complete for synthetic and real S16/S64 |
+| D2 — GPU baseline | 1–2 hrs | Yes (needs CUDA GPU) | Infrastructure complete; current Linux run had CUDA unavailable |
+| D3 — FPGA timing | 1–2 hrs | No (needs XRT) | Complete for synthetic S8-S512 and real S16/S64 |
+| D4 — Comparison | 1–2 hrs | Yes | Complete in `docs/track_d_results.md` |
 
-Steps D1 and D2 are now implemented as benchmark infrastructure. D3 is blocked
-on hardware and Track A Step 3, but is a straightforward instrumentation change
-once Track A Step 3 is running.
+Track D is complete for the current staged one-head design. The result is
+honest: correctness is strong, HBM bank usage is demonstrated across banks
+`[0]` through `[7]`, but the staged FPGA path is slower than the local one-head
+CPU NumPy baseline because the workload is small and still pays repeated
+kernel-launch and HBM staging overhead.

@@ -264,6 +264,13 @@ Real TinyLlama single-tile CPU baseline:
 python model/benchmark_cpu.py --vectors sim/real_tinyllama_tile
 ```
 
+Real TinyLlama full-sequence CPU baselines:
+
+```bash
+python model/benchmark_cpu.py --vectors sim/real_tinyllama_s16
+python model/benchmark_cpu.py --vectors sim/real_tinyllama_s64
+```
+
 CUDA GPU baseline, if a CUDA GPU is available:
 
 ```bash
@@ -291,5 +298,8 @@ reference. The real-vector GPU run matched
 `sim/real_tinyllama_tile/score_softmax.txt` with max difference
 `2.98023224e-08`.
 
-These are software baselines only. Final FPGA speedup tables still require
-comparison against the current Track B five-kernel FPGA runs.
+The current CPU/GPU/FPGA comparison is recorded in:
+
+```text
+docs/track_d_results.md
+```

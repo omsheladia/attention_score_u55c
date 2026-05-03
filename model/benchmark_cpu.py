@@ -58,7 +58,7 @@ def print_header(args: argparse.Namespace) -> None:
     print("Reports both current score+mask+scale+softmax scope and future +V scope.")
     if args.vectors:
         print(f"Input mode: real/exported vectors from {args.vectors}")
-        print("Note: current FPGA comparison consumes Q/K and softmax only; V is software-only for now.")
+        print("Note: current FPGA comparison includes final one-head softmax @ V.")
     else:
         print(f"Input mode: synthetic lengths {args.lengths}")
     print(f"Warmup iterations: {args.warmup}")

@@ -241,10 +241,17 @@ double run_timed(const std::string& name, LaunchFn&& launch, bool verbose = true
 void print_timings(const std::vector<TimedStage>& stages, double total_ms) {
   std::cout << std::fixed << std::setprecision(3);
   std::cout << "Kernel timing summary (host wall-clock, launch through wait):\n";
+  double kernel_total_ms = 0.0;
   for (const auto& stage : stages) {
+    kernel_total_ms += stage.milliseconds;
     std::cout << "  " << std::left << std::setw(28) << stage.name << std::right
               << stage.milliseconds << " ms\n";
   }
+  const double non_kernel_ms = std::max(0.0, total_ms - kernel_total_ms);
+  std::cout << "  " << std::left << std::setw(28) << "kernel_launch_wait_sum" << std::right
+            << kernel_total_ms << " ms\n";
+  std::cout << "  " << std::left << std::setw(28) << "host_dma_sync_gap" << std::right
+            << non_kernel_ms << " ms\n";
   std::cout << "  " << std::left << std::setw(28) << "total_chain" << std::right
             << total_ms << " ms\n";
   std::cout.unsetf(std::ios::floatfield);
@@ -485,15 +492,15 @@ int run_single_tile(const Args& args, xrt::device& device, const xrt::uuid& uuid
         v_weighted_sum_kernel->group_id(2));
   }
 
-  q_bo.write(q_tile.data());
-  k_bo.write(k_tile.data());
-  q_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-  k_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
-
   using Clock = std::chrono::steady_clock;
   std::vector<TimedStage> timings;
   timings.reserve(run_v_stage ? 5 : 4);
   const auto chain_start = Clock::now();
+
+  q_bo.write(q_tile.data());
+  k_bo.write(k_tile.data());
+  q_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+  k_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
 
   timings.push_back({"attention_score_u55c_kernel", run_timed("attention score kernel", [&]() {
                         return score_kernel(
@@ -547,10 +554,6 @@ int run_single_tile(const Args& args, xrt::device& device, const xrt::uuid& uuid
                        })});
   }
 
-  const auto chain_stop = Clock::now();
-  const double total_chain_ms =
-      std::chrono::duration<double, std::milli>(chain_stop - chain_start).count();
-
   const auto score_raw_got = read_i32_bo(raw_score_bo, score_raw_expected.size());
   const auto score_scaled_got = read_float_bo(scaled_score_bo, score_scaled_expected.size());
   const auto score_softmax_got = read_float_bo(softmax_prob_bo, score_softmax_expected.size());
@@ -572,6 +575,10 @@ int run_single_tile(const Args& args, xrt::device& device, const xrt::uuid& uuid
       compare_float(attn_out_active, attn_out_expected, "attn_out", attn_out_tolerance);
     }
   }
+
+  const auto chain_stop = Clock::now();
+  const double total_chain_ms =
+      std::chrono::duration<double, std::milli>(chain_stop - chain_start).count();
 
   print_timings(timings, total_chain_ms);
   if (run_v_stage) {

@@ -589,11 +589,12 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
 - Full-sequence vector-mode results: `S=16` total_chain `0.985 ms`; `S=64` total_chain `2.510 ms`; both printed `Tiled sequence verification PASSED`, `Attention output verification PASSED`, and `XRT chain verification PASSED`.
 - The exporter writes quantized-pipeline `attn_out.txt` plus PyTorch full-float `attn_ref_float.txt`; recorded quantized-vs-float max errors were `2.67604024e-04` for S=16 and `1.62767614e-04` for S=64.
 
-**Track D — Steps 1–2 done; remaining:**
-- Steps 1–2 complete: `model/benchmark_cpu.py` verified for synthetic S = 8, 64, 128, 256, 512 and real-vector input; `model/benchmark_gpu.py` verified on RTX 3050 Laptop GPU.
-- Step 3: FPGA timing instrumentation for attention-score/softmax is now available from the real U55C Track A sweeps.
-- Step 4: Comparison table and speedup analysis can now include the real-card
-  staged full-attention Track B run.
+**Track D — Complete for the current staged one-head design:**
+- `model/benchmark_cpu.py` verified synthetic S = 8, 64, 128, 256, 512 and real vectors S=16/S=64.
+- `model/benchmark_gpu.py` exists, but the current Linux run reported CUDA unavailable, so GPU timings are `N/A` in the current report.
+- `host/attention_score_chain_xrt.cpp` now prints `kernel_launch_wait_sum`, `host_dma_sync_gap`, and `total_chain`.
+- `docs/track_d_results.md` contains CPU/FPGA comparison tables, real-vector tables, HBM bank usage, and the performance interpretation.
+- Main conclusion: correct staged FPGA path, HBM banks `[0]` through `[7]` used, but slower than one-head CPU NumPy due kernel launch and HBM staging overhead.
 
 **Future (post-hardware confirmation):**
 1. Merge pre-softmax stages into one dataflow kernel

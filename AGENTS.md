@@ -646,7 +646,6 @@ Not yet confirmed:
 
 - automated synthetic Track A regression through multiple vector directories
 - XRT `hw_emu` run using `sim/real_tinyllama_tile/`
-- CPU/GPU/FPGA baseline comparison for final acceleration claims
 - full TinyLlama attention path
 - full TinyLlama model execution
 
@@ -842,14 +841,45 @@ On 2026-05-03, Track C was extended beyond the legacy single-tile
   `/tmp/attention_score_trackc_pydeps` for `transformers`/`sentencepiece`, and
   `/tmp/attention_score_hf_cache` for the model cache.
 
+Later on 2026-05-03, Track D was completed for the current staged one-head
+design:
+
+- Track C changes were staged for commit before this Track D work began.
+- `model/benchmark_common.py` now loads full-sequence vector directories with
+  `q_full.txt`/`k_full.txt`, so CPU/GPU baselines can consume
+  `sim/real_tinyllama_s16` and `sim/real_tinyllama_s64`.
+- `host/attention_score_chain_xrt.cpp` now prints `kernel_launch_wait_sum`,
+  `host_dma_sync_gap`, and `total_chain`.
+- CPU baselines were run with `/home/advent/kmhatre/DT/bin/python`; GPU
+  baseline was attempted, but this Linux environment reported
+  `CUDA is not available; GPU baseline skipped.`
+- Real U55C synthetic FPGA timings:
+  - `S=8`: CPU `0.0322 ms`, FPGA total `0.803 ms`, compute `0.275 ms`
+  - `S=64`: CPU `0.2920 ms`, FPGA total `2.864 ms`, compute `2.143 ms`
+  - `S=128`: CPU `2.5009 ms`, FPGA total `6.992 ms`, compute `5.250 ms`
+  - `S=256`: CPU `3.9523 ms`, FPGA total `20.570 ms`, compute `18.601 ms`
+  - `S=512`: CPU `12.3290 ms`, FPGA total `72.941 ms`, compute `69.792 ms`
+- Real TinyLlama vector timings:
+  - `sim/real_tinyllama_s16`: CPU `0.0426 ms`, FPGA total `1.488 ms`,
+    compute `0.582 ms`
+  - `sim/real_tinyllama_s64`: CPU `0.1523 ms`, FPGA total `3.094 ms`,
+    compute `1.722 ms`
+- Detailed tables, HBM bank mapping, and honest interpretation are in
+  `docs/track_d_results.md`.
+- Main conclusion: the current FPGA path is correct and demonstrates HBM bank
+  placement across `[0]` through `[7]`, but it is slower than the one-head CPU
+  NumPy baseline because the staged design pays repeated kernel launch and HBM
+  round-trip overhead. Next performance work should focus on fusion/dataflow
+  and keeping intermediates resident on-card.
+
 ## Best Next Step
 
 Track A Steps 1-4 are complete for the current staged design. Track A Step 5
 remains a future fusion/dataflow milestone, not required before starting
 dependent work. Best next practical steps are:
 
-1. add/update CPU/GPU/FPGA comparison tables using the real U55C sequence sweep
-2. add Track D comparison tables for synthetic and real-vector FPGA runs
+1. reduce staged HBM round trips and launch overhead with fusion/dataflow
+2. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
 3. if more score-kernel speed is needed after that, prefer wider packing or
    on-chip fusion before chasing higher GEMM unroll, because the 64-bit packed
    interface produced the first material latency drop
@@ -859,14 +889,12 @@ dependent work. Best next practical steps are:
 With Track A Steps 1-4 working across synthetic sequence lengths, the next
 major engineering steps are:
 
-1. Track D: collect CPU/GPU/FPGA timing baselines and speedup tables
+1. merge kernels for performance because the staged HBM path is now measured
 2. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
    if the demo needs a broader real-input sweep
-3. compare real-vector FPGA `attn_out` timings with CPU/GPU baselines
-4. merge kernels for performance if the staged HBM path becomes the bottleneck
-5. connect to a real TinyLlama attention subgraph
-6. add KV-cache-aware decode flow
-7. eventually integrate into a decoder-layer path
+3. connect to a real TinyLlama attention subgraph
+4. add KV-cache-aware decode flow
+5. eventually integrate into a decoder-layer path
 
 ## Current Repo State Relevant To This Effort
 
@@ -880,15 +908,10 @@ At the time of writing:
 - `docs/implementation_checklist.md` now treats full-row softmax as required
   for `S > 64`, adds `softmax @ V` as Track B, upgrades real inputs to Q/K/V,
   and adds CPU/GPU/FPGA baseline work
-- Track C Steps 1-3 are already implemented in `model/check_tinyllama_setup.py`
-  and `model/extract_tinyllama_qkv.py`
-- Track C Step 4 has a current-design exporter in `model/export_real_vectors.py`
-  that writes `sim/real_tinyllama_tile/` and has passed local C++ benches plus
-  a real-card XRT run for attention score, mask+scale, and softmax
-- Track D Step 1 CPU baseline is implemented and locally verified in
-  `model/benchmark_cpu.py`
-- Track D Step 2 CUDA baseline is implemented and verified on the local RTX
-  3050 Laptop GPU in `model/benchmark_gpu.py`
+- Track C Steps 1-5 are implemented for legacy single-tile and full-sequence
+  real-vector directories
+- Track D is complete for the current staged one-head design; see
+  `docs/track_d_results.md`
 
 Agents should avoid redoing exploration that this file already captures unless
 something materially changed.
