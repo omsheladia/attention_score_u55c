@@ -48,6 +48,8 @@ struct Args {
   std::uint32_t seq_len = 0;
   float q_scale = kDefaultQScale;
   float k_scale = kDefaultKScale;
+  bool resident = false;
+  bool resident_debug = false;
 };
 
 struct TimedStage {
@@ -152,10 +154,16 @@ Args parse_args(int argc, char** argv) {
       args.q_scale = std::stof(argv[++idx]);
     } else if (arg == "--k-scale" && (idx + 1) < argc) {
       args.k_scale = std::stof(argv[++idx]);
+    } else if (arg == "--resident") {
+      args.resident = true;
+    } else if (arg == "--resident-debug") {
+      args.resident = true;
+      args.resident_debug = true;
     } else {
       throw std::runtime_error(
           "Usage: host_attention_score_chain --xclbin <path> [--vectors <dir>] "
-          "[--device <idx>] [--seq-len <S>] [--q-scale <float>] [--k-scale <float>]");
+          "[--device <idx>] [--seq-len <S>] [--q-scale <float>] [--k-scale <float>] "
+          "[--resident] [--resident-debug]");
     }
   }
 
@@ -831,6 +839,159 @@ int run_tiled_inputs(
   return 0;
 }
 
+int run_resident_inputs(
+    const std::string& label,
+    const std::vector<std::int8_t>& q_full,
+    const std::vector<std::int8_t>& k_full,
+    const std::vector<float>& v_full,
+    float scale,
+    const std::vector<float>& logits_expected,
+    const std::vector<float>& softmax_expected,
+    const std::vector<float>& attn_out_expected,
+    float attn_out_tolerance,
+    bool resident_debug,
+    xrt::device& device,
+    const xrt::uuid& uuid) {
+  if (q_full.empty() || k_full.empty() || v_full.empty()) {
+    throw std::runtime_error("Resident inputs must not be empty");
+  }
+  if ((q_full.size() % kHeadDim) != 0 || (k_full.size() % kHeadDim) != 0 ||
+      (v_full.size() % kHeadDim) != 0) {
+    throw std::runtime_error("Resident input sizes must be multiples of head_dim");
+  }
+
+  const std::uint32_t seq_len = static_cast<std::uint32_t>(q_full.size() / kHeadDim);
+  if (seq_len == 0 || seq_len > kFullRowMaxCols) {
+    throw std::runtime_error("Resident seq_len must be in the range 1..512");
+  }
+  if ((k_full.size() / kHeadDim) != seq_len || (v_full.size() / kHeadDim) != seq_len) {
+    throw std::runtime_error("Resident host path expects Q, K, and V to share seq_len");
+  }
+
+  const std::size_t score_elems = static_cast<std::size_t>(seq_len) * seq_len;
+  const std::size_t attn_elems = static_cast<std::size_t>(seq_len) * kHeadDim;
+  if (logits_expected.size() != score_elems || softmax_expected.size() != score_elems ||
+      attn_out_expected.size() != attn_elems) {
+    throw std::runtime_error("Resident reference file size mismatch");
+  }
+
+  const std::uint32_t q_chunks =
+      (seq_len + static_cast<std::uint32_t>(kScoreRowsPerTile) - 1U) /
+      static_cast<std::uint32_t>(kScoreRowsPerTile);
+  const std::uint32_t k_chunks =
+      (seq_len + static_cast<std::uint32_t>(kScoreColsPerTile) - 1U) /
+      static_cast<std::uint32_t>(kScoreColsPerTile);
+
+  std::cout << "Running resident " << label << ", S=" << seq_len
+            << ", q_chunks=" << q_chunks
+            << ", k_chunks=" << k_chunks << "\n";
+
+  auto score_mask_scale_kernel =
+      xrt::kernel(device, uuid, "score_mask_scale_resident_u55c_kernel");
+  auto softmax_full_row_kernel =
+      xrt::kernel(device, uuid, "softmax_full_row_resident_u55c_kernel");
+  auto v_weighted_sum_kernel =
+      xrt::kernel(device, uuid, "v_weighted_sum_resident_u55c_kernel");
+
+  auto q_full_bo =
+      xrt::bo(device, sizeof(std::int8_t) * q_full.size(), score_mask_scale_kernel.group_id(0));
+  auto k_full_bo =
+      xrt::bo(device, sizeof(std::int8_t) * k_full.size(), score_mask_scale_kernel.group_id(1));
+  auto logits_bo =
+      xrt::bo(device, sizeof(float) * score_elems, score_mask_scale_kernel.group_id(2));
+  auto probs_bo =
+      xrt::bo(device, sizeof(float) * score_elems, softmax_full_row_kernel.group_id(1));
+  auto v_full_bo =
+      xrt::bo(device, sizeof(float) * v_full.size(), v_weighted_sum_kernel.group_id(1));
+  auto attn_out_bo =
+      xrt::bo(device, sizeof(float) * attn_elems, v_weighted_sum_kernel.group_id(2));
+
+  using Clock = std::chrono::steady_clock;
+  std::vector<TimedStage> timings = {
+      {"score_mask_scale_resident", 0.0},
+      {"softmax_full_row_resident", 0.0},
+      {"v_weighted_sum_resident", 0.0},
+  };
+
+  const auto chain_start = Clock::now();
+
+  q_full_bo.write(q_full.data());
+  k_full_bo.write(k_full.data());
+  v_full_bo.write(v_full.data());
+  q_full_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+  k_full_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+  v_full_bo.sync(XCL_BO_SYNC_BO_TO_DEVICE);
+
+  for (std::uint32_t query_base = 0; query_base < seq_len; query_base += kScoreRowsPerTile) {
+    const std::uint32_t query_rows =
+        std::min<std::uint32_t>(kScoreRowsPerTile, seq_len - query_base);
+
+    for (std::uint32_t key_base = 0; key_base < seq_len; key_base += kScoreColsPerTile) {
+      const std::uint32_t key_cols =
+          std::min<std::uint32_t>(kScoreColsPerTile, seq_len - key_base);
+      timings[0].milliseconds += run_timed("resident score+mask+scale tile", [&]() {
+        return score_mask_scale_kernel(
+            q_full_bo,
+            k_full_bo,
+            logits_bo,
+            seq_len,
+            query_base,
+            key_base,
+            query_rows,
+            key_cols,
+            scale);
+      }, false);
+    }
+
+    timings[1].milliseconds += run_timed("resident full-row softmax", [&]() {
+      return softmax_full_row_kernel(
+          logits_bo,
+          probs_bo,
+          seq_len,
+          query_base,
+          query_rows);
+    }, false);
+
+    for (std::uint32_t key_base = 0; key_base < seq_len; key_base += kScoreColsPerTile) {
+      const std::uint32_t key_cols =
+          std::min<std::uint32_t>(kScoreColsPerTile, seq_len - key_base);
+      const std::uint32_t clear_accum = (key_base == 0U) ? 1U : 0U;
+      timings[2].milliseconds += run_timed("resident v weighted sum tile", [&]() {
+        return v_weighted_sum_kernel(
+            probs_bo,
+            v_full_bo,
+            attn_out_bo,
+            seq_len,
+            query_base,
+            key_base,
+            query_rows,
+            key_cols,
+            clear_accum);
+      }, false);
+    }
+  }
+
+  const auto attn_out_got = read_float_bo(attn_out_bo, attn_elems);
+  compare_float(attn_out_got, attn_out_expected, "resident_full_attn_out", attn_out_tolerance);
+
+  if (resident_debug) {
+    const auto logits_got = read_float_bo(logits_bo, score_elems);
+    const auto softmax_got = read_float_bo(probs_bo, score_elems);
+    compare_float(logits_got, logits_expected, "resident_full_score_scaled", 1.0e-4f);
+    compare_float(softmax_got, softmax_expected, "resident_full_score_softmax", 1.0e-4f);
+    std::cout << "Resident intermediate verification PASSED\n";
+  }
+
+  const auto chain_stop = Clock::now();
+  const double total_chain_ms =
+      std::chrono::duration<double, std::milli>(chain_stop - chain_start).count();
+
+  print_timings(timings, total_chain_ms);
+  std::cout << "Resident attention output verification PASSED\n";
+  std::cout << "XRT chain verification PASSED\n";
+  return 0;
+}
+
 int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& uuid) {
   if (args.seq_len == 0) {
     throw std::runtime_error("--seq-len must be positive");
@@ -866,6 +1027,46 @@ int run_tiled_sequence(const Args& args, xrt::device& device, const xrt::uuid& u
       softmax_expected,
       attn_out_expected,
       1.0e-4f,
+      device,
+      uuid);
+}
+
+int run_resident_sequence(const Args& args, xrt::device& device, const xrt::uuid& uuid) {
+  if (args.seq_len == 0) {
+    throw std::runtime_error("--seq-len must be positive");
+  }
+
+  const std::uint32_t seq_len = args.seq_len;
+  const auto q_full = make_synthetic_q(seq_len);
+  const auto k_full = make_synthetic_k(seq_len);
+  const auto v_full = make_synthetic_v(seq_len);
+  const float scale = total_scale(args.q_scale, args.k_scale);
+
+  std::vector<std::int32_t> raw_expected;
+  std::vector<float> logits_expected;
+  std::vector<float> softmax_expected;
+  compute_cpu_reference(
+      q_full,
+      k_full,
+      seq_len,
+      scale,
+      &raw_expected,
+      &logits_expected,
+      &softmax_expected);
+  std::vector<float> attn_out_expected;
+  compute_attn_out_reference(softmax_expected, v_full, seq_len, &attn_out_expected);
+
+  return run_resident_inputs(
+      "synthetic sequence",
+      q_full,
+      k_full,
+      v_full,
+      scale,
+      logits_expected,
+      softmax_expected,
+      attn_out_expected,
+      1.0e-4f,
+      args.resident_debug,
       device,
       uuid);
 }
@@ -911,6 +1112,48 @@ int run_tiled_vector_sequence(const Args& args, xrt::device& device, const xrt::
       uuid);
 }
 
+int run_resident_vector_sequence(const Args& args, xrt::device& device, const xrt::uuid& uuid) {
+  const auto q_full = read_text_vector_all<std::int8_t>(args.vector_dir + "/q_full.txt");
+  const auto k_full = read_text_vector_all<std::int8_t>(args.vector_dir + "/k_full.txt");
+  const auto v_full = read_text_vector_all<float>(args.vector_dir + "/v_full.txt");
+  const std::uint32_t seq_len = static_cast<std::uint32_t>(q_full.size() / kHeadDim);
+  if (seq_len > kFullRowMaxCols) {
+    throw std::runtime_error("Full-sequence vector directory exceeds current max seq_len 512");
+  }
+
+  const std::size_t score_elems = static_cast<std::size_t>(seq_len) * seq_len;
+  const std::size_t attn_elems = static_cast<std::size_t>(seq_len) * kHeadDim;
+  const auto logits_expected =
+      read_text_vector<float>(args.vector_dir + "/score_scaled.txt", score_elems);
+  const auto softmax_expected =
+      read_text_vector<float>(args.vector_dir + "/score_softmax.txt", score_elems);
+
+  std::vector<float> attn_out_expected;
+  float attn_out_tolerance = 1.0e-4f;
+  if (file_exists(args.vector_dir + "/attn_out.txt")) {
+    attn_out_expected = read_text_vector<float>(args.vector_dir + "/attn_out.txt", attn_elems);
+  } else {
+    attn_out_expected =
+        read_text_vector<float>(args.vector_dir + "/attn_ref_float.txt", attn_elems);
+    attn_out_tolerance = 1.0e-3f;
+  }
+
+  const auto meta = read_kernel_meta(args.vector_dir + "/kernel_meta.txt");
+  return run_resident_inputs(
+      "vector sequence from " + args.vector_dir,
+      q_full,
+      k_full,
+      v_full,
+      meta.total_scale,
+      logits_expected,
+      softmax_expected,
+      attn_out_expected,
+      attn_out_tolerance,
+      args.resident_debug,
+      device,
+      uuid);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -922,11 +1165,20 @@ int main(int argc, char** argv) {
     auto uuid = device.load_xclbin(args.xclbin_path);
 
     if (args.seq_len != 0) {
+      if (args.resident) {
+        return run_resident_sequence(args, device, uuid);
+      }
       return run_tiled_sequence(args, device, uuid);
     }
     if (file_exists(args.vector_dir + "/q_full.txt") &&
         file_exists(args.vector_dir + "/k_full.txt")) {
+      if (args.resident) {
+        return run_resident_vector_sequence(args, device, uuid);
+      }
       return run_tiled_vector_sequence(args, device, uuid);
+    }
+    if (args.resident) {
+      throw std::runtime_error("--resident requires --seq-len or a full-sequence vector directory");
     }
     return run_single_tile(args, device, uuid);
   } catch (const std::exception& ex) {

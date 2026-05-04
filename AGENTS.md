@@ -1027,19 +1027,48 @@ On 2026-05-04, Optimization Track O1 baseline/profiling was completed on branch
   units as `No Trace`, so the native XRT API and host data-transfer summary are
   the authoritative O1 evidence
 
+On 2026-05-04, Optimization Track O2 Windows-side implementation was started:
+
+- `host/attention_score_chain_xrt.cpp` now has `--resident` and
+  `--resident-debug` modes for synthetic `--seq-len` runs and full-sequence
+  `--vectors <dir>` runs
+- the resident path copies full Q/K/V buffers to the device once, keeps full
+  logits/probabilities/attention output in device buffers, and reads back final
+  `attn_out`; `--resident-debug` also reads back logits and probabilities
+- resident HLS top functions were added:
+  - `score_mask_scale_resident_u55c_kernel`
+  - `softmax_full_row_resident_u55c_kernel`
+  - `v_weighted_sum_resident_u55c_kernel`
+- `host/build_xclbin.sh` now compiles the resident kernels and links them into
+  the same xclbin as the existing tile kernels
+- `host/vpp_link.cfg` maps resident Q/K/logits/probs/V/output buffers across
+  HBM banks `[0]`, `[1]`, `[3]`, `[5]`, `[6]`, and `[7]`
+- resident HLS Tcl scripts were added for Linux-side `csim`/`csynth`:
+  - `hls/score_and_mask_scale/run_hls_resident.tcl`
+  - `hls/softmax_full_row/run_hls_resident.tcl`
+  - `hls/v_weighted_sum/run_hls_resident.tcl`
+- local g++ benches pass for resident score/mask/scale, resident full-row
+  softmax, and resident V weighted-sum; the V bench includes a two-K-chunk
+  resident accumulation check
+- not yet done: Vitis HLS/v++ compile, `hw_emu`, or real U55C verification for
+  the resident xclbin
+
 ## Best Next Step
 
 Track A Step 5 is hardware-verified on the current
 `optimization-device-resident-online-attn` branch, and Track O1 baseline
-profiling is complete. Best next practical steps are:
+profiling is complete. Track O2 is implemented locally but still needs Linux
+Vitis/XRT build and U55C validation. Best next practical steps are:
 
 1. use `docs/track_d_results.md` as the current fused-vs-staged timing and
    utilization summary, including the O1 profile artifacts
-2. start Track O2 device-resident full-buffer flow
-3. then reduce launch count with Track O3 larger-grain kernels
-4. prioritize device-resident buffers, lower kernel launch count, and online
+2. build the resident-kernel xclbin on the U55C Linux machine and run
+   `--resident-debug` first at small `S`
+3. run the resident synthetic sweep and compare against the O1 baseline
+4. then reduce launch count with Track O3 larger-grain kernels
+5. prioritize device-resident buffers, lower kernel launch count, and online
    softmax fused with V accumulation before minor HLS/clock tuning
-5. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
+6. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
    `S=512` if broader real-input coverage is needed
 
 ## After That
@@ -1075,8 +1104,8 @@ At the time of writing:
   comparison; see `docs/track_d_results.md`
 - `docs/implementation_checklist_optimization.md` captures the next performance
   work after the completed required checklist
-- Optimization Track O1 is complete; the next implementation track is O2
-  device-resident full-buffer flow
+- Optimization Track O1 is complete; Track O2 is locally implemented and now
+  needs U55C Linux build/verification
 
 Agents should avoid redoing exploration that this file already captures unless
 something materially changed.

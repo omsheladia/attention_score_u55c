@@ -116,5 +116,53 @@ void softmax_full_row_u55c_kernel(
   }
 }
 
+void softmax_full_row_resident_u55c_kernel(
+    const float* logits_in,
+    float* prob_out,
+    std::uint32_t seq_len,
+    std::uint32_t query_pos_base,
+    std::uint32_t query_row_count) {
+#pragma HLS INTERFACE m_axi port=logits_in offset=slave bundle=gmem0 depth=262144
+#pragma HLS INTERFACE m_axi port=prob_out offset=slave bundle=gmem1 depth=262144
+#pragma HLS INTERFACE s_axilite port=logits_in bundle=control
+#pragma HLS INTERFACE s_axilite port=prob_out bundle=control
+#pragma HLS INTERFACE s_axilite port=seq_len bundle=control
+#pragma HLS INTERFACE s_axilite port=query_pos_base bundle=control
+#pragma HLS INTERFACE s_axilite port=query_row_count bundle=control
+#pragma HLS INTERFACE s_axilite port=return bundle=control
+
+  float score_in_local[kScoreRowsPerTile][kFullRowMaxCols];
+  float prob_out_local[kScoreRowsPerTile][kFullRowMaxCols];
+
+  const std::uint16_t seq_len_u16 = clamp_key_cols(static_cast<std::uint16_t>(seq_len));
+  const std::uint16_t query_base_u16 = static_cast<std::uint16_t>(query_pos_base);
+  const std::uint16_t query_rows_u16 = static_cast<std::uint16_t>(query_row_count);
+
+  for (int row = 0; row < kScoreRowsPerTile; ++row) {
+    for (int col = 0; col < kFullRowMaxCols; ++col) {
+#pragma HLS PIPELINE II=1
+      float value = 0.0f;
+      if ((row < query_rows_u16) && (col < seq_len_u16)) {
+        const int global_row = static_cast<int>(query_base_u16) + row;
+        value = logits_in[(global_row * static_cast<int>(seq_len_u16)) + col];
+      }
+      score_in_local[row][col] = value;
+    }
+  }
+
+  softmax_full_row_core_hls(score_in_local, prob_out_local, query_rows_u16, seq_len_u16);
+
+  for (int row = 0; row < kScoreRowsPerTile; ++row) {
+    for (int col = 0; col < kFullRowMaxCols; ++col) {
+#pragma HLS PIPELINE II=1
+      if ((row < query_rows_u16) && (col < seq_len_u16)) {
+        const int global_row = static_cast<int>(query_base_u16) + row;
+        prob_out[(global_row * static_cast<int>(seq_len_u16)) + col] =
+            prob_out_local[row][col];
+      }
+    }
+  }
+}
+
 }  // namespace softmax_full_row
 }  // namespace attention_score_u55c

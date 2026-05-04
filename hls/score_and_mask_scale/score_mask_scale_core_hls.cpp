@@ -86,6 +86,52 @@ void load_k_tile(
   }
 }
 
+void load_q_tile_from_full(
+    const word64_t* q_full,
+    act_int8_t q_local[kScoreRowsPerTile][kHeadDim],
+    std::uint16_t query_pos_base,
+    std::uint16_t query_row_count) {
+#pragma HLS INLINE off
+
+  for (int row = 0; row < kScoreRowsPerTile; ++row) {
+    for (int word_idx = 0; word_idx < (kHeadDim / kBytesPerWord); ++word_idx) {
+#pragma HLS PIPELINE II=1
+      word64_t packed_word = 0;
+      if (row < query_row_count) {
+        const int global_row = static_cast<int>(query_pos_base) + row;
+        packed_word = q_full[(global_row * (kHeadDim / kBytesPerWord)) + word_idx];
+      }
+      for (int lane = 0; lane < kBytesPerWord; ++lane) {
+#pragma HLS UNROLL
+        q_local[row][(word_idx * kBytesPerWord) + lane] = unpack_int8_lane(packed_word, lane);
+      }
+    }
+  }
+}
+
+void load_k_tile_from_full(
+    const word64_t* k_full,
+    act_int8_t k_local[kScoreColsPerTile][kHeadDim],
+    std::uint16_t key_pos_base,
+    std::uint16_t key_col_count) {
+#pragma HLS INLINE off
+
+  for (int col = 0; col < kScoreColsPerTile; ++col) {
+    for (int word_idx = 0; word_idx < (kHeadDim / kBytesPerWord); ++word_idx) {
+#pragma HLS PIPELINE II=1
+      word64_t packed_word = 0;
+      if (col < key_col_count) {
+        const int global_col = static_cast<int>(key_pos_base) + col;
+        packed_word = k_full[(global_col * (kHeadDim / kBytesPerWord)) + word_idx];
+      }
+      for (int lane = 0; lane < kBytesPerWord; ++lane) {
+#pragma HLS UNROLL
+        k_local[col][(word_idx * kBytesPerWord) + lane] = unpack_int8_lane(packed_word, lane);
+      }
+    }
+  }
+}
+
 void compute_score_stream(
     const act_int8_t q_tile[kScoreRowsPerTile][kHeadDim],
     const act_int8_t k_tile[kScoreColsPerTile][kHeadDim],
@@ -257,6 +303,69 @@ void score_mask_scale_u55c_kernel(
     for (int col = 0; col < kScoreColsPerTile; ++col) {
 #pragma HLS PIPELINE II=1
       score_out[(row * kScoreColsPerTile) + col] = score_out_local[row][col];
+    }
+  }
+}
+
+void score_mask_scale_resident_u55c_kernel(
+    const word64_t* q_full,
+    const word64_t* k_full,
+    float* logits_out,
+    std::uint32_t seq_len,
+    std::uint32_t query_pos_base,
+    std::uint32_t key_pos_base,
+    std::uint32_t query_row_count,
+    std::uint32_t key_col_count,
+    float total_scale) {
+#pragma HLS INTERFACE m_axi port=q_full offset=slave bundle=gmem_q depth=4096
+#pragma HLS INTERFACE m_axi port=k_full offset=slave bundle=gmem_k depth=4096
+#pragma HLS INTERFACE m_axi port=logits_out offset=slave bundle=gmem_out depth=262144
+#pragma HLS INTERFACE s_axilite port=q_full bundle=control
+#pragma HLS INTERFACE s_axilite port=k_full bundle=control
+#pragma HLS INTERFACE s_axilite port=logits_out bundle=control
+#pragma HLS INTERFACE s_axilite port=seq_len bundle=control
+#pragma HLS INTERFACE s_axilite port=query_pos_base bundle=control
+#pragma HLS INTERFACE s_axilite port=key_pos_base bundle=control
+#pragma HLS INTERFACE s_axilite port=query_row_count bundle=control
+#pragma HLS INTERFACE s_axilite port=key_col_count bundle=control
+#pragma HLS INTERFACE s_axilite port=total_scale bundle=control
+#pragma HLS INTERFACE s_axilite port=return bundle=control
+
+  act_int8_t q_local[kScoreRowsPerTile][kHeadDim];
+  act_int8_t k_local[kScoreColsPerTile][kHeadDim];
+  float score_out_local[kScoreRowsPerTile][kScoreColsPerTile];
+
+#pragma HLS ARRAY_PARTITION variable=q_local cyclic factor=16 dim=2
+#pragma HLS ARRAY_PARTITION variable=k_local cyclic factor=16 dim=2
+
+  const std::uint16_t seq_len_u16 = static_cast<std::uint16_t>(seq_len);
+  const std::uint16_t query_base_u16 = static_cast<std::uint16_t>(query_pos_base);
+  const std::uint16_t key_base_u16 = static_cast<std::uint16_t>(key_pos_base);
+  const std::uint16_t query_rows_u16 = static_cast<std::uint16_t>(query_row_count);
+  const std::uint16_t key_cols_u16 = static_cast<std::uint16_t>(key_col_count);
+
+  load_q_tile_from_full(q_full, q_local, query_base_u16, query_rows_u16);
+  load_k_tile_from_full(k_full, k_local, key_base_u16, key_cols_u16);
+
+  score_mask_scale_core_hls(
+      q_local,
+      k_local,
+      score_out_local,
+      query_base_u16,
+      key_base_u16,
+      query_rows_u16,
+      key_cols_u16,
+      total_scale);
+
+  for (int row = 0; row < kScoreRowsPerTile; ++row) {
+    for (int col = 0; col < kScoreColsPerTile; ++col) {
+#pragma HLS PIPELINE II=1
+      if ((row < query_rows_u16) && (col < key_cols_u16)) {
+        const int global_row = static_cast<int>(query_base_u16) + row;
+        const int global_col = static_cast<int>(key_base_u16) + col;
+        logits_out[(global_row * static_cast<int>(seq_len_u16)) + global_col] =
+            score_out_local[row][col];
+      }
     }
   }
 }

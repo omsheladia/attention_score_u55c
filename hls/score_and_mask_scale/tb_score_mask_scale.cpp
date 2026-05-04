@@ -1,10 +1,12 @@
 #include "score_mask_scale_core_hls.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -161,6 +163,37 @@ int main(int argc, char** argv) {
       key_col_count,
       total_scale);
 
+  const std::uint32_t seq_len =
+      std::max(query_pos_base + query_row_count, key_pos_base + key_col_count);
+  const int words_per_row = kHeadDim / kBytesPerWord;
+  std::vector<word64_t> q_full_packed(seq_len * words_per_row, 0);
+  std::vector<word64_t> k_full_packed(seq_len * words_per_row, 0);
+  std::vector<float> resident_logits(static_cast<std::size_t>(seq_len) * seq_len, 0.0f);
+
+  for (std::uint32_t row = 0; row < query_row_count; ++row) {
+    pack_q_or_k_tile(
+        &q_tile[row * kHeadDim],
+        &q_full_packed[(query_pos_base + row) * words_per_row],
+        words_per_row);
+  }
+  for (std::uint32_t col = 0; col < key_col_count; ++col) {
+    pack_q_or_k_tile(
+        &k_tile[col * kHeadDim],
+        &k_full_packed[(key_pos_base + col) * words_per_row],
+        words_per_row);
+  }
+
+  attention_score_u55c::score_mask_scale::score_mask_scale_resident_u55c_kernel(
+      q_full_packed.data(),
+      k_full_packed.data(),
+      resident_logits.data(),
+      seq_len,
+      query_pos_base,
+      key_pos_base,
+      query_row_count,
+      key_col_count,
+      total_scale);
+
   int mismatch_count = 0;
   float max_diff = 0.0f;
   for (int idx = 0; idx < kScoreElems; ++idx) {
@@ -175,6 +208,27 @@ int main(int argc, char** argv) {
                   << ": got " << score_out[idx]
                   << ", expected " << score_expected[idx]
                   << ", diff " << diff << "\n";
+      }
+    }
+  }
+
+  for (std::uint32_t row = 0; row < query_row_count; ++row) {
+    for (std::uint32_t col = 0; col < key_col_count; ++col) {
+      const int tile_idx = static_cast<int>((row * kScoreColsPerTile) + col);
+      const std::size_t full_idx =
+          (static_cast<std::size_t>(query_pos_base + row) * seq_len) + key_pos_base + col;
+      const float diff = std::fabs(resident_logits[full_idx] - score_expected[tile_idx]);
+      if (diff > max_diff) {
+        max_diff = diff;
+      }
+      if (diff > 1.0e-4f) {
+        ++mismatch_count;
+        if (mismatch_count <= 8) {
+          std::cerr << "Resident mismatch at row " << row << ", col " << col
+                    << ": got " << resident_logits[full_idx]
+                    << ", expected " << score_expected[tile_idx]
+                    << ", diff " << diff << "\n";
+        }
       }
     }
   }

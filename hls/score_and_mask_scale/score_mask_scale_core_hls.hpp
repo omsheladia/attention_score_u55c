@@ -34,6 +34,17 @@ void score_mask_scale_u55c_kernel(
     std::uint32_t key_col_count,
     float total_scale);
 
+void score_mask_scale_resident_u55c_kernel(
+    const word64_t* q_full,
+    const word64_t* k_full,
+    float* logits_out,
+    std::uint32_t seq_len,
+    std::uint32_t query_pos_base,
+    std::uint32_t key_pos_base,
+    std::uint32_t query_row_count,
+    std::uint32_t key_col_count,
+    float total_scale);
+
 }  // namespace score_mask_scale
 }  // namespace attention_score_u55c
 

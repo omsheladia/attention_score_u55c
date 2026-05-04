@@ -126,21 +126,21 @@ tile loops.
 
 ### Host layout
 
-- [ ] Allocate full-sequence device buffers instead of only tile buffers:
+- [x] Allocate full-sequence device buffers instead of only tile buffers:
   - `q_full_bo` for `(S, 64)` INT8
   - `k_full_bo` for `(S, 64)` INT8
   - `v_full_bo` for `(S, 64)` FP32
   - `logits_bo` for `(S, S)` FP32, if still materializing logits
   - `probs_bo` for `(S, S)` FP32, if still materializing probabilities
   - `attn_out_bo` for `(S, 64)` FP32
-- [ ] Copy Q/K/V to the device once per sequence.
-- [ ] Read back only final `attn_out` for verification.
-- [ ] Keep optional debug mode that can read back logits/probabilities for
+- [x] Copy Q/K/V to the device once per sequence.
+- [x] Read back only final `attn_out` for verification.
+- [x] Keep optional debug mode that can read back logits/probabilities for
       comparison during bring-up.
 
 ### Kernel interface changes
 
-- [ ] Update `score_mask_scale_u55c_kernel` or add a new variant that accepts:
+- [x] Update `score_mask_scale_u55c_kernel` or add a new variant that accepts:
   - full Q buffer
   - full K buffer
   - full logits output buffer
@@ -148,13 +148,30 @@ tile loops.
   - `query_base`
   - `key_base`
   - scale
-- [ ] Kernel reads the proper tile from full Q/K using offsets.
-- [ ] Kernel writes the scaled logit tile directly into the correct offset of
+- [x] Kernel reads the proper tile from full Q/K using offsets.
+- [x] Kernel writes the scaled logit tile directly into the correct offset of
       the full `S x S` logits buffer.
-- [ ] Update `softmax_full_row_u55c_kernel` to read/write row offsets in full
+- [x] Update `softmax_full_row_u55c_kernel` to read/write row offsets in full
       logits/probability buffers.
-- [ ] Update `v_weighted_sum_u55c_kernel` to read weights and V from full
+- [x] Update `v_weighted_sum_u55c_kernel` to read weights and V from full
       buffers using offsets, and to write partial/final output on device.
+
+### 2026-05-04 Windows implementation status
+
+- [x] Added `--resident` host mode for synthetic `--seq-len` and full-sequence
+      `--vectors <dir>` inputs.
+- [x] Added `--resident-debug` to optionally read back and compare full logits
+      and full softmax probabilities during bring-up.
+- [x] Added resident HLS top functions:
+  - `score_mask_scale_resident_u55c_kernel`
+  - `softmax_full_row_resident_u55c_kernel`
+  - `v_weighted_sum_resident_u55c_kernel`
+- [x] Updated `host/build_xclbin.sh` and `host/vpp_link.cfg` to include the
+      resident kernels and HBM mappings.
+- [x] Added resident HLS Tcl scripts for Linux-side `csim`/`csynth` runs.
+- [x] Local g++ HLS benches pass for resident score/mask/scale, full-row
+      softmax, and V weighted-sum, including a two-K-chunk resident V
+      accumulation test.
 
 ### Verification
 

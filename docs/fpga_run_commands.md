@@ -135,6 +135,69 @@ Results:
   `sim/real_tinyllama_s16 0.569 ms`,
   `sim/real_tinyllama_s64 2.004 ms`.
 
+## Optimization O2 Resident Bring-Up
+
+Track O2 adds a new resident mode that keeps full Q/K/V, logits,
+probabilities, and final `attn_out` in device buffers. The existing tiled mode
+is still available without extra flags.
+
+New host flags:
+
+```text
+--resident        Run the full-buffer resident path.
+--resident-debug  Also read back and compare full logits/probabilities.
+```
+
+Recommended first U55C/Linux bring-up after copying this branch:
+
+```bash
+cd /home/advent/Desktop/RC19
+source attention_score_u55c/host/setup_2022_2_env.sh
+
+vitis_hls -f attention_score_u55c/hls/score_and_mask_scale/run_hls_resident.tcl
+vitis_hls -f attention_score_u55c/hls/softmax_full_row/run_hls_resident.tcl
+vitis_hls -f attention_score_u55c/hls/v_weighted_sum/run_hls_resident.tcl
+
+bash attention_score_u55c/host/build_host.sh
+bash attention_score_u55c/host/build_xclbin.sh hw_emu \
+  /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+
+export XCL_EMULATION_MODE=hw_emu
+./attention_score_u55c/build/host_attention_score_chain \
+  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  --seq-len 8 \
+  --resident-debug \
+  --device 0
+```
+
+After `hw_emu` passes, run real hardware:
+
+```bash
+unset XCL_EMULATION_MODE
+bash attention_score_u55c/host/build_xclbin.sh hw \
+  /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+
+for s in 8 64 128 256 512; do
+  ./attention_score_u55c/build/host_attention_score_chain \
+    --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+    --seq-len "$s" \
+    --resident \
+    --device 0
+done
+
+for d in attention_score_u55c/sim/real_tinyllama_s16 attention_score_u55c/sim/real_tinyllama_s64; do
+  ./attention_score_u55c/build/host_attention_score_chain \
+    --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+    --vectors "$d" \
+    --resident \
+    --device 0
+done
+```
+
+Use `--resident-debug` for the first small synthetic and real-vector runs; use
+plain `--resident` for timing, because debug mode intentionally reads back
+extra intermediate matrices.
+
 ## 1. Source The 2022.2 Environment
 
 ```bash

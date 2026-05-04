@@ -22,6 +22,13 @@ void softmax_full_row_u55c_kernel(
     std::uint32_t query_row_count,
     std::uint32_t key_col_count);
 
+void softmax_full_row_resident_u55c_kernel(
+    const float* logits_in,
+    float* prob_out,
+    std::uint32_t seq_len,
+    std::uint32_t query_pos_base,
+    std::uint32_t query_row_count);
+
 }  // namespace softmax_full_row
 }  // namespace attention_score_u55c
 

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -91,6 +92,33 @@ int main(int argc, char** argv) {
       query_row_count,
       key_col_count);
 
+  std::vector<float> weights_full(static_cast<std::size_t>(key_col_count) * key_col_count, 0.0f);
+  std::vector<float> v_full(static_cast<std::size_t>(key_col_count) * kHeadDim, 0.0f);
+  std::vector<float> out_full(static_cast<std::size_t>(key_col_count) * kHeadDim, 0.0f);
+  for (std::uint32_t row = 0; row < query_row_count; ++row) {
+    for (std::uint32_t col = 0; col < key_col_count; ++col) {
+      weights_full[(static_cast<std::size_t>(row) * key_col_count) + col] =
+          weights_tile[(row * kScoreColsPerTile) + col];
+    }
+  }
+  for (std::uint32_t col = 0; col < key_col_count; ++col) {
+    for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+      v_full[(static_cast<std::size_t>(col) * kHeadDim) + dim] =
+          v_tile[(col * kHeadDim) + dim];
+    }
+  }
+
+  attention_score_u55c::v_weighted_sum::v_weighted_sum_resident_u55c_kernel(
+      weights_full.data(),
+      v_full.data(),
+      out_full.data(),
+      key_col_count,
+      0,
+      0,
+      query_row_count,
+      key_col_count,
+      1);
+
   int mismatch_count = 0;
   float max_diff = 0.0f;
   for (int idx = 0; idx < kOutElems; ++idx) {
@@ -105,6 +133,94 @@ int main(int argc, char** argv) {
                   << ": got " << out_tile[idx]
                   << ", expected " << expected[idx]
                   << ", diff " << diff << "\n";
+      }
+    }
+  }
+
+  for (std::uint32_t row = 0; row < query_row_count; ++row) {
+    for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+      const int tile_idx = static_cast<int>((row * kHeadDim) + dim);
+      const std::size_t full_idx = (static_cast<std::size_t>(row) * kHeadDim) + dim;
+      const float diff = std::fabs(out_full[full_idx] - expected[tile_idx]);
+      if (diff > max_diff) {
+        max_diff = diff;
+      }
+      if (diff > 1.0e-4f) {
+        ++mismatch_count;
+        if (mismatch_count <= 8) {
+          std::cerr << "Resident mismatch at row " << row << ", dim " << dim
+                    << ": got " << out_full[full_idx]
+                    << ", expected " << expected[tile_idx]
+                    << ", diff " << diff << "\n";
+        }
+      }
+    }
+  }
+
+  constexpr std::uint32_t kMultiSeqLen = 128;
+  std::vector<float> multi_weights(static_cast<std::size_t>(kMultiSeqLen) * kMultiSeqLen, 0.0f);
+  std::vector<float> multi_v(static_cast<std::size_t>(kMultiSeqLen) * kHeadDim, 0.0f);
+  std::vector<float> multi_out(static_cast<std::size_t>(kMultiSeqLen) * kHeadDim, 0.0f);
+  std::vector<float> multi_expected(kScoreRowsPerTile * kHeadDim, 0.0f);
+
+  for (std::uint32_t row = 0; row < kScoreRowsPerTile; ++row) {
+    for (std::uint32_t col = 0; col < kMultiSeqLen; ++col) {
+      multi_weights[(static_cast<std::size_t>(row) * kMultiSeqLen) + col] =
+          static_cast<float>((row * 13 + col * 7) % 17) / 64.0f;
+    }
+  }
+  for (std::uint32_t col = 0; col < kMultiSeqLen; ++col) {
+    for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+      multi_v[(static_cast<std::size_t>(col) * kHeadDim) + dim] =
+          static_cast<float>(static_cast<int>((col * 11 + dim * 5) % 29) - 14) / 16.0f;
+    }
+  }
+  for (std::uint32_t row = 0; row < kScoreRowsPerTile; ++row) {
+    for (std::uint32_t col = 0; col < kMultiSeqLen; ++col) {
+      const float weight = multi_weights[(static_cast<std::size_t>(row) * kMultiSeqLen) + col];
+      for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+        multi_expected[(row * kHeadDim) + dim] +=
+            weight * multi_v[(static_cast<std::size_t>(col) * kHeadDim) + dim];
+      }
+    }
+  }
+
+  attention_score_u55c::v_weighted_sum::v_weighted_sum_resident_u55c_kernel(
+      multi_weights.data(),
+      multi_v.data(),
+      multi_out.data(),
+      kMultiSeqLen,
+      0,
+      0,
+      kScoreRowsPerTile,
+      kScoreColsPerTile,
+      1);
+  attention_score_u55c::v_weighted_sum::v_weighted_sum_resident_u55c_kernel(
+      multi_weights.data(),
+      multi_v.data(),
+      multi_out.data(),
+      kMultiSeqLen,
+      0,
+      kScoreColsPerTile,
+      kScoreRowsPerTile,
+      kScoreColsPerTile,
+      0);
+
+  for (std::uint32_t row = 0; row < kScoreRowsPerTile; ++row) {
+    for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+      const std::size_t idx = (static_cast<std::size_t>(row) * kHeadDim) + dim;
+      const float diff = std::fabs(multi_out[idx] - multi_expected[idx]);
+      if (diff > max_diff) {
+        max_diff = diff;
+      }
+      if (diff > 1.0e-4f) {
+        ++mismatch_count;
+        if (mismatch_count <= 8) {
+          std::cerr << "Resident multi-chunk mismatch at row " << row << ", dim " << dim
+                    << ": got " << multi_out[idx]
+                    << ", expected " << multi_expected[idx]
+                    << ", diff " << diff << "\n";
+        }
       }
     }
   }

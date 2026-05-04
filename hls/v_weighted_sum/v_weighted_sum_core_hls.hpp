@@ -22,6 +22,17 @@ void v_weighted_sum_u55c_kernel(
     std::uint32_t query_row_count,
     std::uint32_t key_col_count);
 
+void v_weighted_sum_resident_u55c_kernel(
+    const float* weights_full,
+    const float* v_full,
+    float* out_full,
+    std::uint32_t seq_len,
+    std::uint32_t query_pos_base,
+    std::uint32_t key_pos_base,
+    std::uint32_t query_row_count,
+    std::uint32_t key_col_count,
+    std::uint32_t clear_accum);
+
 }  // namespace v_weighted_sum
 }  // namespace attention_score_u55c
 

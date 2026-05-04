@@ -84,6 +84,22 @@ bool run_case(
       query_row_count,
       key_col_count);
 
+  std::vector<float> resident_logits(static_cast<std::size_t>(key_col_count) * key_col_count, 0.0f);
+  std::vector<float> resident_probs(static_cast<std::size_t>(key_col_count) * key_col_count, 0.0f);
+  for (std::uint32_t row = 0; row < query_row_count; ++row) {
+    for (std::uint32_t col = 0; col < key_col_count; ++col) {
+      resident_logits[(static_cast<std::size_t>(row) * key_col_count) + col] =
+          score_in[(row * kFullRowMaxCols) + col];
+    }
+  }
+
+  attention_score_u55c::softmax_full_row::softmax_full_row_resident_u55c_kernel(
+      resident_logits.data(),
+      resident_probs.data(),
+      key_col_count,
+      0,
+      query_row_count);
+
   int mismatch_count = 0;
   float max_diff = 0.0f;
   for (int idx = 0; idx < kElemCount; ++idx) {
@@ -98,6 +114,26 @@ bool run_case(
                   << ": got " << prob_out[idx]
                   << ", expected " << expected[idx]
                   << ", diff " << diff << "\n";
+      }
+    }
+  }
+
+  for (std::uint32_t row = 0; row < query_row_count; ++row) {
+    for (std::uint32_t col = 0; col < key_col_count; ++col) {
+      const float got = resident_probs[(static_cast<std::size_t>(row) * key_col_count) + col];
+      const float want = expected[(row * kFullRowMaxCols) + col];
+      const float diff = std::fabs(got - want);
+      if (diff > max_diff) {
+        max_diff = diff;
+      }
+      if (diff > 1.0e-4f) {
+        ++mismatch_count;
+        if (mismatch_count <= 8) {
+          std::cerr << name << " resident mismatch at row " << row << ", col " << col
+                    << ": got " << got
+                    << ", expected " << want
+                    << ", diff " << diff << "\n";
+        }
       }
     }
   }
