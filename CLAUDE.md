@@ -647,7 +647,28 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
   `sim/real_tinyllama_s16 0.569 ms`,
   `sim/real_tinyllama_s64 2.004 ms`.
 
+**Optimization Track O1 — Complete baseline/profile for fused Step 5:**
+- Baseline commit:
+  `329d6a41134e09e303b5f4e87f27c35193e43909`.
+- Baseline xclbin UUID:
+  `56cd611d-8c32-c19b-f5ef-358bed40d459`.
+- `docs/track_d_results.md` now contains the O1 launch/timing table for
+  synthetic `S = 8, 64, 128, 256, 512`.
+- XRT profiling was enabled with `docs/xrt_profile_s512.ini` and run on the
+  real U55C at `S=512`.
+- Profiled run passed `Tiled sequence verification PASSED`,
+  `Attention output verification PASSED`, and `XRT chain verification PASSED`.
+- Profiled `S=512` timing:
+  `score_mask_scale 20.683 ms`, `softmax_full_row 8.238 ms`,
+  `v_weighted_sum 19.271 ms`, `kernel_launch_wait_sum 48.191 ms`,
+  `host_dma_sync_gap 17.464 ms`, `total_chain 65.655 ms`.
+- XRT native profile confirms `1088` tile-level launches, `2816` BO syncs,
+  `1088` host reads, and `1728` host writes at `S=512`.
+- Profile artifacts are checked into `docs/` with the
+  `optimization_o1_s512_*` prefix.
+
 **Future:**
-1. Rerun/update Track D timing and utilization tables for fused vs staged
-2. Capture refreshed fused post-route reports
-3. Connect to full TinyLlama attention subgraph
+1. Start Track O2 device-resident full-buffer flow
+2. Then reduce launch count with Track O3 larger-grain kernels
+3. Consider Track O4 online softmax fused with V accumulation
+4. Connect to full TinyLlama attention subgraph

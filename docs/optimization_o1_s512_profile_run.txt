@@ -1,0 +1,22 @@
+Opening device 0
+XRT build version: 2.14.354
+Build hash: 43926231f7183688add2dccfd391b36a1f000bea
+Build date: 2022-10-08 09:49:58
+Git branch: 2022.2
+PID: 1042415
+UID: 1000
+[Mon May  4 21:00:49 2026 GMT]
+HOST: advent
+EXE: /home/advent/Desktop/RC19/attention_score_u55c/build/host_attention_score_chain
+[XRT] WARNING: Enabling both Native XRT and HAL level trace is not currently supported.  Only Native XRT tracing will be enabled.
+Running tiled synthetic sequence, S=512, q_chunks=64, k_chunks=8
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_u55c_kernel20.683 ms
+  softmax_full_row_u55c_kernel8.238 ms
+  v_weighted_sum_u55c_kernel  19.271 ms
+  kernel_launch_wait_sum      48.191 ms
+  host_dma_sync_gap           17.464 ms
+  total_chain                 65.655 ms
+Tiled sequence verification PASSED
+Attention output verification PASSED
+XRT chain verification PASSED

@@ -88,23 +88,23 @@ tile loops.
 
 ## What to do
 
-- [ ] Freeze the current fused xclbin UUID, commit hash, and command lines used
+- [x] Freeze the current fused xclbin UUID, commit hash, and command lines used
       for timing.
-- [ ] Add a short baseline table for:
+- [x] Add a short baseline table for:
   - `S = 8, 64, 128, 256, 512`
   - total time
   - kernel launch/wait sum
   - host/DMA/sync gap
   - launch count by kernel
-- [ ] Enable XRT profiling for at least one `S=512` run.
-- [ ] Capture whether time is dominated by:
+- [x] Enable XRT profiling for at least one `S=512` run.
+- [x] Capture whether time is dominated by:
   - kernel launch overhead
   - BO sync/write/read traffic
   - score compute
   - softmax
   - V weighted sum
-- [ ] Record results in a new section of `docs/track_d_results.md`.
-- [ ] Keep the same CPU/GPU baseline scripts so speedup claims stay apples to
+- [x] Record results in a new section of `docs/track_d_results.md`.
+- [x] Keep the same CPU/GPU baseline scripts so speedup claims stay apples to
       apples.
 
 ## Expected result
@@ -460,7 +460,7 @@ larger real TinyLlama-derived inputs, not only synthetic `--seq-len` data.
 
 ## Milestone 1 - Low-Risk Optimization
 
-- [ ] Track O1 complete
+- [x] Track O1 complete
 - [ ] Track O2 complete
 - [ ] Same outputs as current fused Step 5 path
 - [ ] Measurable reduction in host/DMA/sync gap
@@ -500,4 +500,3 @@ An optimization should not be considered complete until:
 - [ ] timing is compared against the current fused Step 5 baseline
 - [ ] resource and timing reports are copied under `docs/`
 - [ ] `docs/track_d_results.md` and `AGENTS.md` are updated
-

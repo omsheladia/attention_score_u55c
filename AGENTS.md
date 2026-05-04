@@ -994,18 +994,52 @@ On 2026-05-04, Track A Step 5 was started on branch
     `attention_score_chain_xclbin_info.txt` /
     `attention_score_chain_xclbin_link_summary.txt` mirrors
 
+On 2026-05-04, Optimization Track O1 baseline/profiling was completed on branch
+`optimization-device-resident-online-attn` for the fused Step 5 xclbin:
+
+- frozen baseline commit:
+  `329d6a41134e09e303b5f4e87f27c35193e43909`
+- frozen xclbin UUID: `56cd611d-8c32-c19b-f5ef-358bed40d459`
+- `docs/xrt_profile_s512.ini` enables `host_trace`, `native_xrt_trace`, and
+  coarse `device_trace` for profiling-only runs
+- profiled real U55C command:
+  `./build/host_attention_score_chain --xclbin build/attention_score_chain.xclbin --seq-len 512 --device 0`
+- profiled run passed:
+  `Tiled sequence verification PASSED`,
+  `Attention output verification PASSED`, and
+  `XRT chain verification PASSED`
+- profiled timing was:
+  `score_mask_scale 20.683 ms`, `softmax_full_row 8.238 ms`,
+  `v_weighted_sum 19.271 ms`, `kernel_launch_wait_sum 48.191 ms`,
+  `host_dma_sync_gap 17.464 ms`, `total_chain 65.655 ms`
+- profile artifacts copied under `docs/`:
+  `optimization_o1_s512_profile_run.txt`,
+  `optimization_o1_s512_summary.csv`,
+  `optimization_o1_s512_native_trace.csv`,
+  `optimization_o1_s512_device_trace_0.csv`, and
+  `optimization_o1_s512_xrt.run_summary`
+- XRT native profile confirms the current `S=512` path performs `1088`
+  tile-level kernel launches, `2816` BO syncs, `1088` host reads, and `1728`
+  host writes; this confirms the next optimization should target
+  device-resident buffers and launch-count reduction before minor HLS/clock
+  tuning
+- device trace was generated, but XRT reported `NUM_MONITORS=0` and compute
+  units as `No Trace`, so the native XRT API and host data-transfer summary are
+  the authoritative O1 evidence
+
 ## Best Next Step
 
 Track A Step 5 is hardware-verified on the current
-`track-a-step5-fused-score-mask-scale` branch. Best next practical steps are:
+`optimization-device-resident-online-attn` branch, and Track O1 baseline
+profiling is complete. Best next practical steps are:
 
 1. use `docs/track_d_results.md` as the current fused-vs-staged timing and
-   utilization summary
-2. use `docs/implementation_checklist_optimization.md` as the forward plan for
-   making the FPGA path faster than CPU
-3. prioritize device-resident buffers, lower kernel launch count, and online
+   utilization summary, including the O1 profile artifacts
+2. start Track O2 device-resident full-buffer flow
+3. then reduce launch count with Track O3 larger-grain kernels
+4. prioritize device-resident buffers, lower kernel launch count, and online
    softmax fused with V accumulation before minor HLS/clock tuning
-4. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
+5. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
    `S=512` if broader real-input coverage is needed
 
 ## After That
@@ -1041,6 +1075,8 @@ At the time of writing:
   comparison; see `docs/track_d_results.md`
 - `docs/implementation_checklist_optimization.md` captures the next performance
   work after the completed required checklist
+- Optimization Track O1 is complete; the next implementation track is O2
+  device-resident full-buffer flow
 
 Agents should avoid redoing exploration that this file already captures unless
 something materially changed.

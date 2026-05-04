@@ -810,7 +810,56 @@ These are synthetic one-head full-attention measurements through final
 decoder-loop integration are still required before model tokens/sec is
 meaningful.
 
-## 15. Preserve A Known-Good Run
+## 15. Track O1 XRT Profiling For Fused S=512
+
+Use this only when collecting profiling artifacts. The `xrt.ini` file enables
+runtime tracing and adds overhead, so remove it after the profiled run.
+
+```bash
+cd /home/advent/Desktop/RC19/attention_score_u55c
+cp docs/xrt_profile_s512.ini xrt.ini
+
+source host/setup_2022_2_env.sh
+unset XCL_EMULATION_MODE
+
+./build/host_attention_score_chain \
+  --xclbin build/attention_score_chain.xclbin \
+  --seq-len 512 \
+  --device 0
+
+rm -f xrt.ini
+```
+
+The 2026-05-04 profiled run passed:
+
+```text
+Tiled sequence verification PASSED
+Attention output verification PASSED
+XRT chain verification PASSED
+```
+
+Profiled timing:
+
+| S | score_mask_scale ms | full-row softmax ms | V weighted sum ms | kernel launch/wait sum ms | host/DMA/sync gap ms | total ms |
+|---|--------------------:|--------------------:|------------------:|--------------------------:|---------------------:|---------:|
+| 512 | 20.683 | 8.238 | 19.271 | 48.191 | 17.464 | 65.655 |
+
+Generated profile artifacts were copied to:
+
+```text
+docs/optimization_o1_s512_profile_run.txt
+docs/optimization_o1_s512_summary.csv
+docs/optimization_o1_s512_native_trace.csv
+docs/optimization_o1_s512_device_trace_0.csv
+docs/optimization_o1_s512_xrt.run_summary
+```
+
+The profiling summary confirms the current fused path still performs `1088`
+tile-level kernel launches at `S=512`, plus thousands of BO sync/write/read
+operations. The detailed interpretation is recorded in
+`docs/track_d_results.md`.
+
+## 16. Preserve A Known-Good Run
 
 The older known-good preservation backup was created at:
 

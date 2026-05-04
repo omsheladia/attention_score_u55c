@@ -122,6 +122,106 @@ The `sim/real_tinyllama_tile` single-tile fused timing is slower than the staged
 timing. Treat that as a small-run overhead/noise case; the full-sequence
 `S=16` and `S=64` real-vector runs improved with fusion.
 
+## Optimization Track O1 Baseline And Profiling
+
+Track O1 freezes the current fused Step 5 design as the baseline for future
+optimization work.
+
+Baseline identifiers:
+
+| Item | Value |
+|---|---|
+| git commit | `329d6a41134e09e303b5f4e87f27c35193e43909` |
+| xclbin UUID | `56cd611d-8c32-c19b-f5ef-358bed40d459` |
+| branch when profiled | `optimization-device-resident-online-attn` |
+| XRT/tool version | XRT 2022.2 / 2.14.354 |
+| platform shell | `xilinx_u55c_gen3x16_xdma_base_3` |
+
+Baseline synthetic command:
+
+```bash
+source host/setup_2022_2_env.sh
+unset XCL_EMULATION_MODE
+
+for s in 8 64 128 256 512; do
+  ./build/host_attention_score_chain \
+    --xclbin build/attention_score_chain.xclbin \
+    --seq-len "$s" \
+    --device 0
+done
+```
+
+Baseline launch and timing table:
+
+| S | score launches | softmax launches | V launches | total launches | score ms | softmax ms | V ms | kernel launch/wait sum ms | host/DMA/sync gap ms | total ms |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 8 | 1 | 1 | 1 | 3 | 0.064 | 0.076 | 0.037 | 0.177 | 0.119 | 0.296 |
+| 64 | 8 | 8 | 8 | 24 | 0.230 | 0.628 | 0.275 | 1.132 | 1.232 | 2.364 |
+| 128 | 32 | 16 | 32 | 80 | 0.913 | 1.391 | 1.090 | 3.393 | 2.092 | 5.484 |
+| 256 | 128 | 32 | 128 | 288 | 3.808 | 3.170 | 4.672 | 11.651 | 5.656 | 17.307 |
+| 512 | 512 | 64 | 512 | 1088 | 16.956 | 8.164 | 18.976 | 44.096 | 16.231 | 60.328 |
+
+For `S=512`, the baseline spends about `73.1%` of host-measured chain time in
+kernel launch-through-wait windows and about `26.9%` in the remaining host,
+DMA, and sync gap. Inside the kernel launch/wait sum, score is `38.5%`, full-row
+softmax is `18.5%`, and V weighted sum is `43.0%`.
+
+XRT profiling command:
+
+```bash
+cp docs/xrt_profile_s512.ini xrt.ini
+source host/setup_2022_2_env.sh
+unset XCL_EMULATION_MODE
+./build/host_attention_score_chain \
+  --xclbin build/attention_score_chain.xclbin \
+  --seq-len 512 \
+  --device 0
+rm -f xrt.ini
+```
+
+The profiled `S=512` run passed:
+
+```text
+Tiled sequence verification PASSED
+Attention output verification PASSED
+XRT chain verification PASSED
+```
+
+Profiled run timing was slightly slower, as expected with tracing enabled:
+
+| S | score ms | softmax ms | V ms | kernel launch/wait sum ms | host/DMA/sync gap ms | total ms |
+|---:|---:|---:|---:|---:|---:|---:|
+| 512 | 20.683 | 8.238 | 19.271 | 48.191 | 17.464 | 65.655 |
+
+Profile artifacts copied into `docs/`:
+
+- `xrt_profile_s512.ini`
+- `optimization_o1_s512_profile_run.txt`
+- `optimization_o1_s512_summary.csv`
+- `optimization_o1_s512_native_trace.csv`
+- `optimization_o1_s512_device_trace_0.csv`
+- `optimization_o1_s512_xrt.run_summary`
+
+Key XRT profile observations from `optimization_o1_s512_summary.csv`:
+
+| Profile item | Count | Total time ms | Note |
+|---|---:|---:|---|
+| `xrt::run::start` | 1088 | 1.342 | one call per tile-level kernel launch |
+| `xrt::run::wait` | 1088 | 25.820 | host wait time for launched kernels |
+| `xrt::bo::sync` | 2816 | 24.171 | host/device buffer synchronization |
+| Host reads from global memory | 1088 | 8.404 | max transfer 16 KB |
+| Host writes to global memory | 1728 | 15.906 | max transfer 16 KB |
+
+The profile confirms that the current path is dominated by launch count and
+host-visible buffer staging, not FPGA fabric utilization. The next optimization
+should therefore start with device-resident full buffers and fewer launches
+rather than minor clock or directive tuning.
+
+The XRT summary generated `device_trace_0.csv`, but it reported no accelerator
+performance monitors (`NUM_MONITORS=0`) and the device trace marks compute
+units as `No Trace`. Treat the native XRT API and host data-transfer profile as
+the authoritative O1 evidence for this run.
+
 ## HBM Usage
 
 The current fused Step 5 xclbin uses HBM banks `[0]` through `[7]`, but the raw
