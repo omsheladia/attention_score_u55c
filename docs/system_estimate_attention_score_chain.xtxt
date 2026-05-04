@@ -2,24 +2,23 @@
 Version:    v++ v2022.2 (64-bit)
 Build:      SW Build 3671529 on 2022-10-13-17:52:11
 Copyright:  Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
-Created:    Sun May  3 18:48:04 2026
+Created:    Mon May  4 12:39:05 2026
 ===============================================================================
 
 -------------------------------------------------------------------------------
 Design Name:             attention_score_chain
 Target Device:           xilinx:u55c:gen3x16_xdma_3:202210.1
 Target Clock:            300.000000MHz
-Total number of kernels: 5
+Total number of kernels: 4
 -------------------------------------------------------------------------------
 
 Kernel Summary
 Kernel Name                   Type  Target              OpenCL Library         Compute Units
 ----------------------------  ----  ------------------  ---------------------  -------------
 v_weighted_sum_u55c_kernel    c     fpga0:OCL_REGION_0  attention_score_chain  1
-attention_score_u55c_kernel   c     fpga0:OCL_REGION_0  attention_score_chain  1
-mask_scale_u55c_kernel        c     fpga0:OCL_REGION_0  attention_score_chain  1
-softmax_full_row_u55c_kernel  c     fpga0:OCL_REGION_0  attention_score_chain  1
+score_mask_scale_u55c_kernel  c     fpga0:OCL_REGION_0  attention_score_chain  1
 softmax_u55c_kernel           c     fpga0:OCL_REGION_0  attention_score_chain  1
+softmax_full_row_u55c_kernel  c     fpga0:OCL_REGION_0  attention_score_chain  1
 
 
 -------------------------------------------------------------------------------
@@ -27,116 +26,131 @@ OpenCL Binary:     attention_score_chain
 Kernels mapped to: clc_region
 
 Timing Information (MHz)
-Compute Unit                    Kernel Name                   Module Name                                                              Target Frequency  Estimated Frequency
-------------------------------  ----------------------------  -----------------------------------------------------------------------  ----------------  -------------------
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel_Pipeline_VITIS_LOOP_81_2                     300.300293        755.85791
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel_Pipeline_VITIS_LOOP_92_5                     300.300293        780.03125
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_core_hls                                                 300.300293        412.201141
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel_Pipeline_VITIS_LOOP_109_7_VITIS_LOOP_110_8   300.300293        411.015198
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel                                              300.300293        411.015198
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_55_1_VITIS_LOOP_56_2          300.300293        411.015198
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_core_hls                                                      300.300293        430.663208
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_71_3_VITIS_LOOP_72_4          300.300293        411.015198
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_u55c_kernel                                                   300.300293        411.015198
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_91_1_VITIS_LOOP_92_2             300.300293        411.015198
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_67_7                                300.300293        523.286255
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_39_2                                300.300293        419.287201
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_46_3                                300.300293        404.858307
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_52_4                                300.300293        914.913025
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_57_5                                300.300293        429.737885
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_62_6                                300.300293        523.286255
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls                                                         300.300293        404.858307
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_104_3_VITIS_LOOP_105_4           300.300293        411.015198
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel                                                      300.300293        404.858307
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_98_1_VITIS_LOOP_99_2    300.300293        411.015198
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_74_7                       300.300293        418.410034
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_45_2                       300.300293        418.410034
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_53_3                       300.300293        404.858307
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_59_4                       300.300293        836.120422
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_64_5                       300.300293        418.410034
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_69_6                       300.300293        418.410034
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls                                                300.300293        360.10083
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_111_3_VITIS_LOOP_112_4  300.300293        411.015198
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel                                             300.300293        360.10083
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_57_1_VITIS_LOOP_58_2      300.300293        411.015198
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_64_3_VITIS_LOOP_65_4      300.300293        411.015198
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_core_hls                                                  300.300293        426.985474
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_78_5_VITIS_LOOP_79_6      300.300293        411.015198
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel                                               300.300293        411.015198
+Compute Unit                    Kernel Name                   Module Name                                                                        Target Frequency  Estimated Frequency
+------------------------------  ----------------------------  ---------------------------------------------------------------------------------  ----------------  -------------------
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile_Pipeline_VITIS_LOOP_61_2                         300.300293        755.85791
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile                                                  300.300293        411.015198
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile_Pipeline_VITIS_LOOP_78_2                         300.300293        780.03125
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile                                                  300.300293        411.015198
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  entry_proc                                                                         300.300293        821.692688
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream_Pipeline_VITIS_LOOP_97_1_VITIS_LOOP_98  300.300293        447.828033
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream                                         300.300293        447.828033
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream_Pipeline_VITIS_LOOP_129_1                  300.300293        430.663208
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream                                            300.300293        430.663208
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_store_scaled_stream                                          300.300293        517.598328
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_score_mask_scale_dataflow                                    300.300293        430.663208
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_core_hls                                                          300.300293        430.663208
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_256_1_VITIS_LOOP_257_2            300.300293        411.015198
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel                                                       300.300293        411.015198
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_91_1_VITIS_LOOP_92_2                       300.300293        411.015198
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_67_7                                          300.300293        523.286255
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_39_2                                          300.300293        419.287201
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_46_3                                          300.300293        404.858307
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_52_4                                          300.300293        914.913025
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_57_5                                          300.300293        429.737885
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_62_6                                          300.300293        523.286255
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls                                                                   300.300293        404.858307
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_104_3_VITIS_LOOP_105_4                     300.300293        411.015198
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel                                                                300.300293        404.858307
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_98_1_VITIS_LOOP_99_2              300.300293        411.015198
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_74_7                                 300.300293        418.410034
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_45_2                                 300.300293        418.410034
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_53_3                                 300.300293        404.858307
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_59_4                                 300.300293        836.120422
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_64_5                                 300.300293        418.410034
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_69_6                                 300.300293        418.410034
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls                                                          300.300293        360.10083
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_111_3_VITIS_LOOP_112_4            300.300293        411.015198
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel                                                       300.300293        360.10083
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_57_1_VITIS_LOOP_58_2                300.300293        411.015198
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_64_3_VITIS_LOOP_65_4                300.300293        411.015198
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_core_hls                                                            300.300293        426.985474
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_78_5_VITIS_LOOP_79_6                300.300293        411.015198
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel                                                         300.300293        411.015198
 
 Latency Information
-Compute Unit                    Kernel Name                   Module Name                                                              Start Interval  Best (cycles)  Avg (cycles)  Worst (cycles)  Best (absolute)  Avg (absolute)  Worst (absolute)
-------------------------------  ----------------------------  -----------------------------------------------------------------------  --------------  -------------  ------------  --------------  ---------------  --------------  ----------------
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel_Pipeline_VITIS_LOOP_81_2                     10              10             10            10              33.330 ns        33.330 ns       33.330 ns
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel_Pipeline_VITIS_LOOP_92_5                     10              10             10            10              33.330 ns        33.330 ns       33.330 ns
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_core_hls                                                 519             519            519           519             1.730 us         1.730 us        1.730 us
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel_Pipeline_VITIS_LOOP_109_7_VITIS_LOOP_110_8   259             259            259           259             0.863 us         0.863 us        0.863 us
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel                                              2000            1999           1999          1999            6.663 us         6.663 us        6.663 us
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_55_1_VITIS_LOOP_56_2          515             515            515           515             1.716 us         1.716 us        1.716 us
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_core_hls                                                      526             526            526           526             1.753 us         1.753 us        1.753 us
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_71_3_VITIS_LOOP_72_4          516             516            516           516             1.720 us         1.720 us        1.720 us
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_u55c_kernel                                                   1702            1701           1701          1701            5.669 us         5.669 us        5.669 us
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_91_1_VITIS_LOOP_92_2             515             515            515           515             1.716 us         1.716 us        1.716 us
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_67_7                                66              66             66            66              0.220 us         0.220 us        0.220 us
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_39_2                                undef           undef          undef         undef           undef            undef           undef
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_46_3                                2 ~ 262165      2              undef         262165          6.666 ns         undef           0.874 ms
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_52_4                                undef           undef          undef         undef           undef            undef           undef
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_57_5                                2 ~ 142         2              undef         142             6.666 ns         undef           0.473 us
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_62_6                                undef           undef          undef         undef           undef            undef           undef
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls                                                         undef           undef          undef         undef           undef            undef           undef
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_104_3_VITIS_LOOP_105_4           516             516            516           516             1.720 us         1.720 us        1.720 us
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel                                                      undef           undef          undef         undef           undef            undef           undef
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_98_1_VITIS_LOOP_99_2    4100            4100           4100          4100            13.665 us        13.665 us       13.665 us
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_74_7                       514             514            514           514             1.713 us         1.713 us        1.713 us
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_45_2                       undef           undef          undef         undef           undef            undef           undef
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_53_3                       2 ~ 2073        2              undef         2073            6.666 ns         undef           6.909 us
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_59_4                       undef           undef          undef         undef           undef            undef           undef
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_64_5                       2 ~ 527         2              undef         527             6.666 ns         undef           1.756 us
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_69_6                       undef           undef          undef         undef           undef            undef           undef
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls                                                undef           undef          undef         undef           undef            undef           undef
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_111_3_VITIS_LOOP_112_4  4101            4101           4101          4101            13.669 us        13.669 us       13.669 us
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel                                             undef           undef          undef         undef           undef            undef           undef
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_57_1_VITIS_LOOP_58_2      515             515            515           515             1.716 us         1.716 us        1.716 us
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_64_3_VITIS_LOOP_65_4      4099            4099           4099          4099            13.662 us        13.662 us       13.662 us
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_core_hls                                                  1030            1030           1030          1030            3.433 us         3.433 us        3.433 us
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_78_5_VITIS_LOOP_79_6      516             516            516           516             1.720 us         1.720 us        1.720 us
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel                                               5790            5789           5789          5789            19.295 us        19.295 us       19.295 us
+Compute Unit                    Kernel Name                   Module Name                                                                        Start Interval  Best (cycles)  Avg (cycles)  Worst (cycles)  Best (absolute)  Avg (absolute)  Worst (absolute)
+------------------------------  ----------------------------  ---------------------------------------------------------------------------------  --------------  -------------  ------------  --------------  ---------------  --------------  ----------------
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile_Pipeline_VITIS_LOOP_61_2                         10              10             10            10              33.330 ns        33.330 ns       33.330 ns
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile                                                  182             182            182           182             0.607 us         0.607 us        0.607 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile_Pipeline_VITIS_LOOP_78_2                         10              10             10            10              33.330 ns        33.330 ns       33.330 ns
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile                                                  966             966            966           966             3.220 us         3.220 us        3.220 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  entry_proc                                                                         0               0              0             0               0 ns             0 ns            0 ns
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream_Pipeline_VITIS_LOOP_97_1_VITIS_LOOP_98  525             525            525           525             1.750 us         1.750 us        1.750 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream                                         527             527            527           527             1.756 us         1.756 us        1.756 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream_Pipeline_VITIS_LOOP_129_1                  525             525            525           525             1.750 us         1.750 us        1.750 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream                                            527             527            527           527             1.756 us         1.756 us        1.756 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_store_scaled_stream                                          515             515            515           515             1.716 us         1.716 us        1.716 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_score_mask_scale_dataflow                                    528             540            540           540             1.800 us         1.800 us        1.800 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_core_hls                                                          541             541            541           541             1.803 us         1.803 us        1.803 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_256_1_VITIS_LOOP_257_2            516             516            516           516             1.720 us         1.720 us        1.720 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel                                                       2098            2097           2097          2097            6.989 us         6.989 us        6.989 us
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_91_1_VITIS_LOOP_92_2                       515             515            515           515             1.716 us         1.716 us        1.716 us
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_67_7                                          66              66             66            66              0.220 us         0.220 us        0.220 us
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_39_2                                          undef           undef          undef         undef           undef            undef           undef
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_46_3                                          2 ~ 262165      2              undef         262165          6.666 ns         undef           0.874 ms
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_52_4                                          undef           undef          undef         undef           undef            undef           undef
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_57_5                                          2 ~ 142         2              undef         142             6.666 ns         undef           0.473 us
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_62_6                                          undef           undef          undef         undef           undef            undef           undef
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls                                                                   undef           undef          undef         undef           undef            undef           undef
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_104_3_VITIS_LOOP_105_4                     516             516            516           516             1.720 us         1.720 us        1.720 us
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel                                                                undef           undef          undef         undef           undef            undef           undef
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_98_1_VITIS_LOOP_99_2              4100            4100           4100          4100            13.665 us        13.665 us       13.665 us
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_74_7                                 514             514            514           514             1.713 us         1.713 us        1.713 us
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_45_2                                 undef           undef          undef         undef           undef            undef           undef
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_53_3                                 2 ~ 2073        2              undef         2073            6.666 ns         undef           6.909 us
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_59_4                                 undef           undef          undef         undef           undef            undef           undef
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_64_5                                 2 ~ 527         2              undef         527             6.666 ns         undef           1.756 us
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_69_6                                 undef           undef          undef         undef           undef            undef           undef
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls                                                          undef           undef          undef         undef           undef            undef           undef
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_111_3_VITIS_LOOP_112_4            4101            4101           4101          4101            13.669 us        13.669 us       13.669 us
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel                                                       undef           undef          undef         undef           undef            undef           undef
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_57_1_VITIS_LOOP_58_2                515             515            515           515             1.716 us         1.716 us        1.716 us
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_64_3_VITIS_LOOP_65_4                4099            4099           4099          4099            13.662 us        13.662 us       13.662 us
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_core_hls                                                            1030            1030           1030          1030            3.433 us         3.433 us        3.433 us
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_78_5_VITIS_LOOP_79_6                516             516            516           516             1.720 us         1.720 us        1.720 us
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel                                                         5790            5789           5789          5789            19.295 us        19.295 us       19.295 us
 
 Area Information
-Compute Unit                    Kernel Name                   Module Name                                                              FF     LUT    DSP  BRAM  URAM
-------------------------------  ----------------------------  -----------------------------------------------------------------------  -----  -----  ---  ----  ----
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel_Pipeline_VITIS_LOOP_81_2                     519    59     0    0     0
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel_Pipeline_VITIS_LOOP_92_5                     519    59     0    0     0
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_core_hls                                                 1565   2531   0    0     0
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel_Pipeline_VITIS_LOOP_109_7_VITIS_LOOP_110_8   958    940    0    0     0
-attention_score_u55c_kernel_1   attention_score_u55c_kernel   attention_score_u55c_kernel                                              19448  32277  0    1     0
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_55_1_VITIS_LOOP_56_2          1040   612    0    0     0
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_core_hls                                                      763    580    0    0     0
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_71_3_VITIS_LOOP_72_4          1098   1045   0    0     0
-mask_scale_u55c_kernel_1        mask_scale_u55c_kernel        mask_scale_u55c_kernel                                                   12733  19852  0    2     0
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_91_1_VITIS_LOOP_92_2             1040   612    0    0     0
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_67_7                                9      68     0    0     0
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_39_2                                222    266    0    0     0
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_46_3                                1165   1482   0    0     0
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_52_4                                9      41     0    0     0
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_57_5                                171    113    0    0     0
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_62_6                                18     77     0    0     0
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls                                                         1699   2393   0    0     0
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_104_3_VITIS_LOOP_105_4           1098   1045   0    0     0
-softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel                                                      13523  21473  0    2     0
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_98_1_VITIS_LOOP_99_2    1222   689    0    0     0
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_74_7                       12     74     0    0     0
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_45_2                       216    269    0    0     0
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_53_3                       1171   1486   0    0     0
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_59_4                       12     44     0    0     0
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_64_5                       177    117    0    0     0
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_69_6                       12     63     0    0     0
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls                                                1687   2427   0    1     0
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_111_3_VITIS_LOOP_112_4  1267   1122   0    0     0
-softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel                                             13862  21661  0    1     2
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_57_1_VITIS_LOOP_58_2      1036   596    0    0     0
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_64_3_VITIS_LOOP_65_4      1049   620    0    0     0
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_core_hls                                                  50068  25556  0    0     0
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_78_5_VITIS_LOOP_79_6      1098   1045   0    0     0
-v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel                                               68145  55972  0    49    0
+Compute Unit                    Kernel Name                   Module Name                                                                        FF     LUT    DSP  BRAM  URAM
+------------------------------  ----------------------------  ---------------------------------------------------------------------------------  -----  -----  ---  ----  ----
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile_Pipeline_VITIS_LOOP_61_2                         519    59     0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile                                                  1114   451    0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile_Pipeline_VITIS_LOOP_78_2                         519    59     0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile                                                  1120   455    0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  entry_proc                                                                         3      47     0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream_Pipeline_VITIS_LOOP_97_1_VITIS_LOOP_98  2890   2689   0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream                                         2895   2747   0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream_Pipeline_VITIS_LOOP_129_1                  663    419    0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream                                            765    522    0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_store_scaled_stream                                          56     95     0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_score_mask_scale_dataflow                                    4230   3823   0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_core_hls                                                          4235   3841   0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_256_1_VITIS_LOOP_257_2            1098   1045   0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel                                                       22293  33779  0    1     0
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_91_1_VITIS_LOOP_92_2                       1040   612    0    0     0
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_67_7                                          9      68     0    0     0
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_39_2                                          222    266    0    0     0
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_46_3                                          1165   1482   0    0     0
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_52_4                                          9      41     0    0     0
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_57_5                                          171    113    0    0     0
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls_Pipeline_VITIS_LOOP_62_6                                          18     77     0    0     0
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_core_hls                                                                   1699   2393   0    0     0
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel_Pipeline_VITIS_LOOP_104_3_VITIS_LOOP_105_4                     1098   1045   0    0     0
+softmax_u55c_kernel_1           softmax_u55c_kernel           softmax_u55c_kernel                                                                13523  21473  0    2     0
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_98_1_VITIS_LOOP_99_2              1222   689    0    0     0
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_74_7                                 12     74     0    0     0
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_45_2                                 216    269    0    0     0
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_53_3                                 1171   1486   0    0     0
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_59_4                                 12     44     0    0     0
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_64_5                                 177    117    0    0     0
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls_Pipeline_VITIS_LOOP_69_6                                 12     63     0    0     0
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_core_hls                                                          1687   2427   0    1     0
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel_Pipeline_VITIS_LOOP_111_3_VITIS_LOOP_112_4            1267   1122   0    0     0
+softmax_full_row_u55c_kernel_1  softmax_full_row_u55c_kernel  softmax_full_row_u55c_kernel                                                       13862  21661  0    1     2
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_57_1_VITIS_LOOP_58_2                1036   596    0    0     0
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_64_3_VITIS_LOOP_65_4                1049   620    0    0     0
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_core_hls                                                            50068  25556  0    0     0
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_78_5_VITIS_LOOP_79_6                1098   1045   0    0     0
+v_weighted_sum_u55c_kernel_1    v_weighted_sum_u55c_kernel    v_weighted_sum_u55c_kernel                                                         68145  55972  0    49    0
 -------------------------------------------------------------------------------

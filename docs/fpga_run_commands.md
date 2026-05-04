@@ -6,9 +6,9 @@ attention-score chain on the U55C.
 
 Branch note: the checked-in `track-a-step5-fused-score-mask-scale` branch now
 builds the fused pre-softmax `score_mask_scale_u55c_kernel` instead of separate
-`attention_score_u55c_kernel` and `mask_scale_u55c_kernel`. The historical
-commands/results below remain the last real-card verified staged baseline until
-the fused branch is rebuilt and rerun on the Linux/Vitis/U55C machine.
+`attention_score_u55c_kernel` and `mask_scale_u55c_kernel`. On May 4, 2026 the
+fused branch was rebuilt and verified with Vitis/XRT 2022.2 in local C++, HLS,
+`hw_emu`, and real U55C hardware.
 
 ## Verified Hardware State
 
@@ -23,16 +23,16 @@ the fused branch is rebuilt and rerun on the Linux/Vitis/U55C machine.
 
 ## Kernel Chains
 
-Verified real-card single-tile path:
+Current fused real-card single-tile path:
 
 ```text
 Q_rot_int8, K_rot_int8
--> attention_score_u55c_kernel
--> mask_scale_u55c_kernel
+-> score_mask_scale_u55c_kernel
 -> softmax_u55c_kernel
+-> v_weighted_sum_u55c_kernel when V/reference files are present
 ```
 
-Current staged tiled `hw_emu` baseline:
+Historical staged tiled baseline:
 
 ```text
 Q_rot_int8, K_rot_int8
@@ -79,7 +79,6 @@ The link config used for the `.xclbin` is
 ```text
 q_tile       -> HBM[0]
 k_tile       -> HBM[1]
-raw score    -> HBM[2]
 tile scaled  -> HBM[3]
 tile prob    -> HBM[4]
 full logits  -> HBM[4]
@@ -88,6 +87,53 @@ V weights    -> HBM[5]
 V tile       -> HBM[6]
 V partial    -> HBM[7]
 ```
+
+## Latest Fused Branch Verification
+
+These commands were run on May 4, 2026 from `/home/advent/Desktop/RC19` on
+branch `track-a-step5-fused-score-mask-scale`.
+
+```bash
+source attention_score_u55c/host/setup_2022_2_env.sh
+bash attention_score_u55c/host/build_host.sh
+bash attention_score_u55c/host/build_xclbin.sh hw_emu /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+export XCL_EMULATION_MODE=hw_emu
+./attention_score_u55c/build/host_attention_score_chain --xclbin attention_score_u55c/build/attention_score_chain.xclbin --vectors attention_score_u55c/sim/attention_score_tile --device 0
+./attention_score_u55c/build/host_attention_score_chain --xclbin attention_score_u55c/build/attention_score_chain.xclbin --seq-len 8 --device 0
+
+unset XCL_EMULATION_MODE
+bash attention_score_u55c/host/build_xclbin.sh hw /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+./attention_score_u55c/build/host_attention_score_chain --xclbin attention_score_u55c/build/attention_score_chain.xclbin --vectors attention_score_u55c/sim/attention_score_tile --device 0
+for s in 8 64 128 256 512; do
+  ./attention_score_u55c/build/host_attention_score_chain --xclbin attention_score_u55c/build/attention_score_chain.xclbin --seq-len "$s" --device 0
+done
+for d in attention_score_u55c/sim/real_tinyllama_tile attention_score_u55c/sim/real_tinyllama_s16 attention_score_u55c/sim/real_tinyllama_s64; do
+  ./attention_score_u55c/build/host_attention_score_chain --xclbin attention_score_u55c/build/attention_score_chain.xclbin --vectors "$d" --device 0
+done
+```
+
+Results:
+
+- Vitis HLS 2022.2 fused kernel: `csim PASS`, `csynth PASS`, estimated
+  `342.47 MHz`, latency `1587 cycles`, `40 DSP`, `1 BRAM_18K`.
+- `hw_emu --vectors sim/attention_score_tile`: `Attention output verification
+  PASSED`, `XRT chain verification PASSED`, total `31168.255 ms`.
+- `hw_emu --seq-len 8`: `Tiled sequence verification PASSED`, `Attention
+  output verification PASSED`, `XRT chain verification PASSED`, total
+  `66191.919 ms`.
+- Real hardware xclbin build: content `Bitstream`, UUID
+  `56cd611d-8c32-c19b-f5ef-358bed40d459`, build time `0h 57m 5s`.
+- Routed timing summary:
+  `_x/reports/link/imp/impl_1_hw_bb_locked_timing_summary_routed.rpt`,
+  WNS `0.003 ns`, TNS `0`, WHS `0.009 ns`, no failing endpoints.
+- Real U55C `--vectors sim/attention_score_tile`: total `0.199 ms`.
+- Real U55C synthetic `--seq-len` totals:
+  `S=8 0.296 ms`, `S=64 2.364 ms`, `S=128 5.484 ms`,
+  `S=256 17.307 ms`, `S=512 60.328 ms`.
+- Real U55C TinyLlama vector totals:
+  `sim/real_tinyllama_tile 0.635 ms`,
+  `sim/real_tinyllama_s16 0.569 ms`,
+  `sim/real_tinyllama_s64 2.004 ms`.
 
 ## 1. Source The 2022.2 Environment
 

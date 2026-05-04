@@ -26,8 +26,9 @@ This is still not a full TinyLlama runtime or model-level tokens/sec benchmark.
 
 Branch note: `track-a-step5-fused-score-mask-scale` adds the Track A Step 5
 fused pre-softmax kernel and wires the host/build flow to use it. Local C++
-verification for the fused kernel passes, but Vitis HLS, `hw_emu`, real U55C
-verification, and refreshed routed reports are still pending on this branch.
+verification, Vitis HLS, `hw_emu`, and real U55C verification now pass on this
+branch. The fused real-card xclbin passed synthetic `S=8,64,128,256,512` and
+real TinyLlama `S=16`/`S=64` vector runs on May 4, 2026.
 
 ## What Is In Scope
 

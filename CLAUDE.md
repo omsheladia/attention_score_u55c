@@ -569,9 +569,8 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
 - Step 3 Part B complete in `hw_emu`: XRT host tiling loop and full-row kernel pass at S = 8, 64, 128.
 - Four-kernel real hardware xclbin complete: real U55C sweep passes at S = 8, 64, 128, 256, 512.
 - Step 4 complete for the current staged host: double-buffered pass-1 BO sets pass on real U55C at S = 8, 64, 128, 256, 512.
-- Step 5 is branch WIP on `track-a-step5-fused-score-mask-scale`: fused
-  pre-softmax code and local C++ checks are done; Vitis/HW verification is
-  pending.
+- Step 5 is hardware-verified on `track-a-step5-fused-score-mask-scale`: fused
+  pre-softmax code, Vitis HLS, `hw_emu`, and real U55C runs pass.
 - Five-kernel Track B real hardware xclbin passed build and real U55C sequence
   sweep at S = 8, 64, 128, 256, 512.
 - Saved-vector `--vectors` mode now verifies `attn_out`; next add CPU/GPU/FPGA
@@ -621,7 +620,7 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
 - `docs/track_d_results.md` contains CPU/FPGA comparison tables, real-vector tables, HBM bank usage, and the performance interpretation.
 - Main conclusion: correct staged FPGA path, HBM banks `[0]` through `[7]` used, but slower than one-head CPU NumPy due kernel launch and HBM staging overhead.
 
-**Track A Step 5 — Started on `track-a-step5-fused-score-mask-scale`:**
+**Track A Step 5 — Hardware verified on `track-a-step5-fused-score-mask-scale`:**
 - `hls/score_and_mask_scale/` adds `score_mask_scale_u55c_kernel`, a fused
   pre-softmax kernel that consumes packed INT8 Q/K tiles and writes scaled FP32
   logits directly.
@@ -631,9 +630,24 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
 - Local g++ fused-kernel checks passed for `sim/attention_score_tile` and
   `sim/real_tinyllama_tile`; the Python full-tiling reference check still
   passes for `S = 8, 64, 128, 256, 512`.
-- Still pending: Vitis HLS `csim/csynth`, xclbin rebuild, `hw_emu`, real U55C
-  verification, Track D retiming, and refreshed post-route reports.
+- Vitis HLS 2022.2 `csim/csynth` passed for `score_mask_scale_u55c_kernel`:
+  estimated `342.47 MHz`, latency `1587 cycles`, `40 DSP`, `1 BRAM_18K`.
+- Fused `hw_emu --vectors sim/attention_score_tile` and `hw_emu --seq-len 8`
+  passed with `Attention output verification PASSED` and
+  `XRT chain verification PASSED`.
+- Fused real hardware xclbin build passed in `0h 57m 5s`; UUID
+  `56cd611d-8c32-c19b-f5ef-358bed40d459`; routed timing met constraints with
+  WNS `0.003 ns`, TNS `0`, WHS `0.009 ns`.
+- Real U55C synthetic sweep passed:
+  `S=8 0.296 ms`, `S=64 2.364 ms`, `S=128 5.484 ms`,
+  `S=256 17.307 ms`, `S=512 60.328 ms`.
+- Real U55C vector runs passed:
+  `sim/attention_score_tile 0.199 ms`,
+  `sim/real_tinyllama_tile 0.635 ms`,
+  `sim/real_tinyllama_s16 0.569 ms`,
+  `sim/real_tinyllama_s64 2.004 ms`.
 
-**Future (post-hardware confirmation):**
-1. Complete fused-kernel HLS/XRT verification and rerun Track D timing
-2. Connect to full TinyLlama attention subgraph
+**Future:**
+1. Rerun/update Track D timing and utilization tables for fused vs staged
+2. Capture refreshed fused post-route reports
+3. Connect to full TinyLlama attention subgraph

@@ -421,8 +421,8 @@ Current and planned HLS additions from `docs/implementation_checklist.md`:
 - `hls/mask_and_scale/` to merge causal mask and score scale is implemented
 - `hls/softmax_full_row/` for full-row softmax up to `S = 512` is implemented
 - `hls/v_weighted_sum/` for the `softmax @ V` partial weighted-sum kernel
-- `hls/score_and_mask_scale/` is implemented locally on the Step 5 branch;
-  Vitis/HW verification is pending
+- `hls/score_and_mask_scale/` is implemented and hardware-verified on the
+  Step 5 fused branch
 
 ### Host / XRT
 
@@ -954,36 +954,69 @@ On 2026-05-04, Track A Step 5 was started on branch
     pass
 - Python full-sequence tiled reference check still passes for
   `S = 8, 64, 128, 256, 512`
-- pending: Vitis HLS `csim/csynth` for the fused kernel, xclbin rebuild,
-  `hw_emu`, real U55C sequence/vector runs, Track D retiming, and new
-  post-route reports
+- Linux/Vitis 2022.2 verification then completed on the U55C machine:
+  - initial HLS `csim` failed only in the fused testbench because
+    `ap_int<8>` construction from `long double` was ambiguous under Vitis HLS
+    2022.2; `hls/score_and_mask_scale/tb_score_mask_scale.cpp` was fixed to
+    read INT8 files through integer values and FP32 files through floats
+  - deterministic single-tile vector export was fixed so `attn_out.txt` uses
+    the same one-K/V-chunk partial weighted-sum contract as
+    `v_partial_expected.txt`
+  - local C++ `host/run_local_csim.sh` passed after those fixes
+  - `score_mask_scale_u55c_kernel` Vitis HLS `csim PASS`, `csynth PASS`;
+    estimated `342.47 MHz`, latency `1587 cycles`, `40 DSP`, `1 BRAM_18K`
+  - fused `hw_emu` xclbin build passed and embedded
+    `_x/link/int/systemDiagramModelSlrBaseAddress.json`
+  - fused `hw_emu --vectors sim/attention_score_tile` passed with
+    `Attention output verification PASSED`, `XRT chain verification PASSED`,
+    total `31168.255 ms`
+  - fused `hw_emu --seq-len 8` passed with `Tiled sequence verification PASSED`,
+    `Attention output verification PASSED`, `XRT chain verification PASSED`,
+    total `66191.919 ms`
+  - fused real hardware xclbin build passed in `0h 57m 5s`; xclbin content
+    `Bitstream`, UUID `56cd611d-8c32-c19b-f5ef-358bed40d459`, kernels
+    `score_mask_scale_u55c_kernel`, `softmax_u55c_kernel`,
+    `softmax_full_row_u55c_kernel`, and `v_weighted_sum_u55c_kernel`
+  - routed timing met all constraints: WNS `0.003 ns`, TNS `0`, WHS
+    `0.009 ns`, no failing endpoints
+  - real U55C `--vectors sim/attention_score_tile` passed, total `0.199 ms`
+  - real U55C synthetic sequence sweep passed:
+    `S=8 0.296 ms`, `S=64 2.364 ms`, `S=128 5.484 ms`,
+    `S=256 17.307 ms`, `S=512 60.328 ms`
+  - real U55C TinyLlama vector runs passed:
+    `sim/real_tinyllama_tile 0.635 ms`, `sim/real_tinyllama_s16 0.569 ms`,
+    `sim/real_tinyllama_s64 2.004 ms`
+  - latest fused build reports were copied into `docs/`, including refreshed
+    `PostRouteFullUtilization.rpt`, `PostRouteKernelUtilization.rpt`,
+    `PostRouteSLRUtilization.rpt`, `PostRouteTimingSummary.rpt/.rpv/.rpx`,
+    `system_estimate_attention_score_chain.xtxt`, per-kernel system estimates,
+    Vitis guidance HTML files, `system_diagram_fused.json`, and non-ignored
+    `attention_score_chain_xclbin_info.txt` /
+    `attention_score_chain_xclbin_link_summary.txt` mirrors
 
 ## Best Next Step
 
-Track A Steps 1-4 are complete for the staged design. On the current
-`track-a-step5-fused-score-mask-scale` branch, Step 5 code is started and local
-C++ fused-kernel checks pass. Best next practical steps are:
+Track A Step 5 is hardware-verified on the current
+`track-a-step5-fused-score-mask-scale` branch. Best next practical steps are:
 
-1. run Vitis HLS `csim`/`csynth` for `hls/score_and_mask_scale/`
-2. rebuild the fused xclbin and run `hw_emu` at `S=8,64,128`
-3. run real U55C synthetic `S=8,64,128,256,512` and vector-mode regressions
-4. rerun Track D timing and capture refreshed post-route reports
-5. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
-6. if more score-kernel speed is needed after that, prefer wider packing or
+1. rerun/update Track D comparison tables for fused-vs-staged timing and
+   utilization
+2. capture or copy refreshed routed post-route reports for the fused xclbin
+3. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
+4. if more score-kernel speed is needed after that, prefer wider packing or
    on-chip fusion before chasing higher GEMM unroll, because the 64-bit packed
    interface produced the first material latency drop
 
 ## After That
 
-After the fused Step 5 branch is hardware-verified, the next major engineering
+After the fused Step 5 branch is merged/reported, the next major engineering
 steps are:
 
-1. compare fused-vs-staged Track D timing and utilization
-2. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
+1. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
    if the demo needs a broader real-input sweep
-3. connect to a real TinyLlama attention subgraph
-4. add KV-cache-aware decode flow
-5. eventually integrate into a decoder-layer path
+2. connect to a real TinyLlama attention subgraph
+3. add KV-cache-aware decode flow
+4. eventually integrate into a decoder-layer path
 
 ## Current Repo State Relevant To This Effort
 

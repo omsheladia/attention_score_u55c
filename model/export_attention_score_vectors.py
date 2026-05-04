@@ -23,7 +23,6 @@ from attention_score_ref import (
     build_padded_score_tile,
     compute_full_attention,
     compute_attention_score_tile,
-    compute_v_weighted_sum,
     compute_v_weighted_sum_partial,
     deterministic_full_attention_inputs,
     deterministic_v_matrix,
@@ -119,7 +118,7 @@ def export_single_tile(args: argparse.Namespace, output_dir: Path) -> dict[str, 
     v_active = deterministic_v_matrix(args.key_cols)
     v_tile = pad_float_matrix(v_active, SCORE_K_TILE, HEAD_DIM)
     weights_active = [row[: args.key_cols] for row in score_softmax[: args.query_rows]]
-    attn_out_active = compute_v_weighted_sum(weights_active, v_active)
+    attn_out_active = compute_v_weighted_sum_partial(weights_active, v_active)
     attn_out_padded = pad_float_matrix(attn_out_active, SCORE_ROWS_PER_CHUNK, HEAD_DIM)
     v_partial_expected = pad_float_matrix(
         compute_v_weighted_sum_partial(weights_active, v_active),

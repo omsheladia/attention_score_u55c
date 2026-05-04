@@ -19,21 +19,39 @@ constexpr int kQPackedWords = (kScoreRowsPerTile * kHeadDim) / kBytesPerWord;
 constexpr int kKPackedWords = (kScoreColsPerTile * kHeadDim) / kBytesPerWord;
 constexpr int kScoreElems = kScoreRowsPerTile * kScoreColsPerTile;
 
-template <typename T, int N>
-bool load_flat_array(const std::string& path, T (&dst)[N]) {
+template <int N>
+bool load_flat_int8_array(const std::string& path, act_int8_t (&dst)[N]) {
   std::ifstream handle(path);
   if (!handle) {
     std::cerr << "Failed to open " << path << "\n";
     return false;
   }
 
-  long double value = 0.0;
+  long long value = 0;
   for (int idx = 0; idx < N; ++idx) {
     if (!(handle >> value)) {
       std::cerr << "Unexpected EOF while reading " << path << "\n";
       return false;
     }
-    dst[idx] = static_cast<T>(value);
+    dst[idx] = static_cast<act_int8_t>(value);
+  }
+
+  return true;
+}
+
+template <int N>
+bool load_flat_float_array(const std::string& path, float (&dst)[N]) {
+  std::ifstream handle(path);
+  if (!handle) {
+    std::cerr << "Failed to open " << path << "\n";
+    return false;
+  }
+
+  for (int idx = 0; idx < N; ++idx) {
+    if (!(handle >> dst[idx])) {
+      std::cerr << "Unexpected EOF while reading " << path << "\n";
+      return false;
+    }
   }
 
   return true;
@@ -111,13 +129,13 @@ int main(int argc, char** argv) {
   std::uint32_t key_col_count = 0;
   float total_scale = 0.0f;
 
-  if (!load_flat_array(base + "/q_tile.txt", q_tile)) {
+  if (!load_flat_int8_array(base + "/q_tile.txt", q_tile)) {
     return 1;
   }
-  if (!load_flat_array(base + "/k_tile.txt", k_tile)) {
+  if (!load_flat_int8_array(base + "/k_tile.txt", k_tile)) {
     return 1;
   }
-  if (!load_flat_array(base + "/score_scaled.txt", score_expected)) {
+  if (!load_flat_float_array(base + "/score_scaled.txt", score_expected)) {
     return 1;
   }
   if (!load_kernel_meta(

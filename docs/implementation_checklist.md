@@ -22,10 +22,10 @@ the full attention block first, then worry about where the inputs come from.
 
 # Track A — Speedup with Synthetic Inputs
 
-Steps are ordered easiest to hardest. Steps 1-4 are complete for the current
-staged design. Step 5 is now a branch WIP on
-`track-a-step5-fused-score-mask-scale`: local C++ checks pass, while Vitis HLS
-and XRT hardware verification are still pending.
+Steps are ordered easiest to hardest. Steps 1-4 are complete for the staged
+design. Step 5 is complete on branch `track-a-step5-fused-score-mask-scale` for
+the current fused pre-softmax design: local C++, Vitis HLS, `hw_emu`, and real
+U55C verification pass.
 
 ---
 
@@ -382,18 +382,23 @@ softmax weights — neither fits the single-pass dataflow model naturally.
       with sub-functions connected by on-chip FIFOs
 - [x] Add `#pragma HLS DATAFLOW` and local C++ verification
 - [x] Update `vpp_link.cfg` to replace the separate kernels
-- [ ] Verify Vitis HLS `csim` / `csynth` does not reject DATAFLOW
-- [ ] Rebuild xclbin, re-run all sequence length tests
-- [ ] Confirm timing closure (softmax timing warning may worsen)
+- [x] Verify Vitis HLS `csim` / `csynth` does not reject DATAFLOW
+- [x] Rebuild xclbin, re-run all sequence length tests
+- [x] Confirm timing closure (softmax timing warning may worsen)
 
-2026-05-04 branch status: initial Step 5 implementation exists on
+2026-05-04 branch status: Step 5 implementation exists on
 `track-a-step5-fused-score-mask-scale`. New files live under
 `hls/score_and_mask_scale/`, and `host/build_xclbin.sh`,
 `host/vpp_link.cfg`, and `host/attention_score_chain_xrt.cpp` now target
 `score_mask_scale_u55c_kernel` for the fused pre-softmax path. Local g++ checks
-passed for `sim/attention_score_tile` and `sim/real_tinyllama_tile`; Vitis HLS,
-`hw_emu`, real U55C rebuild/run, and refreshed post-route reports are still
-pending.
+passed for `sim/attention_score_tile` and `sim/real_tinyllama_tile`. Vitis HLS
+2022.2 `csim`/`csynth` passed for the fused kernel with estimated 342.47 MHz,
+1587-cycle latency, 40 DSP, and 1 BRAM_18K. The fused real hardware xclbin
+passed timing with WNS 0.003 ns, no failing endpoints, and UUID
+`56cd611d-8c32-c19b-f5ef-358bed40d459`. Real U55C synthetic sequence runs
+passed for `S=8,64,128,256,512`; real TinyLlama vector runs passed for
+`sim/real_tinyllama_tile`, `sim/real_tinyllama_s16`, and
+`sim/real_tinyllama_s64`.
 
 ### Expected result
 - Eliminates HBM traffic between score and mask/scale stages only
@@ -410,7 +415,7 @@ pending.
 | 2 — Merge mask+scale | Done | Local, HLS, hw_emu, real U55C | Done |
 | 3 — Tiling loop | Done | Python, hw_emu, real U55C | Done |
 | 4 — Double buffering | Done for pass 1 | Real U55C | Done |
-| 5 — Dataflow merge | Started; local fused-kernel C++ checks pass | No (Vitis/XRT still required) | Branch WIP |
+| 5 — Dataflow merge | Done on fused branch | Local, HLS, hw_emu, real U55C | Done |
 
 ---
 
