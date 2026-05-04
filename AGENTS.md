@@ -896,6 +896,18 @@ pipeline: host/XRT, HBM banks `[0]` through `[7]`, `attention_score`,
 `mask_scale`, `softmax_full_row`, `v_weighted_sum`, final `attn_out`, tiling
 model, verification tolerances, and scope boundary.
 
+On 2026-05-04, Vitis report/diagram artifacts were added under `docs/` for the
+current five-kernel xclbin. New report-facing artifacts include
+`docs/PlatformDiagram.pdf`, `docs/SystemDiagram.pdf`,
+`docs/PostRouteUtilization.xlsx`, `docs/system_estimate_attention_score_chain.xtxt`,
+and copied routed report files such as `docs/PostRouteFullUtilization.rpt`,
+`docs/PostRouteKernelUtilization.rpt`, `docs/PostRouteSLRUtilization.rpt`, and
+`docs/PostRouteTimingSummary.rpt`. `host/build_xclbin.sh` now passes
+`--save-temps` to all `v++` compile and link steps so future builds preserve
+Vitis Analyzer intermediate files, including `_x/link/int/...` system-diagram
+JSON files. The authoritative generated routed implementation reports for the
+latest local build live under `/home/advent/Desktop/RC19/_x/reports/link/imp/`.
+
 ## Best Next Step
 
 Track A Steps 1-4 are complete for the current staged design. Track A Step 5

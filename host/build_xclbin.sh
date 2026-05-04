@@ -9,6 +9,7 @@ fi
 TARGET="$1"
 PLATFORM="$2"
 BUILD_DIR="attention_score_u55c/build"
+VPP_COMMON_FLAGS=(--save-temps)
 
 if ! command -v v++ >/dev/null 2>&1; then
   echo "v++ is not on PATH. Install/source full Vitis 2022.2 before building xclbin."
@@ -23,32 +24,32 @@ fi
 
 mkdir -p "$BUILD_DIR"
 
-v++ -c -t "$TARGET" --platform "$PLATFORM" \
+v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
   -k attention_score_u55c_kernel \
   -o "$BUILD_DIR/attention_score_u55c_kernel.xo" \
   attention_score_u55c/hls/attention_score/attention_score_core_hls.cpp
 
-v++ -c -t "$TARGET" --platform "$PLATFORM" \
+v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
   -k mask_scale_u55c_kernel \
   -o "$BUILD_DIR/mask_scale_u55c_kernel.xo" \
   attention_score_u55c/hls/mask_and_scale/mask_scale_core_hls.cpp
 
-v++ -c -t "$TARGET" --platform "$PLATFORM" \
+v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
   -k softmax_u55c_kernel \
   -o "$BUILD_DIR/softmax_u55c_kernel.xo" \
   attention_score_u55c/hls/softmax/softmax_core_hls.cpp
 
-v++ -c -t "$TARGET" --platform "$PLATFORM" \
+v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
   -k softmax_full_row_u55c_kernel \
   -o "$BUILD_DIR/softmax_full_row_u55c_kernel.xo" \
   attention_score_u55c/hls/softmax_full_row/softmax_full_row_hls.cpp
 
-v++ -c -t "$TARGET" --platform "$PLATFORM" \
+v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
   -k v_weighted_sum_u55c_kernel \
   -o "$BUILD_DIR/v_weighted_sum_u55c_kernel.xo" \
   attention_score_u55c/hls/v_weighted_sum/v_weighted_sum_core_hls.cpp
 
-v++ -l -t "$TARGET" --platform "$PLATFORM" \
+v++ "${VPP_COMMON_FLAGS[@]}" -l -t "$TARGET" --platform "$PLATFORM" \
   --config attention_score_u55c/host/vpp_link.cfg \
   -o "$BUILD_DIR/attention_score_chain.xclbin" \
   "$BUILD_DIR/attention_score_u55c_kernel.xo" \
