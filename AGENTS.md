@@ -1001,22 +1001,27 @@ Track A Step 5 is hardware-verified on the current
 
 1. use `docs/track_d_results.md` as the current fused-vs-staged timing and
    utilization summary
-2. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
+2. use `docs/implementation_checklist_optimization.md` as the forward plan for
+   making the FPGA path faster than CPU
+3. prioritize device-resident buffers, lower kernel launch count, and online
+   softmax fused with V accumulation before minor HLS/clock tuning
+4. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
    `S=512` if broader real-input coverage is needed
-3. if more score-kernel speed is needed after that, prefer wider packing or
-   on-chip fusion before chasing higher GEMM unroll, because the 64-bit packed
-   interface produced the first material latency drop
 
 ## After That
 
 After the fused Step 5 branch is merged/reported, the next major engineering
 steps are:
 
-1. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
+1. complete the optimization checklist's device-resident flow and launch-count
+   reduction tracks
+2. implement online softmax fused with V accumulation if performance needs to
+   beat CPU
+3. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
    `S=512` if the demo needs a broader real-input sweep
-2. connect to a real TinyLlama attention subgraph
-3. add KV-cache-aware decode flow
-4. eventually integrate into a decoder-layer path
+4. connect to a real TinyLlama attention subgraph
+5. add KV-cache-aware decode flow
+6. eventually integrate into a decoder-layer path
 
 ## Current Repo State Relevant To This Effort
 
@@ -1034,6 +1039,8 @@ At the time of writing:
   real-vector directories
 - Track D results now include the staged baseline and the fused Step 5
   comparison; see `docs/track_d_results.md`
+- `docs/implementation_checklist_optimization.md` captures the next performance
+  work after the completed required checklist
 
 Agents should avoid redoing exploration that this file already captures unless
 something materially changed.
