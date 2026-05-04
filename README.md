@@ -312,6 +312,22 @@ For the full command runbook, see:
 docs/fpga_run_commands.md
 ```
 
+## Routed Reports
+
+Final post-route reports for the current five-kernel xclbin are checked in
+under `docs/`:
+
+- `PostRouteKernelUtilization.rpt`: per-kernel routed utilization
+- `PostRouteFullUtilization.rpt`: full routed design utilization including
+  platform
+- `PostRouteSLRUtilization.rpt`: SLR spread and SLL usage
+- `PostRouteTimingSummary.rpt`: post-route timing closure
+- `PostRouteUtilization.xlsx`: spreadsheet copy for reporting/presentation work
+
+Use these routed reports for final FPGA utilization numbers. The HLS DSP/BRAM
+numbers elsewhere in the repo are useful synthesis estimates, but they are not
+the final routed xclbin utilization.
+
 ## Why This Is A Good First U55C Cut
 
 This block is easy to offload because:

@@ -133,6 +133,42 @@ memory bank. The tradeoff is that the current kernels still round-trip staged
 intermediates through HBM and the host, so the design showcases HBM placement
 but does not yet keep the full attention pipeline resident on-card.
 
+## FPGA Utilization And Timing Closure
+
+The final routed implementation reports for the current five-kernel xclbin are
+checked in under `docs/`:
+
+- `PostRouteKernelUtilization.rpt`: per-kernel routed resource usage
+- `PostRouteFullUtilization.rpt`: full routed design usage including platform
+- `PostRouteSLRUtilization.rpt`: SLR resource spread and SLL usage
+- `PostRouteTimingSummary.rpt`: post-route timing closure
+- `PostRouteUtilization.xlsx`: spreadsheet copy for reporting/presentation work
+
+Headline routed utilization:
+
+| Scope | LUT | REG | BRAM | URAM | DSP |
+|---|---:|---:|---:|---:|---:|
+| User kernels | 63,875 | 74,011 | 127 | 2 | 405 |
+| Full routed design | 196,502 CLB LUTs | 260,859 CLB registers | 326.5 Block RAM tiles | 2 | 409 |
+
+Full routed design percentages on the U55C are `15.07%` CLB LUTs, `10.00%`
+CLB registers, `16.20%` Block RAM tiles, `0.21%` URAM, and `4.53%` DSP.
+
+Per-kernel routed utilization:
+
+| Kernel | LUT | REG | BRAM | URAM | DSP |
+|---|---:|---:|---:|---:|---:|
+| `attention_score_u55c_kernel` | 7,904 | 7,974 | 24 | 0 | 64 |
+| `mask_scale_u55c_kernel` | 3,694 | 5,711 | 16 | 0 | 3 |
+| `softmax_full_row_u55c_kernel` | 5,738 | 7,103 | 16 | 2 | 9 |
+| `softmax_u55c_kernel` | 5,683 | 7,077 | 16 | 0 | 9 |
+| `v_weighted_sum_u55c_kernel` | 40,856 | 46,146 | 55 | 0 | 320 |
+
+The V weighted-sum kernel dominates user-kernel DSP use. The routed timing
+summary reports all user timing constraints met with design-summary
+`WNS 0.003 ns`, `TNS 0`, `WHS 0.009 ns`, and no failing setup or hold
+endpoints.
+
 ## Interpretation
 
 - The current FPGA pipeline is correct for synthetic `S = 8, 64, 128, 256, 512`

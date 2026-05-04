@@ -907,6 +907,28 @@ and copied routed report files such as `docs/PostRouteFullUtilization.rpt`,
 Vitis Analyzer intermediate files, including `_x/link/int/...` system-diagram
 JSON files. The authoritative generated routed implementation reports for the
 latest local build live under `/home/advent/Desktop/RC19/_x/reports/link/imp/`.
+Post-route report highlights for the current routed five-kernel design:
+
+- `docs/PostRouteKernelUtilization.rpt` reports user-kernel usage of
+  `63875 LUT`, `25824 LUTAsMem`, `74011 REG`, `127 BRAM`, `2 URAM`, and
+  `405 DSP` out of the user budget.
+- per-kernel routed usage is dominated by `v_weighted_sum_u55c_kernel`:
+  `40856 LUT`, `20115 LUTAsMem`, `46146 REG`, `55 BRAM`, `320 DSP`; other
+  kernels are much smaller:
+  - `attention_score_u55c_kernel`: `7904 LUT`, `24 BRAM`, `64 DSP`
+  - `mask_scale_u55c_kernel`: `3694 LUT`, `16 BRAM`, `3 DSP`
+  - `softmax_full_row_u55c_kernel`: `5738 LUT`, `16 BRAM`, `2 URAM`, `9 DSP`
+  - legacy `softmax_u55c_kernel`: `5683 LUT`, `16 BRAM`, `9 DSP`
+- `docs/PostRouteFullUtilization.rpt` reports whole routed design usage
+  including platform as `196502 CLB LUTs` (`15.07%`), `260859 CLB Registers`
+  (`10.00%`), `326.5 Block RAM Tile` (`16.20%`), `2 URAM` (`0.21%`), and
+  `409 DSP` (`4.53%`).
+- `docs/PostRouteSLRUtilization.rpt` shows SLR0 carries most user logic:
+  `24.78%` CLB LUTs, `27.75%` Block RAM Tile, `405 DSP`; total SLLs used:
+  `10483`.
+- `docs/PostRouteTimingSummary.rpt` reports all user timing constraints met
+  with design-summary `WNS 0.003 ns`, `TNS 0`, `WHS 0.009 ns`, and no failing
+  setup/hold endpoints.
 
 ## Best Next Step
 

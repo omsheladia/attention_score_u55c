@@ -985,6 +985,21 @@ that environment caveat.
   | 256 | 20.570 | 18.601 | 1.969 |
   | 512 | 72.941 | 69.792 | 3.149 |
 
+- [x] Capture final routed xclbin utilization/timing reports under `docs/`:
+  - `PostRouteKernelUtilization.rpt`
+  - `PostRouteFullUtilization.rpt`
+  - `PostRouteSLRUtilization.rpt`
+  - `PostRouteTimingSummary.rpt`
+  - `PostRouteUtilization.xlsx`
+
+Post-route report highlights for the current five-kernel xclbin: user kernels
+use `63875 LUT`, `74011 REG`, `127 BRAM`, `2 URAM`, and `405 DSP`; the full
+routed design including platform uses `196502 CLB LUTs` (`15.07%`),
+`260859 CLB registers` (`10.00%`), `326.5 Block RAM tiles` (`16.20%`),
+`2 URAM` (`0.21%`), and `409 DSP` (`4.53%`). Timing is closed with
+design-summary `WNS 0.003 ns`, `TNS 0`, `WHS 0.009 ns`, and no failing
+setup/hold endpoints.
+
 ---
 
 ## Track D Step 4 — Comparison and Analysis

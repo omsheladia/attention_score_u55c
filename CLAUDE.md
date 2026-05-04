@@ -95,7 +95,30 @@ XRT deployment status for the current five-kernel Track B chain:
 | real `hw` xclbin | PASS | five-kernel hardware link took `0h 59m 42s`; UUID `45a627bf-33e6-b364-b9ef-2d17b4f5e0e1` |
 | real U55C run | PASS | device 0, shell `xilinx_u55c_gen3x16_xdma_base_3`; synthetic sequence sweep and saved vector directories pass through `attn_out` |
 
-> Re-read HLS reports under `hls/build/.../syn/report/` before quoting numbers — the table above is a snapshot.
+> Re-read HLS reports under `hls/build/.../syn/report/` before quoting numbers.
+> The table above is HLS estimate data, not final post-route implementation
+> utilization.
+
+Post-route routed reports for the current five-kernel xclbin are checked in
+under `docs/`:
+
+| Report | Purpose |
+|---|---|
+| `docs/PostRouteKernelUtilization.rpt` | Per-kernel routed utilization |
+| `docs/PostRouteFullUtilization.rpt` | Full routed design utilization including platform |
+| `docs/PostRouteSLRUtilization.rpt` | SLR spread and SLL usage |
+| `docs/PostRouteTimingSummary.rpt` | Post-route timing closure |
+
+Routed report highlights:
+
+- user kernels total: `63875 LUT`, `74011 REG`, `127 BRAM`, `2 URAM`, `405 DSP`
+- full routed design: `196502 CLB LUTs` (`15.07%`), `260859 CLB registers`
+  (`10.00%`), `326.5 Block RAM tiles` (`16.20%`), `2 URAM` (`0.21%`),
+  `409 DSP` (`4.53%`)
+- largest user kernel: `v_weighted_sum_u55c_kernel` with `40856 LUT`,
+  `46146 REG`, `55 BRAM`, and `320 DSP`
+- timing closure: all user timing constraints met, design-summary
+  `WNS 0.003 ns`, `TNS 0`, `WHS 0.009 ns`, no failing setup/hold endpoints
 
 ---
 
