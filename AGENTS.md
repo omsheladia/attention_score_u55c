@@ -999,11 +999,11 @@ On 2026-05-04, Track A Step 5 was started on branch
 Track A Step 5 is hardware-verified on the current
 `track-a-step5-fused-score-mask-scale` branch. Best next practical steps are:
 
-1. rerun/update Track D comparison tables for fused-vs-staged timing and
-   utilization
-2. capture or copy refreshed routed post-route reports for the fused xclbin
-3. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
-4. if more score-kernel speed is needed after that, prefer wider packing or
+1. use `docs/track_d_results.md` as the current fused-vs-staged timing and
+   utilization summary
+2. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
+   `S=512` if broader real-input coverage is needed
+3. if more score-kernel speed is needed after that, prefer wider packing or
    on-chip fusion before chasing higher GEMM unroll, because the 64-bit packed
    interface produced the first material latency drop
 
@@ -1012,8 +1012,8 @@ Track A Step 5 is hardware-verified on the current
 After the fused Step 5 branch is merged/reported, the next major engineering
 steps are:
 
-1. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
-   if the demo needs a broader real-input sweep
+1. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
+   `S=512` if the demo needs a broader real-input sweep
 2. connect to a real TinyLlama attention subgraph
 3. add KV-cache-aware decode flow
 4. eventually integrate into a decoder-layer path
@@ -1032,8 +1032,8 @@ At the time of writing:
   and adds CPU/GPU/FPGA baseline work
 - Track C Steps 1-5 are implemented for legacy single-tile and full-sequence
   real-vector directories
-- Track D is complete for the current staged one-head design; see
-  `docs/track_d_results.md`
+- Track D results now include the staged baseline and the fused Step 5
+  comparison; see `docs/track_d_results.md`
 
 Agents should avoid redoing exploration that this file already captures unless
 something materially changed.

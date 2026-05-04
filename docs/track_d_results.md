@@ -1,14 +1,18 @@
 # Track D Results
 
-Track D compares the current isolated one-head FPGA attention block against
-software baselines. The measured scope is:
+Track D compares the isolated one-head FPGA attention block against software
+baselines. The measured scope is:
 
 ```text
-Q_int8 @ K_int8.T -> causal mask -> scale -> full-row softmax -> softmax @ V
+Q_int8 @ K_int8.T -> causal mask + scale -> full-row softmax -> softmax @ V
 ```
 
 This is not full TinyLlama inference and is not a model-level tokens/sec result.
 It measures one selected attention head with Q/K/V already prepared.
+
+This file records both the previous staged five-kernel baseline and the current
+Track A Step 5 fused xclbin, where score GEMM plus mask/scale are combined into
+`score_mask_scale_u55c_kernel`.
 
 ## Commands
 
@@ -26,8 +30,8 @@ GPU baseline:
 /home/advent/kmhatre/DT/bin/python model/benchmark_gpu.py --iterations 20 --warmup 3
 ```
 
-This run printed `CUDA is not available; GPU baseline skipped.` for the current
-Linux environment. GPU timings in the tables below were completed separately on
+This run printed `CUDA is not available; GPU baseline skipped.` for the Linux
+U55C environment. GPU timings in the tables below were completed separately on
 the Windows laptop with:
 
 ```text
@@ -47,12 +51,12 @@ python model\benchmark_gpu.py --vectors sim\real_tinyllama_s64 --iterations 100 
 FPGA synthetic sweep:
 
 ```bash
-source attention_score_u55c/host/setup_2022_2_env.sh
+source host/setup_2022_2_env.sh
 unset XCL_EMULATION_MODE
 
 for s in 8 64 128 256 512; do
-  ./attention_score_u55c/build/host_attention_score_chain \
-    --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
+  ./build/host_attention_score_chain \
+    --xclbin build/attention_score_chain.xclbin \
     --seq-len "$s" \
     --device 0
 done
@@ -61,35 +65,28 @@ done
 FPGA real TinyLlama vector runs:
 
 ```bash
-source attention_score_u55c/host/setup_2022_2_env.sh
+source host/setup_2022_2_env.sh
 unset XCL_EMULATION_MODE
 
-./attention_score_u55c/build/host_attention_score_chain \
-  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
-  --vectors attention_score_u55c/sim/real_tinyllama_s16 \
-  --device 0
-
-./attention_score_u55c/build/host_attention_score_chain \
-  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
-  --vectors attention_score_u55c/sim/real_tinyllama_s64 \
-  --device 0
+./build/host_attention_score_chain --xclbin build/attention_score_chain.xclbin --vectors sim/real_tinyllama_s16 --device 0
+./build/host_attention_score_chain --xclbin build/attention_score_chain.xclbin --vectors sim/real_tinyllama_s64 --device 0
 ```
 
 ## Synthetic Results
 
-`FPGA compute` is the sum of kernel launch-through-wait timings printed by the
-host. `Host/DMA gap` is `total_chain - FPGA compute`; it includes BO writes,
-syncs, reads, host staging, and other non-kernel overhead observed by the host.
+The synthetic `--seq-len` flow has been run for `S = 8, 64, 128, 256, 512` on
+the real U55C. These are generated deterministic Q/K/V inputs, not exported
+TinyLlama prompt vectors.
 
-| S | tiles | CPU full attn ms | GPU full attn ms | FPGA compute ms | Host/DMA gap ms | FPGA total ms | CPU/FPGA |
+| S | tiles | CPU full attn ms | GPU full attn ms | staged FPGA total ms | fused FPGA total ms | fused vs staged | CPU/fused FPGA |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 8 | 1 | 0.0322 | 0.3349 | 0.275 | 0.528 | 0.803 | 0.04x |
-| 64 | 8 | 0.2920 | 0.2507 | 2.143 | 0.721 | 2.864 | 0.10x |
-| 128 | 32 | 2.5009 | 0.2998 | 5.250 | 1.742 | 6.992 | 0.36x |
-| 256 | 128 | 3.9523 | 0.2726 | 18.601 | 1.969 | 20.570 | 0.19x |
-| 512 | 512 | 12.3290 | 0.2461 | 69.792 | 3.149 | 72.941 | 0.17x |
+| 8 | 1 | 0.0322 | 0.3349 | 0.803 | 0.296 | 2.71x | 0.11x |
+| 64 | 8 | 0.2920 | 0.2507 | 2.864 | 2.364 | 1.21x | 0.12x |
+| 128 | 32 | 2.5009 | 0.2998 | 6.992 | 5.484 | 1.28x | 0.46x |
+| 256 | 128 | 3.9523 | 0.2726 | 20.570 | 17.307 | 1.19x | 0.23x |
+| 512 | 512 | 12.3290 | 0.2461 | 72.941 | 60.328 | 1.21x | 0.20x |
 
-All FPGA runs printed:
+All fused FPGA synthetic runs printed:
 
 ```text
 Tiled sequence verification PASSED
@@ -99,12 +96,21 @@ XRT chain verification PASSED
 
 ## Real TinyLlama Vector Results
 
-| vector dir | S | tiles | CPU full attn ms | GPU full attn ms | FPGA compute ms | Host/DMA gap ms | FPGA total ms | CPU/FPGA |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| `sim/real_tinyllama_s16` | 16 | 2 | 0.0426 | 0.3278 | 0.582 | 0.906 | 1.488 | 0.03x |
-| `sim/real_tinyllama_s64` | 64 | 8 | 0.1523 | 0.3778 | 1.722 | 1.372 | 3.094 | 0.05x |
+The real TinyLlama full-sequence vector directories currently verified on the
+real U55C are `S = 16` and `S = 64`, plus the legacy single-tile directories.
+Larger real TinyLlama vector directories such as `real_tinyllama_s128`,
+`real_tinyllama_s256`, and `real_tinyllama_s512` have not been generated or run
+yet. That is separate from the synthetic `--seq-len` sweep above, which already
+covers `S = 128, 256, 512`.
 
-Both real-vector FPGA runs printed:
+| vector dir | S | CPU full attn ms | GPU full attn ms | staged FPGA total ms | fused FPGA total ms | fused vs staged |
+|---|---:|---:|---:|---:|---:|---:|
+| `sim/attention_score_tile` | single tile | n/a | n/a | 0.345 | 0.199 | 1.73x |
+| `sim/real_tinyllama_tile` | single tile | n/a | n/a | 0.258 | 0.635 | 0.41x |
+| `sim/real_tinyllama_s16` | 16 | 0.0426 | 0.3278 | 1.488 | 0.569 | 2.62x |
+| `sim/real_tinyllama_s64` | 64 | 0.1523 | 0.3778 | 3.094 | 2.004 | 1.54x |
+
+All fused real-vector FPGA runs printed:
 
 ```text
 Tiled sequence verification PASSED
@@ -112,31 +118,34 @@ Attention output verification PASSED
 XRT chain verification PASSED
 ```
 
+The `sim/real_tinyllama_tile` single-tile fused timing is slower than the staged
+timing. Treat that as a small-run overhead/noise case; the full-sequence
+`S=16` and `S=64` real-vector runs improved with fusion.
+
 ## HBM Usage
 
-The current five-kernel xclbin uses HBM banks `[0]` through `[7]`:
+The current fused Step 5 xclbin uses HBM banks `[0]` through `[7]`, but the raw
+score staging bank from the earlier staged design is no longer part of the main
+pre-softmax path:
 
 | Data | HBM bank |
 |---|---:|
 | Q tile | HBM[0] |
 | K tile | HBM[1] |
-| raw score tile | HBM[2] |
-| scaled score tile | HBM[3] |
+| fused scaled score output | HBM[3] |
 | tile probability / full-row logits | HBM[4] |
 | full-row probability / V weights | HBM[5] |
 | V chunk | HBM[6] |
 | V partial output | HBM[7] |
 
-This is the main HBM story for the demo: the staged design spreads independent
-traffic across eight HBM banks instead of routing all buffers through one global
-memory bank. The tradeoff is that the current kernels still round-trip staged
-intermediates through HBM and the host, so the design showcases HBM placement
-but does not yet keep the full attention pipeline resident on-card.
+`HBM[2]` was used by the staged raw-score path. In the fused branch, score GEMM
+and mask/scale write scaled logits directly, removing that raw-score HBM round
+trip.
 
 ## FPGA Utilization And Timing Closure
 
-The final routed implementation reports for the current five-kernel xclbin are
-checked in under `docs/`:
+The final routed implementation reports for the fused Step 5 xclbin are checked
+in under `docs/`:
 
 - `PostRouteKernelUtilization.rpt`: per-kernel routed resource usage
 - `PostRouteFullUtilization.rpt`: full routed design usage including platform
@@ -148,43 +157,44 @@ Headline routed utilization:
 
 | Scope | LUT | REG | BRAM | URAM | DSP |
 |---|---:|---:|---:|---:|---:|
-| User kernels | 63,875 | 74,011 | 127 | 2 | 405 |
-| Full routed design | 196,502 CLB LUTs | 260,859 CLB registers | 326.5 Block RAM tiles | 2 | 409 |
+| User kernels | 60,983 | 70,401 | 110 | 2 | 405 |
+| Full routed design | 191,648 CLB LUTs | 253,388 CLB registers | 309.5 Block RAM tiles | 2 | 409 |
 
-Full routed design percentages on the U55C are `15.07%` CLB LUTs, `10.00%`
-CLB registers, `16.20%` Block RAM tiles, `0.21%` URAM, and `4.53%` DSP.
+Full routed design percentages on the U55C are `14.70%` CLB LUTs, `9.72%`
+CLB registers, `15.35%` Block RAM tiles, `0.21%` URAM, and `4.53%` DSP.
 
 Per-kernel routed utilization:
 
 | Kernel | LUT | REG | BRAM | URAM | DSP |
 |---|---:|---:|---:|---:|---:|
-| `attention_score_u55c_kernel` | 7,904 | 7,974 | 24 | 0 | 64 |
-| `mask_scale_u55c_kernel` | 3,694 | 5,711 | 16 | 0 | 3 |
-| `softmax_full_row_u55c_kernel` | 5,738 | 7,103 | 16 | 2 | 9 |
-| `softmax_u55c_kernel` | 5,683 | 7,077 | 16 | 0 | 9 |
-| `v_weighted_sum_u55c_kernel` | 40,856 | 46,146 | 55 | 0 | 320 |
+| `score_mask_scale_u55c_kernel` | 8,707 | 9,947 | 23 | 0 | 67 |
+| `softmax_full_row_u55c_kernel` | 5,750 | 7,100 | 16 | 2 | 9 |
+| `softmax_u55c_kernel` | 5,687 | 7,076 | 16 | 0 | 9 |
+| `v_weighted_sum_u55c_kernel` | 40,839 | 46,278 | 55 | 0 | 320 |
 
-The V weighted-sum kernel dominates user-kernel DSP use. The routed timing
-summary reports all user timing constraints met with design-summary
-`WNS 0.003 ns`, `TNS 0`, `WHS 0.009 ns`, and no failing setup or hold
-endpoints.
+The V weighted-sum kernel still dominates user-kernel DSP use. The fused
+pre-softmax kernel uses 67 DSP, replacing the staged score kernel plus mask
+scale kernels that previously used 64 DSP and 3 DSP separately.
+
+The routed timing summary reports all user timing constraints met with
+design-summary `WNS 0.003 ns`, `TNS 0`, `WHS 0.009 ns`, and no failing setup or
+hold endpoints.
 
 ## Interpretation
 
-- The current FPGA pipeline is correct for synthetic `S = 8, 64, 128, 256, 512`
-  and real TinyLlama `S = 16, 64`.
+- The fused FPGA pipeline is correct for synthetic `S = 8, 64, 128, 256, 512`
+  and real TinyLlama vector directories `S = 16, 64`.
+- Synthetic `S = 128, 256, 512` has been run. Larger real TinyLlama vector
+  directories for those same sequence lengths have not been run yet.
 - The GPU baseline was completed on a separate Windows RTX 3050 Laptop GPU
   environment. Treat it as a useful PyTorch GPU reference, not a same-host
   measurement alongside the Linux/U55C FPGA runs.
-- The staged FPGA implementation is slower than the local CPU NumPy baseline
-  for this one-head workload. That is expected for the current architecture:
-  the work is small, kernels are launched many times, and intermediate data is
-  moved through HBM/host-visible buffers between stages.
-- Larger `S` shifts the bottleneck toward kernel compute/launch time. At
-  `S=512`, the measured host/DMA gap is only `3.149 ms` of `72.941 ms`; the
-  staged kernel work dominates.
-- Small real-vector cases are dominated by fixed overhead. At `S=16`, the
-  host/DMA gap is larger than the kernel sum.
-- The next performance step is not more benchmarking. It is reducing staged
-  launches and HBM round trips, most likely by fusing mask/scale/softmax/V work
-  or moving to a persistent on-card dataflow design.
+- Step 5 fusion improves the larger synthetic and full-sequence real-vector
+  cases by removing the raw-score HBM round trip and one staged kernel launch.
+- The FPGA path is still slower than the local CPU/GPU baselines for this
+  isolated one-head workload. The workload is small, and the host still launches
+  many tile-level kernels while moving intermediates through HBM-visible
+  buffers.
+- The next performance step is a deeper on-card dataflow design or additional
+  fusion that reduces repeated launch overhead and keeps more intermediates
+  resident on the FPGA.
