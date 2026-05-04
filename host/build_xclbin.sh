@@ -25,14 +25,9 @@ fi
 mkdir -p "$BUILD_DIR"
 
 v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
-  -k attention_score_u55c_kernel \
-  -o "$BUILD_DIR/attention_score_u55c_kernel.xo" \
-  attention_score_u55c/hls/attention_score/attention_score_core_hls.cpp
-
-v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
-  -k mask_scale_u55c_kernel \
-  -o "$BUILD_DIR/mask_scale_u55c_kernel.xo" \
-  attention_score_u55c/hls/mask_and_scale/mask_scale_core_hls.cpp
+  -k score_mask_scale_u55c_kernel \
+  -o "$BUILD_DIR/score_mask_scale_u55c_kernel.xo" \
+  attention_score_u55c/hls/score_and_mask_scale/score_mask_scale_core_hls.cpp
 
 v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
   -k softmax_u55c_kernel \
@@ -52,8 +47,7 @@ v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
 v++ "${VPP_COMMON_FLAGS[@]}" -l -t "$TARGET" --platform "$PLATFORM" \
   --config attention_score_u55c/host/vpp_link.cfg \
   -o "$BUILD_DIR/attention_score_chain.xclbin" \
-  "$BUILD_DIR/attention_score_u55c_kernel.xo" \
-  "$BUILD_DIR/mask_scale_u55c_kernel.xo" \
+  "$BUILD_DIR/score_mask_scale_u55c_kernel.xo" \
   "$BUILD_DIR/softmax_u55c_kernel.xo" \
   "$BUILD_DIR/softmax_full_row_u55c_kernel.xo" \
   "$BUILD_DIR/v_weighted_sum_u55c_kernel.xo"

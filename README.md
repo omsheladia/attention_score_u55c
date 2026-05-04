@@ -24,6 +24,11 @@ verification all pass. Track C real TinyLlama vectors now run in both the legacy
 single-tile path and the tiled full-sequence vector path at `S=16` and `S=64`.
 This is still not a full TinyLlama runtime or model-level tokens/sec benchmark.
 
+Branch note: `track-a-step5-fused-score-mask-scale` adds the Track A Step 5
+fused pre-softmax kernel and wires the host/build flow to use it. Local C++
+verification for the fused kernel passes, but Vitis HLS, `hw_emu`, real U55C
+verification, and refreshed routed reports are still pending on this branch.
+
 ## What Is In Scope
 
 - Python reference math for one attention-score tile
@@ -33,6 +38,7 @@ This is still not a full TinyLlama runtime or model-level tokens/sec benchmark.
 - U55C-oriented HLS kernels for:
   - INT8 score GEMM
   - merged causal mask + score scaling
+  - fused score + mask/scale for Track A Step 5
   - row-wise softmax
   - full-row softmax up to `S = 512`
   - Track B partial `softmax @ V` weighted-sum kernel
@@ -76,6 +82,7 @@ runtime keeps mask+scale, softmax, and V weighted sum as staged kernels.
 - `model/`: isolated Python reference, vector exporter, and TinyLlama setup checker
 - `hls/attention_score/`: INT8 score GEMM kernel and testbench
 - `hls/mask_and_scale/`: current merged mask+scale kernel
+- `hls/score_and_mask_scale/`: fused Track A Step 5 pre-softmax kernel
 - `hls/causal_mask/`: legacy standalone mask kernel
 - `hls/score_scale/`: legacy standalone scale kernel
 - `hls/softmax/`: current tile softmax kernel
@@ -112,6 +119,9 @@ The host app verifies FPGA outputs against the exported reference vectors:
 - `score_scaled.txt`: float compare with `1.0e-4` tolerance
 - `score_softmax.txt`: float compare with `1.0e-4` tolerance
 - `attn_out.txt` or `attn_ref_float.txt` when `v_full.txt` is present
+
+In the fused Step 5 branch, `score_raw.txt` remains a reference/export artifact,
+but raw scores are no longer written back by the FPGA host path.
 
 Expected pass signal:
 

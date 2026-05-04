@@ -4,6 +4,12 @@ This is the command runbook for the isolated `attention_score_u55c` FPGA demo.
 It captures the steps and parameters used to build, emulate, and run the
 attention-score chain on the U55C.
 
+Branch note: the checked-in `track-a-step5-fused-score-mask-scale` branch now
+builds the fused pre-softmax `score_mask_scale_u55c_kernel` instead of separate
+`attention_score_u55c_kernel` and `mask_scale_u55c_kernel`. The historical
+commands/results below remain the last real-card verified staged baseline until
+the fused branch is rebuilt and rerun on the Linux/Vitis/U55C machine.
+
 ## Verified Hardware State
 
 - XRT: `2.14.354` / `2022.2`
@@ -26,7 +32,7 @@ Q_rot_int8, K_rot_int8
 -> softmax_u55c_kernel
 ```
 
-Current tiled `hw_emu` path:
+Current staged tiled `hw_emu` baseline:
 
 ```text
 Q_rot_int8, K_rot_int8
@@ -37,19 +43,29 @@ Q_rot_int8, K_rot_int8
 -> accumulated attn_out_fp32
 ```
 
+Fused Step 5 branch target:
+
+```text
+Q_rot_int8, K_rot_int8
+-> tiled score_mask_scale_u55c_kernel launches
+-> softmax_full_row_u55c_kernel per Q chunk
+-> v_weighted_sum_u55c_kernel per Q/K chunk
+-> accumulated attn_out_fp32
+```
+
 The XRT host verifies:
 
-- `score_raw.txt`
 - `score_scaled.txt`
 - `score_softmax.txt`
 - `attn_out.txt` when present, or `attn_ref_float.txt` for the real TinyLlama
   tile
 
-for `--vectors <dir>` single-tile mode. If a vector directory contains
-`q_full.txt` and `k_full.txt`, the same `--vectors <dir>` option enters the
-tiled full-sequence path and verifies full-sequence raw, scaled-logit, softmax,
-and attention-output references. The synthetic tiled path still uses
-`--seq-len <S>`.
+for the fused branch `--vectors <dir>` single-tile mode. `score_raw.txt`
+remains an export/reference artifact, but raw scores are no longer written back
+by the fused FPGA host path. If a vector directory contains `q_full.txt` and
+`k_full.txt`, the same `--vectors <dir>` option enters the tiled full-sequence
+path and verifies full-sequence scaled-logit, softmax, and attention-output
+references. The synthetic tiled path still uses `--seq-len <S>`.
 
 The real TinyLlama vector directories also contain `v_full.txt` and
 `attn_ref_float.txt`; full-sequence directories contain quantized-pipeline
@@ -306,20 +322,14 @@ bash attention_score_u55c/host/build_xclbin.sh \
   /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
 ```
 
-The helper compiles these objects:
+On the fused Step 5 branch, the helper compiles these objects:
 
 ```bash
 v++ -c -t hw_emu \
   --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm \
-  -k attention_score_u55c_kernel \
-  -o attention_score_u55c/build/attention_score_u55c_kernel.xo \
-  attention_score_u55c/hls/attention_score/attention_score_core_hls.cpp
-
-v++ -c -t hw_emu \
-  --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm \
-  -k mask_scale_u55c_kernel \
-  -o attention_score_u55c/build/mask_scale_u55c_kernel.xo \
-  attention_score_u55c/hls/mask_and_scale/mask_scale_core_hls.cpp
+  -k score_mask_scale_u55c_kernel \
+  -o attention_score_u55c/build/score_mask_scale_u55c_kernel.xo \
+  attention_score_u55c/hls/score_and_mask_scale/score_mask_scale_core_hls.cpp
 
 v++ -c -t hw_emu \
   --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm \
@@ -332,6 +342,12 @@ v++ -c -t hw_emu \
   -k softmax_full_row_u55c_kernel \
   -o attention_score_u55c/build/softmax_full_row_u55c_kernel.xo \
   attention_score_u55c/hls/softmax_full_row/softmax_full_row_hls.cpp
+
+v++ -c -t hw_emu \
+  --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm \
+  -k v_weighted_sum_u55c_kernel \
+  -o attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo \
+  attention_score_u55c/hls/v_weighted_sum/v_weighted_sum_core_hls.cpp
 ```
 
 Then links:
@@ -341,10 +357,10 @@ v++ -l -t hw_emu \
   --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm \
   --config attention_score_u55c/host/vpp_link.cfg \
   -o attention_score_u55c/build/attention_score_chain.xclbin \
-  attention_score_u55c/build/attention_score_u55c_kernel.xo \
-  attention_score_u55c/build/mask_scale_u55c_kernel.xo \
+  attention_score_u55c/build/score_mask_scale_u55c_kernel.xo \
   attention_score_u55c/build/softmax_u55c_kernel.xo \
-  attention_score_u55c/build/softmax_full_row_u55c_kernel.xo
+  attention_score_u55c/build/softmax_full_row_u55c_kernel.xo \
+  attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo
 ```
 
 ## 9. Run Hardware Emulation

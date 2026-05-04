@@ -413,13 +413,16 @@ Current and planned vector/export additions from `docs/implementation_checklist.
   - `hls/softmax/softmax_core_hls.cpp`
 - full-row softmax:
   - `hls/softmax_full_row/softmax_full_row_hls.cpp`
+- fused score + mask/scale:
+  - `hls/score_and_mask_scale/score_mask_scale_core_hls.cpp`
 
 Current and planned HLS additions from `docs/implementation_checklist.md`:
 
 - `hls/mask_and_scale/` to merge causal mask and score scale is implemented
 - `hls/softmax_full_row/` for full-row softmax up to `S = 512` is implemented
 - `hls/v_weighted_sum/` for the `softmax @ V` partial weighted-sum kernel
-- `hls/score_and_mask_scale/` as a later pre-softmax dataflow merge
+- `hls/score_and_mask_scale/` is implemented locally on the Step 5 branch;
+  Vitis/HW verification is pending
 
 ### Host / XRT
 
@@ -930,24 +933,52 @@ Post-route report highlights for the current routed five-kernel design:
   with design-summary `WNS 0.003 ns`, `TNS 0`, `WHS 0.009 ns`, and no failing
   setup/hold endpoints.
 
+On 2026-05-04, Track A Step 5 was started on branch
+`track-a-step5-fused-score-mask-scale`:
+
+- added `hls/score_and_mask_scale/` with `score_mask_scale_u55c_kernel`
+- the fused kernel consumes packed INT8 Q/K tiles and writes scaled FP32 logits
+  directly, removing the raw-score HBM round trip from the main host path
+- `host/build_xclbin.sh` and `host/vpp_link.cfg` now build/link the fused
+  kernel instead of separate `attention_score_u55c_kernel` and
+  `mask_scale_u55c_kernel`
+- `host/attention_score_chain_xrt.cpp` now launches the fused kernel in both
+  legacy single-tile vector mode and tiled sequence/vector modes; raw score is
+  no longer a device output in this branch
+- local g++ verification passed:
+  - `sim/tb_score_mask_scale.exe sim/attention_score_tile`:
+    `score_mask_scale test PASSED, max diff 4.77303e-09`
+  - `sim/tb_score_mask_scale.exe sim/real_tinyllama_tile`:
+    `score_mask_scale test PASSED, max diff 2.38419e-07`
+  - existing standalone `attention_score` and `mask_scale` local benches still
+    pass
+- Python full-sequence tiled reference check still passes for
+  `S = 8, 64, 128, 256, 512`
+- pending: Vitis HLS `csim/csynth` for the fused kernel, xclbin rebuild,
+  `hw_emu`, real U55C sequence/vector runs, Track D retiming, and new
+  post-route reports
+
 ## Best Next Step
 
-Track A Steps 1-4 are complete for the current staged design. Track A Step 5
-remains a future fusion/dataflow milestone, not required before starting
-dependent work. Best next practical steps are:
+Track A Steps 1-4 are complete for the staged design. On the current
+`track-a-step5-fused-score-mask-scale` branch, Step 5 code is started and local
+C++ fused-kernel checks pass. Best next practical steps are:
 
-1. reduce staged HBM round trips and launch overhead with fusion/dataflow
-2. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
-3. if more score-kernel speed is needed after that, prefer wider packing or
+1. run Vitis HLS `csim`/`csynth` for `hls/score_and_mask_scale/`
+2. rebuild the fused xclbin and run `hw_emu` at `S=8,64,128`
+3. run real U55C synthetic `S=8,64,128,256,512` and vector-mode regressions
+4. rerun Track D timing and capture refreshed post-route reports
+5. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
+6. if more score-kernel speed is needed after that, prefer wider packing or
    on-chip fusion before chasing higher GEMM unroll, because the 64-bit packed
    interface produced the first material latency drop
 
 ## After That
 
-With Track A Steps 1-4 working across synthetic sequence lengths, the next
-major engineering steps are:
+After the fused Step 5 branch is hardware-verified, the next major engineering
+steps are:
 
-1. merge kernels for performance because the staged HBM path is now measured
+1. compare fused-vs-staged Track D timing and utilization
 2. run larger real-vector lengths such as `S=128`, `S=256`, and `S=512`
    if the demo needs a broader real-input sweep
 3. connect to a real TinyLlama attention subgraph

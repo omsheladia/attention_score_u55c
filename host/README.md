@@ -1,14 +1,14 @@
 # XRT Host Flow
 
 This folder is the host-side step for running the isolated attention-score
-chain on a U55C. The current proven real-card path is the staged five-kernel
-one-head attention-output flow for synthetic `--seq-len` runs, plus saved-vector
-`--vectors` runs for synthetic and real TinyLlama-derived vectors.
+chain on a U55C. On the `track-a-step5-fused-score-mask-scale` branch, the host
+is wired for the Track A Step 5 fused pre-softmax path. The previous staged
+five-kernel real-card path remains the last fully hardware-verified baseline in
+the checked-in reports.
 
 ```text
 Q_rot_int8, K_rot_int8
--> attention_score_u55c_kernel
--> mask_scale_u55c_kernel
+-> score_mask_scale_u55c_kernel
 -> softmax_full_row_u55c_kernel
 -> v_weighted_sum_u55c_kernel
 -> attn_out_fp32
@@ -23,10 +23,10 @@ reference are present.
 - `attention_score_chain_xrt.cpp`
   - native XRT C++ host app
   - loads one `.xclbin`
-  - launches score, mask/scale, softmax, and optional V weighted-sum kernels
-    for `--vectors <dir>`
-  - launches tiled score+mask+scale, full-row softmax, and V weighted sum for
-    synthetic `--seq-len <S>`
+  - launches fused score+mask+scale, softmax, and optional V weighted-sum
+    kernels for `--vectors <dir>`
+  - launches tiled fused score+mask+scale, full-row softmax, and V weighted sum
+    for synthetic `--seq-len <S>`
   - compares device outputs against exported vectors or generated synthetic
     full-sequence references
 - `build_host.sh`
@@ -101,10 +101,11 @@ bash host/run_hw.sh 0
 ```
 
 The host prints per-kernel timing and total chain timing using host wall-clock
-measurements from launch through `wait()`, then verifies `score_raw`,
-`score_scaled`, `score_softmax`, and, when present, `attn_out` /
-`attn_ref_float` against the reference vectors in `--vectors` mode. In
-synthetic `--seq-len` mode it also verifies final `attn_out` from the V
+measurements from launch through `wait()`, then verifies `score_scaled`,
+`score_softmax`, and, when present, `attn_out` / `attn_ref_float` against the
+reference vectors in `--vectors` mode. The fused Step 5 path no longer writes
+raw INT32 scores to HBM, so `score_raw` is not a device output in this branch.
+In synthetic `--seq-len` mode it also verifies final `attn_out` from the V
 weighted-sum stage.
 
 Latest verified synthetic-vector helper timing for the five-kernel hardware

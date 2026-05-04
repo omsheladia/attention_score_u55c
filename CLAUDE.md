@@ -569,7 +569,9 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
 - Step 3 Part B complete in `hw_emu`: XRT host tiling loop and full-row kernel pass at S = 8, 64, 128.
 - Four-kernel real hardware xclbin complete: real U55C sweep passes at S = 8, 64, 128, 256, 512.
 - Step 4 complete for the current staged host: double-buffered pass-1 BO sets pass on real U55C at S = 8, 64, 128, 256, 512.
-- Step 5 remains a future dataflow/fusion milestone.
+- Step 5 is branch WIP on `track-a-step5-fused-score-mask-scale`: fused
+  pre-softmax code and local C++ checks are done; Vitis/HW verification is
+  pending.
 - Five-kernel Track B real hardware xclbin passed build and real U55C sequence
   sweep at S = 8, 64, 128, 256, 512.
 - Saved-vector `--vectors` mode now verifies `attn_out`; next add CPU/GPU/FPGA
@@ -619,6 +621,19 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
 - `docs/track_d_results.md` contains CPU/FPGA comparison tables, real-vector tables, HBM bank usage, and the performance interpretation.
 - Main conclusion: correct staged FPGA path, HBM banks `[0]` through `[7]` used, but slower than one-head CPU NumPy due kernel launch and HBM staging overhead.
 
+**Track A Step 5 — Started on `track-a-step5-fused-score-mask-scale`:**
+- `hls/score_and_mask_scale/` adds `score_mask_scale_u55c_kernel`, a fused
+  pre-softmax kernel that consumes packed INT8 Q/K tiles and writes scaled FP32
+  logits directly.
+- `host/build_xclbin.sh`, `host/vpp_link.cfg`, and
+  `host/attention_score_chain_xrt.cpp` now target the fused kernel in place of
+  separate `attention_score_u55c_kernel` and `mask_scale_u55c_kernel`.
+- Local g++ fused-kernel checks passed for `sim/attention_score_tile` and
+  `sim/real_tinyllama_tile`; the Python full-tiling reference check still
+  passes for `S = 8, 64, 128, 256, 512`.
+- Still pending: Vitis HLS `csim/csynth`, xclbin rebuild, `hw_emu`, real U55C
+  verification, Track D retiming, and refreshed post-route reports.
+
 **Future (post-hardware confirmation):**
-1. Merge pre-softmax stages into one dataflow kernel
+1. Complete fused-kernel HLS/XRT verification and rerun Track D timing
 2. Connect to full TinyLlama attention subgraph
