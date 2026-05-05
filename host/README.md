@@ -1,10 +1,8 @@
 # XRT Host Flow
 
 This folder is the host-side step for running the isolated attention-score
-chain on a U55C. On the `track-a-step5-fused-score-mask-scale` branch, the host
-is wired for the Track A Step 5 fused pre-softmax path. The previous staged
-five-kernel real-card path remains the last fully hardware-verified baseline in
-the checked-in reports.
+chain on a U55C. The host supports both the fused tiled path and the Track O2
+resident full-buffer path.
 
 ```text
 Q_rot_int8, K_rot_int8
@@ -12,6 +10,16 @@ Q_rot_int8, K_rot_int8
 -> softmax_full_row_u55c_kernel
 -> v_weighted_sum_u55c_kernel
 -> attn_out_fp32
+```
+
+Resident Track O2 mode uses:
+
+```text
+full Q/K/V device buffers
+-> score_mask_scale_resident_u55c_kernel
+-> softmax_full_row_resident_u55c_kernel
+-> v_weighted_sum_resident_u55c_kernel
+-> resident attn_out_fp32
 ```
 
 The legacy single-tile `--vectors` path still uses `softmax_u55c_kernel` and
@@ -27,6 +35,8 @@ reference are present.
     kernels for `--vectors <dir>`
   - launches tiled fused score+mask+scale, full-row softmax, and V weighted sum
     for synthetic `--seq-len <S>`
+  - supports `--resident` and `--resident-debug` for full-buffer device-resident
+    synthetic and full-sequence vector runs
   - compares device outputs against exported vectors or generated synthetic
     full-sequence references
 - `build_host.sh`
@@ -92,6 +102,36 @@ S=128: Attention output verification PASSED, total_chain 1657498.336 ms
 ```
 
 For first bring-up, `hw_emu` is the right target before `hw`.
+
+Resident real-card sweep:
+
+```bash
+unset XCL_EMULATION_MODE
+
+for s in 8 64 128 256 512; do
+  ./build/host_attention_score_chain \
+    --xclbin build/attention_score_chain.xclbin \
+    --seq-len "$s" \
+    --resident \
+    --device 0
+done
+```
+
+Use `--resident-debug` for the first small run if you also want logits and
+probability readback verification.
+
+Latest Track O2 resident real-card synthetic totals:
+
+```text
+S=8   0.930 ms
+S=64  4.131 ms
+S=128 12.755 ms
+S=256 45.809 ms
+S=512 173.489 ms
+```
+
+The resident path is correct, but slower than the O1 fused tiled path because
+resident V accumulation currently performs slow HBM read-modify-write updates.
 
 Known-good real-card run after the U55C is on shell
 `xilinx_u55c_gen3x16_xdma_base_3`:

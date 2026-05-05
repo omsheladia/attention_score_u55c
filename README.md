@@ -30,6 +30,14 @@ verification, Vitis HLS, `hw_emu`, and real U55C verification now pass on this
 branch. The fused real-card xclbin passed synthetic `S=8,64,128,256,512` and
 real TinyLlama `S=16`/`S=64` vector runs on May 4, 2026.
 
+Optimization note: `optimization-device-resident-online-attn` adds Track O2
+resident full-buffer mode through `--resident` / `--resident-debug`. The
+resident path is real-card verified, including synthetic `S=8,64,128,256,512`
+and real TinyLlama `S=16`/`S=64`, but it is slower end-to-end than the O1 fused
+baseline because resident V accumulation performs slow HBM read-modify-write
+updates. The next performance step is Track O3 multi-K V accumulation that
+keeps the output tile on chip and writes final `attn_out` once.
+
 ## What Is In Scope
 
 - Python reference math for one attention-score tile
@@ -40,9 +48,12 @@ real TinyLlama `S=16`/`S=64` vector runs on May 4, 2026.
   - INT8 score GEMM
   - merged causal mask + score scaling
   - fused score + mask/scale for Track A Step 5
+  - resident full-buffer score + mask/scale for Track O2
   - row-wise softmax
   - full-row softmax up to `S = 512`
+  - resident full-row softmax for Track O2
   - Track B partial `softmax @ V` weighted-sum kernel
+  - resident V weighted-sum kernel for Track O2
 - native XRT host app for the verified score/softmax chain
 - tiled XRT `hw_emu` path using full-row softmax and V weighted sum for
   synthetic sequence lengths
@@ -88,7 +99,8 @@ runtime keeps mask+scale, softmax, and V weighted sum as staged kernels.
 - `hls/score_scale/`: legacy standalone scale kernel
 - `hls/softmax/`: current tile softmax kernel
 - `hls/softmax_full_row/`: full-row softmax kernel for tiled `S <= 512`
-- `hls/v_weighted_sum/`: Track B partial `softmax @ V` kernel
+- `hls/v_weighted_sum/`: Track B partial `softmax @ V` kernel plus the Track
+  O2 resident V kernel
 - `host/`: native XRT host app and Linux build helpers
 - `sim/`: generated synthetic and real-vector cases for the staged attention path
 - `rtl/`: notes for later RTL lowering

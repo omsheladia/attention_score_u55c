@@ -1,0 +1,78 @@
+===============================================================================
+Version:    v++ v2022.2 (64-bit)
+Build:      SW Build 3671529 on 2022-10-13-17:52:11
+Copyright:  Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+Created:    Mon May  4 19:38:01 2026
+===============================================================================
+
+-------------------------------------------------------------------------------
+Design Name:             score_mask_scale_u55c_kernel
+Target Device:           xilinx:u55c:gen3x16_xdma_3:202210.1
+Target Clock:            300.000000MHz
+Total number of kernels: 1
+-------------------------------------------------------------------------------
+
+Kernel Summary
+Kernel Name                   Type  Target              OpenCL Library                Compute Units
+----------------------------  ----  ------------------  ----------------------------  -------------
+score_mask_scale_u55c_kernel  c     fpga0:OCL_REGION_0  score_mask_scale_u55c_kernel  1
+
+
+-------------------------------------------------------------------------------
+OpenCL Binary:     score_mask_scale_u55c_kernel
+Kernels mapped to: clc_region
+
+Timing Information (MHz)
+Compute Unit                    Kernel Name                   Module Name                                                                        Target Frequency  Estimated Frequency
+------------------------------  ----------------------------  ---------------------------------------------------------------------------------  ----------------  -------------------
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile_Pipeline_VITIS_LOOP_61_2                         300.300293        755.85791
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile                                                  300.300293        411.015198
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile_Pipeline_VITIS_LOOP_78_2                         300.300293        780.03125
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile                                                  300.300293        411.015198
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  entry_proc                                                                         300.300293        821.692688
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream_Pipeline_VITIS_LOOP_143_1_VITIS_LOOP_1  300.300293        447.828033
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream                                         300.300293        447.828033
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream_Pipeline_VITIS_LOOP_175_1                  300.300293        430.663208
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream                                            300.300293        430.663208
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_store_scaled_stream                                          300.300293        517.598328
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_score_mask_scale_dataflow                                    300.300293        430.663208
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_core_hls                                                          300.300293        430.663208
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_302_1_VITIS_LOOP_303_2            300.300293        411.015198
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel                                                       300.300293        411.015198
+
+Latency Information
+Compute Unit                    Kernel Name                   Module Name                                                                        Start Interval  Best (cycles)  Avg (cycles)  Worst (cycles)  Best (absolute)  Avg (absolute)  Worst (absolute)
+------------------------------  ----------------------------  ---------------------------------------------------------------------------------  --------------  -------------  ------------  --------------  ---------------  --------------  ----------------
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile_Pipeline_VITIS_LOOP_61_2                         10              10             10            10              33.330 ns        33.330 ns       33.330 ns
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile                                                  182             182            182           182             0.607 us         0.607 us        0.607 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile_Pipeline_VITIS_LOOP_78_2                         10              10             10            10              33.330 ns        33.330 ns       33.330 ns
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile                                                  966             966            966           966             3.220 us         3.220 us        3.220 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  entry_proc                                                                         0               0              0             0               0 ns             0 ns            0 ns
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream_Pipeline_VITIS_LOOP_143_1_VITIS_LOOP_1  525             525            525           525             1.750 us         1.750 us        1.750 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream                                         527             527            527           527             1.756 us         1.756 us        1.756 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream_Pipeline_VITIS_LOOP_175_1                  525             525            525           525             1.750 us         1.750 us        1.750 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream                                            527             527            527           527             1.756 us         1.756 us        1.756 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_store_scaled_stream                                          515             515            515           515             1.716 us         1.716 us        1.716 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_score_mask_scale_dataflow                                    528             540            540           540             1.800 us         1.800 us        1.800 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_core_hls                                                          541             541            541           541             1.803 us         1.803 us        1.803 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_302_1_VITIS_LOOP_303_2            516             516            516           516             1.720 us         1.720 us        1.720 us
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel                                                       2098            2097           2097          2097            6.989 us         6.989 us        6.989 us
+
+Area Information
+Compute Unit                    Kernel Name                   Module Name                                                                        FF     LUT    DSP  BRAM  URAM
+------------------------------  ----------------------------  ---------------------------------------------------------------------------------  -----  -----  ---  ----  ----
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile_Pipeline_VITIS_LOOP_61_2                         519    59     0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_q_tile                                                  1114   451    0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile_Pipeline_VITIS_LOOP_78_2                         519    59     0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_load_k_tile                                                  1120   455    0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  entry_proc                                                                         3      47     0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream_Pipeline_VITIS_LOOP_143_1_VITIS_LOOP_1  2890   2689   0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_compute_score_stream                                         2895   2747   0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream_Pipeline_VITIS_LOOP_175_1                  663    419    0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_mask_scale_stream                                            765    522    0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_store_scaled_stream                                          56     95     0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  p_anonymous_namespace_score_mask_scale_dataflow                                    4230   3823   0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_core_hls                                                          4235   3841   0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel_Pipeline_VITIS_LOOP_302_1_VITIS_LOOP_303_2            1098   1045   0    0     0
+score_mask_scale_u55c_kernel_1  score_mask_scale_u55c_kernel  score_mask_scale_u55c_kernel                                                       22293  33779  0    1     0
+-------------------------------------------------------------------------------

@@ -12,11 +12,21 @@ score_mask_scale_u55c_kernel
 The legacy single-tile path still uses `softmax_u55c_kernel`; the tiled Track A
 path uses `softmax_full_row_u55c_kernel` for S-wide row normalization.
 
-On the `track-a-step5-fused-score-mask-scale` branch, the xclbin build is wired
-for the fused Track A Step 5 pre-softmax kernel. This branch has local C++
-verification, but Vitis HLS, `hw_emu`, and real U55C verification are still
-pending. The last fully routed/real-card reports in `docs/PostRoute*.rpt`
-belong to the previous staged design.
+The current optimization branch also includes Track O2 resident full-buffer
+variants:
+
+```text
+score_mask_scale_resident_u55c_kernel
+-> softmax_full_row_resident_u55c_kernel
+-> v_weighted_sum_resident_u55c_kernel
+```
+
+These resident kernels passed Vitis HLS `csim/csynth`, `hw_emu` smoke
+verification at `S=8 --resident-debug`, and real U55C synthetic
+`S=8,64,128,256,512` plus real-vector `S=16,64` validation. The resident path
+reduced host/DMA/sync gap but regressed total runtime because resident
+V accumulation performs slow HBM read-modify-write updates. See
+`docs/track_d_results.md` and `docs/o2_*` reports for the current results.
 
 The runtime path uses:
 
@@ -30,7 +40,9 @@ The runtime path uses:
   U55C tiled runs pass
 - `v_weighted_sum/`: Track B partial `softmax @ V` kernel for one `8 x 64`
   weights tile and one `64 x 64` V chunk; local bench, Vitis HLS, `hw_emu`,
-  and real U55C tiled runs pass
+  and real U55C tiled runs pass; this folder also contains the Track O2
+  resident V kernel, whose current accumulation loop is the main performance
+  bottleneck
 
 The older `causal_mask/` and `score_scale/` folders are preserved as standalone
 legacy stages and local references, but they are no longer part of the current

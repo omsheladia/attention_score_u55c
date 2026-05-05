@@ -667,8 +667,33 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
 - Profile artifacts are checked into `docs/` with the
   `optimization_o1_s512_*` prefix.
 
+**Optimization Track O2 — Device-resident path verified, performance regressed:**
+- Added resident full-buffer kernels and `--resident` / `--resident-debug`
+  host modes.
+- `host/vpp_link.cfg` uses short resident CU names (`sms_res_1`, `sfr_res_1`,
+  `vws_res_1`) to avoid the Vitis 2022.2 64-character
+  `kernel_name:cu_name` link limit.
+- Resident HLS `csim/csynth` passed for score/mask/scale, full-row softmax,
+  and V weighted-sum.
+- Resident `hw_emu --seq-len 8 --resident-debug` passed, including
+  intermediate logits/probability checks and final attention output.
+- Resident real hardware xclbin build passed; UUID
+  `687b5e4a-591f-9d82-9263-e27bb7a727be`; routed timing met constraints with
+  WNS `0.003 ns`, TNS `0`, WHS `0.009 ns`.
+- Resident real U55C synthetic sweep passed:
+  `S=8 0.930 ms`, `S=64 4.131 ms`, `S=128 12.755 ms`,
+  `S=256 45.809 ms`, `S=512 173.489 ms`.
+- Resident real-vector runs passed:
+  `sim/real_tinyllama_s16 1.042 ms`,
+  `sim/real_tinyllama_s64 3.369 ms`.
+- O2 reduced `S=512` host/DMA/sync gap from O1 `16.231 ms` to `0.757 ms`,
+  but total time regressed from O1 `60.328 ms` to `173.489 ms` because
+  `v_weighted_sum_resident` dominates at `148.581 ms`.
+- Next optimization should fix V accumulation first by keeping the output tile
+  on chip across K chunks and writing final `attn_out` once.
+
 **Future:**
-1. Start Track O2 device-resident full-buffer flow
-2. Then reduce launch count with Track O3 larger-grain kernels
+1. Start Track O3 with multi-K V accumulation
+2. Then reduce pre-softmax launch count with larger-grain kernels
 3. Consider Track O4 online softmax fused with V accumulation
 4. Connect to full TinyLlama attention subgraph

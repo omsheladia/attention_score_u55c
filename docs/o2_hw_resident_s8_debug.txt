@@ -1,0 +1,12 @@
+Opening device 0
+Running resident synthetic sequence, S=8, q_chunks=1, k_chunks=1
+Resident intermediate verification PASSED
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   0.140 ms
+  softmax_full_row_resident   0.142 ms
+  v_weighted_sum_resident     0.283 ms
+  kernel_launch_wait_sum      0.565 ms
+  host_dma_sync_gap           0.442 ms
+  total_chain                 1.007 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED

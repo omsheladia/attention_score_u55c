@@ -1,0 +1,631 @@
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/score_mask_scale_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/score_mask_scale_u55c_kernel
+Running Dispatch Server on port: 38119
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_u55c_kernel.xo.compile_summary, at Mon May  4 19:37:34 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/score_mask_scale_u55c_kernel/v++_compile_score_mask_scale_u55c_kernel_guidance.html', at Mon May  4 19:37:34 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'score_mask_scale_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: score_mask_scale_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/score_mask_scale_u55c_kernel/score_mask_scale_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_61_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 2, loop 'VITIS_LOOP_61_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_78_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 2, loop 'VITIS_LOOP_78_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_143_1_VITIS_LOOP_144_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 13, loop 'VITIS_LOOP_143_1_VITIS_LOOP_144_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_175_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 13, loop 'VITIS_LOOP_175_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_200_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_200_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_302_1_VITIS_LOOP_303_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 4, loop 'VITIS_LOOP_302_1_VITIS_LOOP_303_2'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 411.00 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/score_mask_scale_u55c_kernel/system_estimate_score_mask_scale_u55c_kernel.xtxt
+WARNING: [v++-17-1525]  
+INFO: [v++ 60-586] Created attention_score_u55c/build/score_mask_scale_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 37s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/score_mask_scale_resident_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/score_mask_scale_resident_u55c_kernel
+Running Dispatch Server on port: 33711
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo.compile_summary, at Mon May  4 19:38:12 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/score_mask_scale_resident_u55c_kernel/v++_compile_score_mask_scale_resident_u55c_kernel_guidance.html', at Mon May  4 19:38:12 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'score_mask_scale_resident_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: score_mask_scale_resident_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/score_mask_scale_resident_u55c_kernel/score_mask_scale_resident_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_96_1_VITIS_LOOP_97_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_96_1_VITIS_LOOP_97_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_119_1_VITIS_LOOP_120_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_119_1_VITIS_LOOP_120_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_143_1_VITIS_LOOP_144_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 13, loop 'VITIS_LOOP_143_1_VITIS_LOOP_144_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_175_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 13, loop 'VITIS_LOOP_175_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_200_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_200_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_360_1_VITIS_LOOP_361_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 75, loop 'VITIS_LOOP_360_1_VITIS_LOOP_361_2'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 371.47 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/score_mask_scale_resident_u55c_kernel/system_estimate_score_mask_scale_resident_u55c_kernel.xtxt
+WARNING: [v++-17-1525]  
+INFO: [v++ 60-586] Created attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 37s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/softmax_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/softmax_u55c_kernel
+Running Dispatch Server on port: 37177
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_u55c_kernel.xo.compile_summary, at Mon May  4 19:38:51 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/softmax_u55c_kernel/v++_compile_softmax_u55c_kernel_guidance.html', at Mon May  4 19:38:51 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'softmax_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: softmax_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/softmax_u55c_kernel/softmax_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_91_1_VITIS_LOOP_92_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_91_1_VITIS_LOOP_92_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_67_7'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_67_7'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_39_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 5, loop 'VITIS_LOOP_39_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_46_3'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 3, Final II = 4, Depth = 28, loop 'VITIS_LOOP_46_3'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_52_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_52_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_57_5'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 15, loop 'VITIS_LOOP_57_5'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_62_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_62_6'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_104_3_VITIS_LOOP_105_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 4, loop 'VITIS_LOOP_104_3_VITIS_LOOP_105_4'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were NOT satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 404.86 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/softmax_u55c_kernel/system_estimate_softmax_u55c_kernel.xtxt
+WARNING: [v++-17-1525]  
+INFO: [v++ 60-586] Created attention_score_u55c/build/softmax_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 41s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/softmax_full_row_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/softmax_full_row_u55c_kernel
+Running Dispatch Server on port: 36147
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_u55c_kernel.xo.compile_summary, at Mon May  4 19:39:33 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/softmax_full_row_u55c_kernel/v++_compile_softmax_full_row_u55c_kernel_guidance.html', at Mon May  4 19:39:33 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'softmax_full_row_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: softmax_full_row_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/softmax_full_row_u55c_kernel/softmax_full_row_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_98_1_VITIS_LOOP_99_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 4, loop 'VITIS_LOOP_98_1_VITIS_LOOP_99_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_74_7'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_74_7'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_45_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 5, loop 'VITIS_LOOP_45_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_53_3'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 3, Final II = 4, Depth = 28, loop 'VITIS_LOOP_53_3'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_59_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_59_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_64_5'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 15, loop 'VITIS_LOOP_64_5'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_69_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_69_6'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_111_3_VITIS_LOOP_112_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 5, loop 'VITIS_LOOP_111_3_VITIS_LOOP_112_4'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were NOT satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 360.10 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/softmax_full_row_u55c_kernel/system_estimate_softmax_full_row_u55c_kernel.xtxt
+WARNING: [v++-17-1525]  
+INFO: [v++ 60-586] Created attention_score_u55c/build/softmax_full_row_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 41s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/softmax_full_row_resident_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/softmax_full_row_resident_u55c_kernel
+Running Dispatch Server on port: 43905
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo.compile_summary, at Mon May  4 19:40:15 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/softmax_full_row_resident_u55c_kernel/v++_compile_softmax_full_row_resident_u55c_kernel_guidance.html', at Mon May  4 19:40:15 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'softmax_full_row_resident_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: softmax_full_row_resident_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/softmax_full_row_resident_u55c_kernel/softmax_full_row_resident_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_141_1_VITIS_LOOP_142_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_141_1_VITIS_LOOP_142_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_74_7'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_74_7'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_45_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 5, loop 'VITIS_LOOP_45_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_53_3'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 3, Final II = 4, Depth = 28, loop 'VITIS_LOOP_53_3'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_59_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_59_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_64_5'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 15, loop 'VITIS_LOOP_64_5'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_69_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_69_6'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_155_3_VITIS_LOOP_156_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 4, loop 'VITIS_LOOP_155_3_VITIS_LOOP_156_4'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were NOT satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 360.10 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/softmax_full_row_resident_u55c_kernel/system_estimate_softmax_full_row_resident_u55c_kernel.xtxt
+WARNING: [v++-17-1525]  
+INFO: [v++ 60-586] Created attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 41s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/v_weighted_sum_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/v_weighted_sum_u55c_kernel
+Running Dispatch Server on port: 37143
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo.compile_summary, at Mon May  4 19:40:57 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/v_weighted_sum_u55c_kernel/v++_compile_v_weighted_sum_u55c_kernel_guidance.html', at Mon May  4 19:40:57 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'v_weighted_sum_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: v_weighted_sum_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/v_weighted_sum_u55c_kernel/v_weighted_sum_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_57_1_VITIS_LOOP_58_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_57_1_VITIS_LOOP_58_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_64_3_VITIS_LOOP_65_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_64_3_VITIS_LOOP_65_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_20_1_VITIS_LOOP_21_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 518, loop 'VITIS_LOOP_20_1_VITIS_LOOP_21_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_78_5_VITIS_LOOP_79_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 4, loop 'VITIS_LOOP_78_5_VITIS_LOOP_79_6'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 411.00 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/v_weighted_sum_u55c_kernel/system_estimate_v_weighted_sum_u55c_kernel.xtxt
+WARNING: [v++-17-1525]  
+INFO: [v++ 60-586] Created attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 41s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/v_weighted_sum_resident_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/v_weighted_sum_resident_u55c_kernel
+Running Dispatch Server on port: 44617
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_resident_u55c_kernel.xo.compile_summary, at Mon May  4 19:41:40 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/v_weighted_sum_resident_u55c_kernel/v++_compile_v_weighted_sum_resident_u55c_kernel_guidance.html', at Mon May  4 19:41:40 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'v_weighted_sum_resident_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: v_weighted_sum_resident_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/v_weighted_sum_resident_u55c_kernel/v_weighted_sum_resident_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_122_1_VITIS_LOOP_123_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 77, loop 'VITIS_LOOP_122_1_VITIS_LOOP_123_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_135_3_VITIS_LOOP_136_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_135_3_VITIS_LOOP_136_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_20_1_VITIS_LOOP_21_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 518, loop 'VITIS_LOOP_20_1_VITIS_LOOP_21_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_149_5_VITIS_LOOP_150_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 143, Depth = 144, loop 'VITIS_LOOP_149_5_VITIS_LOOP_150_6'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were NOT satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 203.95 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/v_weighted_sum_resident_u55c_kernel/system_estimate_v_weighted_sum_resident_u55c_kernel.xtxt
+WARNING: [v++-17-1525]  
+INFO: [v++ 60-586] Created attention_score_u55c/build/v_weighted_sum_resident_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_resident_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 42s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ link can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/link
+	Log files: /home/advent/Desktop/RC19/_x/logs/link
+Running Dispatch Server on port: 41409
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin.link_summary, at Mon May  4 19:42:23 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/link/v++_link_attention_score_chain_guidance.html', at Mon May  4 19:42:23 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-629] Linking for hardware target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-1332] Run 'run_link' status: Not started
+INFO: [v++ 60-1443] [19:42:26] Run run_link: Step system_link: Started
+INFO: [v++ 60-1453] Command Line: system_link --xo /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_resident_u55c_kernel.xo -keep --config /home/advent/Desktop/RC19/_x/link/int/syslinkConfig.ini --xpfm /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm --target hw --output_dir /home/advent/Desktop/RC19/_x/link/int --temp_dir /home/advent/Desktop/RC19/_x/link/sys_link
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_resident_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-53] Creating IP database /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml
+INFO: [SYSTEM_LINK 82-38] [19:42:27] build_xd_ip_db started: /home/advent/Vivado/Vitis/2022.2/bin/build_xd_ip_db -ip_search 0  -sds-pf /home/advent/Desktop/RC19/_x/link/sys_link/hw.hpfm -clkid 0 -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_score_mask_scale_resident_u55c_kernel_1_0,score_mask_scale_resident_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_softmax_u55c_kernel_1_0,softmax_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_v_weighted_sum_u55c_kernel_1_0,v_weighted_sum_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_score_mask_scale_u55c_kernel_1_0,score_mask_scale_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_softmax_full_row_resident_u55c_kernel_1_0,softmax_full_row_resident_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_v_weighted_sum_resident_u55c_kernel_1_0,v_weighted_sum_resident_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_softmax_full_row_u55c_kernel_1_0,softmax_full_row_u55c_kernel -o /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml
+INFO: [SYSTEM_LINK 82-37] [19:42:31] build_xd_ip_db finished successfully
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 431.691 ; gain = 0.000 ; free physical = 11015 ; free virtual = 28068
+INFO: [SYSTEM_LINK 82-51] Create system connectivity graph
+INFO: [SYSTEM_LINK 82-102] Applying explicit connections to the system connectivity graph: /home/advent/Desktop/RC19/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml
+INFO: [SYSTEM_LINK 82-38] [19:42:31] cfgen started: /home/advent/Vivado/Vitis/2022.2/bin/cfgen  -nk score_mask_scale_resident_u55c_kernel:1:sms_res_1 -nk softmax_full_row_resident_u55c_kernel:1:sfr_res_1 -nk v_weighted_sum_resident_u55c_kernel:1:vws_res_1 -sp score_mask_scale_u55c_kernel_1.q_tile:HBM[0] -sp score_mask_scale_u55c_kernel_1.k_tile:HBM[1] -sp score_mask_scale_u55c_kernel_1.score_out:HBM[3] -sp sms_res_1.q_full:HBM[0] -sp sms_res_1.k_full:HBM[1] -sp sms_res_1.logits_out:HBM[3] -sp softmax_u55c_kernel_1.score_in:HBM[3] -sp softmax_u55c_kernel_1.prob_out:HBM[4] -sp softmax_full_row_u55c_kernel_1.score_in:HBM[4] -sp softmax_full_row_u55c_kernel_1.prob_out:HBM[5] -sp sfr_res_1.logits_in:HBM[3] -sp sfr_res_1.prob_out:HBM[5] -sp v_weighted_sum_u55c_kernel_1.weights_tile:HBM[5] -sp v_weighted_sum_u55c_kernel_1.v_tile:HBM[6] -sp v_weighted_sum_u55c_kernel_1.out_tile:HBM[7] -sp vws_res_1.weights_full:HBM[5] -sp vws_res_1.v_full:HBM[6] -sp vws_res_1.out_full:HBM[7] -dpa_mem_offload false -dmclkid 0 -r /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml -o /home/advent/Desktop/RC19/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml
+INFO: [CFGEN 83-0] Kernel Specs: 
+INFO: [CFGEN 83-0]   kernel: score_mask_scale_resident_u55c_kernel, num: 1  {sms_res_1}
+INFO: [CFGEN 83-0]   kernel: softmax_full_row_resident_u55c_kernel, num: 1  {sfr_res_1}
+INFO: [CFGEN 83-0]   kernel: v_weighted_sum_resident_u55c_kernel, num: 1  {vws_res_1}
+INFO: [CFGEN 83-0]   kernel: score_mask_scale_u55c_kernel, num: 1  {score_mask_scale_u55c_kernel_1}
+INFO: [CFGEN 83-0]   kernel: softmax_full_row_u55c_kernel, num: 1  {softmax_full_row_u55c_kernel_1}
+INFO: [CFGEN 83-0]   kernel: softmax_u55c_kernel, num: 1  {softmax_u55c_kernel_1}
+INFO: [CFGEN 83-0]   kernel: v_weighted_sum_u55c_kernel, num: 1  {v_weighted_sum_u55c_kernel_1}
+INFO: [CFGEN 83-0] Port Specs: 
+INFO: [CFGEN 83-0]   kernel: score_mask_scale_u55c_kernel_1, k_port: q_tile, sptag: HBM[0]
+INFO: [CFGEN 83-0]   kernel: score_mask_scale_u55c_kernel_1, k_port: k_tile, sptag: HBM[1]
+INFO: [CFGEN 83-0]   kernel: score_mask_scale_u55c_kernel_1, k_port: score_out, sptag: HBM[3]
+INFO: [CFGEN 83-0]   kernel: sms_res_1, k_port: q_full, sptag: HBM[0]
+INFO: [CFGEN 83-0]   kernel: sms_res_1, k_port: k_full, sptag: HBM[1]
+INFO: [CFGEN 83-0]   kernel: sms_res_1, k_port: logits_out, sptag: HBM[3]
+INFO: [CFGEN 83-0]   kernel: softmax_u55c_kernel_1, k_port: score_in, sptag: HBM[3]
+INFO: [CFGEN 83-0]   kernel: softmax_u55c_kernel_1, k_port: prob_out, sptag: HBM[4]
+INFO: [CFGEN 83-0]   kernel: softmax_full_row_u55c_kernel_1, k_port: score_in, sptag: HBM[4]
+INFO: [CFGEN 83-0]   kernel: softmax_full_row_u55c_kernel_1, k_port: prob_out, sptag: HBM[5]
+INFO: [CFGEN 83-0]   kernel: sfr_res_1, k_port: logits_in, sptag: HBM[3]
+INFO: [CFGEN 83-0]   kernel: sfr_res_1, k_port: prob_out, sptag: HBM[5]
+INFO: [CFGEN 83-0]   kernel: v_weighted_sum_u55c_kernel_1, k_port: weights_tile, sptag: HBM[5]
+INFO: [CFGEN 83-0]   kernel: v_weighted_sum_u55c_kernel_1, k_port: v_tile, sptag: HBM[6]
+INFO: [CFGEN 83-0]   kernel: v_weighted_sum_u55c_kernel_1, k_port: out_tile, sptag: HBM[7]
+INFO: [CFGEN 83-0]   kernel: vws_res_1, k_port: weights_full, sptag: HBM[5]
+INFO: [CFGEN 83-0]   kernel: vws_res_1, k_port: v_full, sptag: HBM[6]
+INFO: [CFGEN 83-0]   kernel: vws_res_1, k_port: out_full, sptag: HBM[7]
+INFO: [SYSTEM_LINK 82-37] [19:42:36] cfgen finished successfully
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 431.691 ; gain = 0.000 ; free physical = 11010 ; free virtual = 28069
+INFO: [SYSTEM_LINK 82-52] Create top-level block diagram
+INFO: [SYSTEM_LINK 82-38] [19:42:36] cf2bd started: /home/advent/Vivado/Vitis/2022.2/bin/cf2bd  --linux --trace_buffer 1024 --input_file /home/advent/Desktop/RC19/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml --ip_db /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml --cf_name dr --working_dir /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.xsd --temp_dir /home/advent/Desktop/RC19/_x/link/sys_link --output_dir /home/advent/Desktop/RC19/_x/link/int --target_bd ulp.bd
+INFO: [CF2BD 82-31] Launching cf2xd: cf2xd -linux -trace-buffer 1024 -i /home/advent/Desktop/RC19/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml -r /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml -o dr.xml
+INFO: [CF2BD 82-28] cf2xd finished successfully
+INFO: [CF2BD 82-31] Launching cf_xsd: cf_xsd -disable-address-gen -bd ulp.bd -dn dr -dp /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.xsd
+INFO: [CF2BD 82-28] cf_xsd finished successfully
+INFO: [SYSTEM_LINK 82-37] [19:42:39] cf2bd finished successfully
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 431.691 ; gain = 0.000 ; free physical = 10996 ; free virtual = 28060
+INFO: [v++ 60-1441] [19:42:39] Run run_link: Step system_link: Completed
+Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 11068 ; free virtual = 28132
+INFO: [v++ 60-1443] [19:42:39] Run run_link: Step cf2sw: Started
+INFO: [v++ 60-1453] Command Line: cf2sw -sdsl /home/advent/Desktop/RC19/_x/link/int/sdsl.dat -rtd /home/advent/Desktop/RC19/_x/link/int/cf2sw.rtd -nofilter /home/advent/Desktop/RC19/_x/link/int/cf2sw_full.rtd -xclbin /home/advent/Desktop/RC19/_x/link/int/xclbin_orig.xml -o /home/advent/Desktop/RC19/_x/link/int/xclbin_orig.1.xml
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [v++ 60-1441] [19:42:44] Run run_link: Step cf2sw: Completed
+Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 11073 ; free virtual = 28136
+INFO: [v++ 60-1443] [19:42:44] Run run_link: Step rtd2_system_diagram: Started
+INFO: [v++ 60-1453] Command Line: rtd2SystemDiagram
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [v++ 60-1441] [19:42:44] Run run_link: Step rtd2_system_diagram: Completed
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.24 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 11052 ; free virtual = 28114
+INFO: [v++ 60-1443] [19:42:44] Run run_link: Step vpl: Started
+INFO: [v++ 60-1453] Command Line: vpl -t hw -f /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm -s --remote_ip_cache /home/advent/Desktop/RC19/.ipcache --output_dir /home/advent/Desktop/RC19/_x/link/int --log_dir /home/advent/Desktop/RC19/_x/logs/link --report_dir /home/advent/Desktop/RC19/_x/reports/link --config /home/advent/Desktop/RC19/_x/link/int/vplConfig.ini -k /home/advent/Desktop/RC19/_x/link/int/kernel_info.dat --webtalk_flag Vitis --temp_dir /home/advent/Desktop/RC19/_x/link --no-info --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_v_weighted_sum_resident_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_v_weighted_sum_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_softmax_full_row_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_softmax_full_row_resident_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_score_mask_scale_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_score_mask_scale_resident_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_softmax_u55c_kernel_1_0 --messageDb /home/advent/Desktop/RC19/_x/link/run_link/vpl.pb /home/advent/Desktop/RC19/_x/link/int/dr.bd.tcl
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+
+****** vpl v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [VPL 60-839] Read in kernel information from file '/home/advent/Desktop/RC19/_x/link/int/kernel_info.dat'.
+INFO: [VPL 74-78] Compiler Version string: 2022.2
+INFO: [VPL 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [VPL 60-1032] Extracting hardware platform to /home/advent/Desktop/RC19/_x/link/vivado/vpl/.local/hw_platform
+[19:42:50] Run vpl: Step create_project: Started
+Creating Vivado project.
+[19:42:52] Run vpl: Step create_project: Completed
+[19:42:52] Run vpl: Step create_bd: Started
+[19:43:09] Run vpl: Step create_bd: Completed
+[19:43:09] Run vpl: Step update_bd: Started
+[19:43:10] Run vpl: Step update_bd: Completed
+[19:43:10] Run vpl: Step generate_target: Started
+[19:44:01] Run vpl: Step generate_target: Completed
+[19:44:01] Run vpl: Step config_hw_runs: Started
+[19:44:03] Run vpl: Step config_hw_runs: Completed
+[19:44:03] Run vpl: Step synth: Started
+[19:44:34] Block-level synthesis in progress, 0 of 32 jobs complete, 8 jobs running.
+[19:45:04] Block-level synthesis in progress, 2 of 32 jobs complete, 7 jobs running.
+[19:45:35] Block-level synthesis in progress, 7 of 32 jobs complete, 7 jobs running.
+[19:46:05] Block-level synthesis in progress, 10 of 32 jobs complete, 7 jobs running.
+[19:46:35] Block-level synthesis in progress, 14 of 32 jobs complete, 8 jobs running.
+[19:47:05] Block-level synthesis in progress, 18 of 32 jobs complete, 6 jobs running.
+[19:47:35] Block-level synthesis in progress, 22 of 32 jobs complete, 6 jobs running.
+[19:48:06] Block-level synthesis in progress, 24 of 32 jobs complete, 5 jobs running.
+[19:48:36] Block-level synthesis in progress, 26 of 32 jobs complete, 3 jobs running.
+[19:49:06] Block-level synthesis in progress, 27 of 32 jobs complete, 2 jobs running.
+[19:49:36] Block-level synthesis in progress, 28 of 32 jobs complete, 1 job running.
+[19:50:06] Block-level synthesis in progress, 28 of 32 jobs complete, 1 job running.
+[19:50:36] Block-level synthesis in progress, 28 of 32 jobs complete, 1 job running.
+[19:51:06] Block-level synthesis in progress, 28 of 32 jobs complete, 1 job running.
+[19:51:37] Block-level synthesis in progress, 28 of 32 jobs complete, 1 job running.
+[19:52:07] Block-level synthesis in progress, 28 of 32 jobs complete, 1 job running.
+[19:52:37] Block-level synthesis in progress, 28 of 32 jobs complete, 1 job running.
+[19:53:07] Block-level synthesis in progress, 28 of 32 jobs complete, 1 job running.
+[19:53:37] Block-level synthesis in progress, 28 of 32 jobs complete, 1 job running.
+[19:54:07] Block-level synthesis in progress, 28 of 32 jobs complete, 1 job running.
+[19:54:37] Block-level synthesis in progress, 29 of 32 jobs complete, 1 job running.
+[19:55:05] Run vpl: Step synth: Completed
+[19:55:05] Run vpl: Step impl: Started
+[20:02:08] Finished 2nd of 6 tasks (FPGA linking synthesized kernels to platform). Elapsed time: 00h 19m 23s 
+
+[20:02:08] Starting logic optimization..
+[20:02:38] Phase 1 Retarget
+[20:02:38] Phase 2 Constant propagation
+[20:03:08] Phase 3 Sweep
+[20:03:08] Phase 4 BUFG optimization
+[20:03:08] Phase 5 Shift Register Optimization
+[20:03:39] Phase 6 Post Processing Netlist
+[20:04:09] Finished 3rd of 6 tasks (FPGA logic optimization). Elapsed time: 00h 02m 00s 
+
+[20:04:09] Starting logic placement..
+[20:04:09] Phase 1 Placer Initialization
+[20:04:09] Phase 1.1 Placer Initialization Netlist Sorting
+[20:06:09] Phase 1.2 IO Placement/ Clock Placement/ Build Placer Device
+[20:06:40] Phase 1.3 Build Placer Netlist Model
+[20:08:10] Phase 1.4 Constrain Clocks/Macros
+[20:08:10] Phase 2 Global Placement
+[20:08:10] Phase 2.1 Floorplanning
+[20:08:41] Phase 2.1.1 Partition Driven Placement
+[20:08:41] Phase 2.1.1.1 PBP: Partition Driven Placement
+[20:09:11] Phase 2.1.1.2 PBP: Clock Region Placement
+[20:09:41] Phase 2.1.1.3 PBP: Compute Congestion
+[20:09:41] Phase 2.1.1.4 PBP: UpdateTiming
+[20:09:41] Phase 2.1.1.5 PBP: Add part constraints
+[20:10:11] Phase 2.2 Physical Synthesis After Floorplan
+[20:10:11] Phase 2.3 Update Timing before SLR Path Opt
+[20:10:11] Phase 2.4 Post-Processing in Floorplanning
+[20:10:11] Phase 2.5 Global Placement Core
+[20:14:13] Phase 2.5.1 UpdateTiming Before Physical Synthesis
+[20:14:43] Phase 2.5.2 Physical Synthesis In Placer
+[20:16:14] Phase 3 Detail Placement
+[20:16:14] Phase 3.1 Commit Multi Column Macros
+[20:16:14] Phase 3.2 Commit Most Macros & LUTRAMs
+[20:17:15] Phase 3.3 Small Shape DP
+[20:17:15] Phase 3.3.1 Small Shape Clustering
+[20:17:15] Phase 3.3.2 Flow Legalize Slice Clusters
+[20:17:15] Phase 3.3.3 Slice Area Swap
+[20:17:15] Phase 3.3.3.1 Slice Area Swap Initial
+[20:18:15] Phase 3.4 Place Remaining
+[20:18:15] Phase 3.5 Re-assign LUT pins
+[20:18:15] Phase 3.6 Pipeline Register Optimization
+[20:18:15] Phase 3.7 Fast Optimization
+[20:18:46] Phase 4 Post Placement Optimization and Clean-Up
+[20:18:46] Phase 4.1 Post Commit Optimization
+[20:19:46] Phase 4.1.1 Post Placement Optimization
+[20:19:46] Phase 4.1.1.1 BUFG Insertion
+[20:19:46] Phase 1 Physical Synthesis Initialization
+[20:20:16] Phase 4.1.1.2 BUFG Replication
+[20:20:16] Phase 4.1.1.3 Post Placement Timing Optimization
+[20:23:18] Phase 4.1.1.4 Replication
+[20:24:18] Phase 4.2 Post Placement Cleanup
+[20:24:18] Phase 4.3 Placer Reporting
+[20:24:18] Phase 4.3.1 Print Estimated Congestion
+[20:24:18] Phase 4.4 Final Placement Cleanup
+[20:26:49] Finished 4th of 6 tasks (FPGA logic placement). Elapsed time: 00h 22m 40s 
+
+[20:26:49] Starting logic routing..
+[20:27:19] Phase 1 Build RT Design
+[20:28:50] Phase 2 Router Initialization
+[20:28:50] Phase 2.1 Fix Topology Constraints
+[20:28:50] Phase 2.2 Pre Route Cleanup
+[20:28:50] Phase 2.3 Global Clock Net Routing
+[20:29:20] Phase 2.4 Update Timing
+[20:30:51] Phase 2.5 Update Timing for Bus Skew
+[20:30:51] Phase 2.5.1 Update Timing
+[20:31:51] Phase 3 Initial Routing
+[20:31:51] Phase 3.1 Global Routing
+[20:32:22] Phase 4 Rip-up And Reroute
+[20:32:22] Phase 4.1 Global Iteration 0
+[20:39:25] Phase 4.2 Global Iteration 1
+[20:41:26] Phase 4.3 Global Iteration 2
+[20:41:56] Phase 5 Delay and Skew Optimization
+[20:41:56] Phase 5.1 Delay CleanUp
+[20:41:56] Phase 5.1.1 Update Timing
+[20:42:27] Phase 5.1.2 Update Timing
+[20:43:27] Phase 5.2 Clock Skew Optimization
+[20:43:27] Phase 6 Post Hold Fix
+[20:43:27] Phase 6.1 Hold Fix Iter
+[20:43:27] Phase 6.1.1 Update Timing
+[20:44:27] Phase 7 Leaf Clock Prog Delay Opt
+[20:45:28] Phase 7.1 Delay CleanUp
+[20:45:28] Phase 7.1.1 Update Timing
+[20:45:58] Phase 7.1.2 Update Timing
+[20:46:29] Phase 7.2 Hold Fix Iter
+[20:46:29] Phase 7.2.1 Update Timing
+[20:47:59] Phase 8 Route finalize
+[20:48:30] Phase 9 Verifying routed nets
+[20:48:30] Phase 10 Depositing Routes
+[20:49:00] Phase 11 Resolve XTalk
+[20:49:00] Phase 12 Post Router Timing
+[20:50:01] Finished 5th of 6 tasks (FPGA routing). Elapsed time: 00h 23m 11s 
+
+[20:50:01] Starting bitstream generation..
+[20:56:34] Creating bitmap...
+[21:02:37] Writing bitstream ./level0_i_ulp_my_rm_partial.bit...
+[21:02:37] Finished 6th of 6 tasks (FPGA bitstream generation). Elapsed time: 00h 12m 35s 
+Check VPL, containing 1 checks, has run: 0 errors
+[21:02:56] Run vpl: Step impl: Completed
+[21:02:56] Run vpl: FINISHED. Run Status: impl Complete!
+INFO: [v++ 60-1441] [21:02:56] Run run_link: Step vpl: Completed
+Time (s): cpu = 00:00:35 ; elapsed = 01:20:12 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 18479 ; free virtual = 25528
+INFO: [v++ 60-1443] [21:02:56] Run run_link: Step rtdgen: Started
+INFO: [v++ 60-1453] Command Line: rtdgen
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [v++ 60-991] clock name 'ulp_ucs/aclk_kernel_01' (clock ID '1') is being mapped to clock name 'KERNEL_CLK' in the xclbin
+INFO: [v++ 60-991] clock name 'ulp_ucs/aclk_kernel_00' (clock ID '0') is being mapped to clock name 'DATA_CLK' in the xclbin
+INFO: [v++ 60-991] clock name 'hbm_aclk' (clock ID '') is being mapped to clock name 'hbm_aclk' in the xclbin
+INFO: [v++ 60-1230] The compiler selected the following frequencies for the runtime controllable kernel clock(s) and scalable system clock(s): System (SYSTEM) clock: hbm_aclk = 450, Kernel (KERNEL) clock: ulp_ucs/aclk_kernel_01 = 500, Kernel (DATA) clock: ulp_ucs/aclk_kernel_00 = 300
+INFO: [v++ 60-1453] Command Line: cf2sw -a /home/advent/Desktop/RC19/_x/link/int/address_map.xml -sdsl /home/advent/Desktop/RC19/_x/link/int/sdsl.dat -xclbin /home/advent/Desktop/RC19/_x/link/int/xclbin_orig.xml -rtd /home/advent/Desktop/RC19/_x/link/int/attention_score_chain.rtd -o /home/advent/Desktop/RC19/_x/link/int/attention_score_chain.xml
+INFO: [v++ 60-1652] Cf2sw returned exit code: 0
+INFO: [v++ 60-1441] [21:03:00] Run run_link: Step rtdgen: Completed
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 21378 ; free virtual = 28461
+INFO: [v++ 60-1443] [21:03:00] Run run_link: Step xclbinutil: Started
+INFO: [v++ 60-1453] Command Line: xclbinutil --add-section BITSTREAM:RAW:/home/advent/Desktop/RC19/_x/link/int/partial.bit --force --target hw --key-value SYS:dfx_enable:true --add-section :JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.rtd --append-section :JSON:/home/advent/Desktop/RC19/_x/link/int/appendSection.rtd --add-section CLOCK_FREQ_TOPOLOGY:JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_xml.rtd --add-section BUILD_METADATA:JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_build.rtd --add-section EMBEDDED_METADATA:RAW:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.xml --add-section SYSTEM_METADATA:RAW:/home/advent/Desktop/RC19/_x/link/int/systemDiagramModelSlrBaseAddress.json --key-value SYS:PlatformVBNV:xilinx_u55c_gen3x16_xdma_3_202210_1 --output /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+XRT Build Version: 2.14.354 (2022.2)
+       Build Date: 2022-10-08 09:49:58
+          Hash ID: 43926231f7183688add2dccfd391b36a1f000bea
+Creating a default 'in-memory' xclbin image.
+
+Section: 'BITSTREAM'(0) was successfully added.
+Size   : 50713762 bytes
+Format : RAW
+File   : '/home/advent/Desktop/RC19/_x/link/int/partial.bit'
+
+Section: 'MEM_TOPOLOGY'(6) was successfully added.
+Format : JSON
+File   : 'mem_topology'
+
+Section: 'IP_LAYOUT'(8) was successfully added.
+Format : JSON
+File   : 'ip_layout'
+
+Section: 'CONNECTIVITY'(7) was successfully added.
+Format : JSON
+File   : 'connectivity'
+
+Section: 'CLOCK_FREQ_TOPOLOGY'(11) was successfully added.
+Size   : 410 bytes
+Format : JSON
+File   : '/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_xml.rtd'
+
+Section: 'BUILD_METADATA'(14) was successfully added.
+Size   : 13913 bytes
+Format : JSON
+File   : '/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_build.rtd'
+
+Section: 'EMBEDDED_METADATA'(2) was successfully added.
+Size   : 347543 bytes
+Format : RAW
+File   : '/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.xml'
+
+Section: 'SYSTEM_METADATA'(22) was successfully added.
+Size   : 99681 bytes
+Format : RAW
+File   : '/home/advent/Desktop/RC19/_x/link/int/systemDiagramModelSlrBaseAddress.json'
+
+Section: 'PARTITION_METADATA'(20) was successfully appended to.
+Format : JSON
+File   : 'partition_metadata'
+
+Section: 'IP_LAYOUT'(8) was successfully appended to.
+Format : JSON
+File   : 'ip_layout'
+Successfully wrote (51218964 bytes) to the output file: /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin
+Leaving xclbinutil.
+INFO: [v++ 60-1441] [21:03:01] Run run_link: Step xclbinutil: Completed
+Time (s): cpu = 00:00:00.06 ; elapsed = 00:00:00.13 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 21328 ; free virtual = 28462
+INFO: [v++ 60-1443] [21:03:01] Run run_link: Step xclbinutilinfo: Started
+INFO: [v++ 60-1453] Command Line: xclbinutil --quiet --force --info /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin.info --input /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [v++ 60-1441] [21:03:01] Run run_link: Step xclbinutilinfo: Completed
+Time (s): cpu = 00:00:00.27 ; elapsed = 00:00:00.3 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 21326 ; free virtual = 28461
+INFO: [v++ 60-1443] [21:03:01] Run run_link: Step generate_sc_driver: Started
+INFO: [v++ 60-1453] Command Line: 
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [v++ 60-1441] [21:03:01] Run run_link: Step generate_sc_driver: Completed
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 21326 ; free virtual = 28461
+Check POST-VPL, containing 1 checks, has run: 0 errors
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/link/system_estimate_attention_score_chain.xtxt
+INFO: [v++ 60-586] Created /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.ltx
+INFO: [v++ 60-586] Created attention_score_u55c/build/attention_score_chain.xclbin
+INFO: [v++ 60-1307] Run completed. Additional information can be found in:
+	Guidance: /home/advent/Desktop/RC19/_x/reports/link/v++_link_attention_score_chain_guidance.html
+	Timing Report: /home/advent/Desktop/RC19/_x/reports/link/imp/impl_1_hw_bb_locked_timing_summary_routed.rpt
+	Vivado Log: /home/advent/Desktop/RC19/_x/logs/link/vivado.log
+	Steps Log File: /home/advent/Desktop/RC19/_x/logs/link/link.steps.log
+
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin.link_summary 
+INFO: [v++ 60-791] Total elapsed time: 1h 20m 48s
+INFO: [v++ 60-1653] Closing dispatch client.
+Built attention_score_u55c/build/attention_score_chain.xclbin

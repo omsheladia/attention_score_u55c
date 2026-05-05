@@ -222,6 +222,105 @@ performance monitors (`NUM_MONITORS=0`) and the device trace marks compute
 units as `No Trace`. Treat the native XRT API and host data-transfer profile as
 the authoritative O1 evidence for this run.
 
+## Optimization Track O2 Device-Resident Results
+
+Track O2 adds resident full-buffer kernels and host mode:
+
+```bash
+./build/host_attention_score_chain \
+  --xclbin build/attention_score_chain.xclbin \
+  --seq-len <S> \
+  --resident \
+  --device 0
+```
+
+For bring-up, `--resident-debug` also reads back full logits and probabilities:
+
+```bash
+./build/host_attention_score_chain \
+  --xclbin build/attention_score_chain.xclbin \
+  --seq-len 8 \
+  --resident-debug \
+  --device 0
+```
+
+O2 build identifiers:
+
+| Item | Value |
+|---|---|
+| real hardware xclbin UUID | `687b5e4a-591f-9d82-9263-e27bb7a727be` |
+| hw_emu xclbin UUID | `2b6e9831-1168-cbfb-8ab9-55a08dbfcbaa` |
+| kernels in xclbin | tiled + resident score/mask/scale, softmax, full-row softmax, and V weighted sum |
+| clocks | HBM 450 MHz, kernel 500 MHz, data 300 MHz |
+
+Resident HLS and build status:
+
+| Kernel | HLS/Vitis status | Estimate / note |
+|---|---|---|
+| `score_mask_scale_resident_u55c_kernel` | `csim PASS`, `csynth PASS`, `v++` compile PASS | HLS 342.47 MHz, `v++` 371.47 MHz |
+| `softmax_full_row_resident_u55c_kernel` | `csim PASS`, `csynth PASS`, `v++` compile PASS | HLS 315.96 MHz, `v++` 360.10 MHz; softmax II warning remains |
+| `v_weighted_sum_resident_u55c_kernel` | `csim PASS`, `csynth PASS`, `v++` compile PASS | HLS 164.34 MHz, `v++` 203.95 MHz; output read-modify-write loop misses II |
+
+`hw_emu --seq-len 8 --resident-debug` passed, including intermediate
+logits/probabilities and final attention output. Larger resident `hw_emu`
+lengths were not run because the `S=8` resident debug run already took about
+`584178.703 ms` in cycle simulation, dominated by the resident V kernel. The
+real-card validation below covers the full `S=8,64,128,256,512` sweep.
+
+Resident synthetic real-card results:
+
+| S | q_chunks | k_chunks | score ms | softmax ms | V ms | kernel launch/wait sum ms | host/DMA/sync gap ms | total ms |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 8 | 1 | 1 | 0.147 | 0.152 | 0.342 | 0.642 | 0.288 | 0.930 |
+| 64 | 8 | 1 | 0.280 | 1.160 | 2.590 | 4.029 | 0.102 | 4.131 |
+| 128 | 16 | 2 | 1.114 | 1.835 | 9.466 | 12.415 | 0.340 | 12.755 |
+| 256 | 32 | 4 | 4.429 | 3.360 | 37.452 | 45.241 | 0.568 | 45.809 |
+| 512 | 64 | 8 | 15.567 | 8.583 | 148.581 | 172.731 | 0.757 | 173.489 |
+
+All resident synthetic real-card runs printed:
+
+```text
+Resident attention output verification PASSED
+XRT chain verification PASSED
+```
+
+Resident real TinyLlama vector results:
+
+| vector dir | S | score ms | softmax ms | V ms | kernel launch/wait sum ms | host/DMA/sync gap ms | total ms |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `sim/real_tinyllama_s16` | 16 | 0.197 | 0.153 | 0.645 | 0.995 | 0.047 | 1.042 |
+| `sim/real_tinyllama_s64` | 64 | 0.276 | 0.721 | 2.287 | 3.284 | 0.085 | 3.369 |
+
+Both resident real-vector runs printed:
+
+```text
+Resident attention output verification PASSED
+XRT chain verification PASSED
+```
+
+`sim/real_tinyllama_s16 --resident-debug` also passed intermediate
+logits/probability verification with total `1.294 ms`.
+
+O2 interpretation:
+
+- Correctness is good: resident synthetic `S=8,64,128,256,512`, resident
+  `S=8 --resident-debug`, and resident real TinyLlama `S=16,64` all pass.
+- The intended host-staging effect is visible: at `S=512`, host/DMA/sync gap
+  drops from the O1 baseline `16.231 ms` to `0.757 ms`.
+- End-to-end time is worse: `S=512` increases from O1 `60.328 ms` to resident
+  `173.489 ms`.
+- The regression is dominated by `v_weighted_sum_resident_u55c_kernel`
+  (`148.581 ms` at `S=512`). Its HLS reports show the output accumulation
+  read-modify-write loop missing II badly, so Track O3 should prioritize
+  multi-K V accumulation that keeps the output tile on chip and writes final
+  `attn_out` once per Q chunk.
+
+Fresh O2 reports are checked in under `docs/` with the `o2_` prefix, including
+`o2_PostRouteTimingSummary.rpt`, `o2_PostRouteKernelUtilization.rpt`,
+`o2_PostRouteFullUtilization.rpt`, `o2_PostRouteSLRUtilization.rpt`,
+`o2_system_diagram.json`, O2 system-estimate files, Vitis guidance files, and
+`o2_attention_score_chain_xclbin_info.txt`.
+
 ## HBM Usage
 
 The current fused Step 5 xclbin uses HBM banks `[0]` through `[7]`, but the raw

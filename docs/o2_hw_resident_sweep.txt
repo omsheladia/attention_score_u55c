@@ -1,0 +1,60 @@
+=== resident synthetic S=8 ===
+Opening device 0
+Running resident synthetic sequence, S=8, q_chunks=1, k_chunks=1
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   0.147 ms
+  softmax_full_row_resident   0.152 ms
+  v_weighted_sum_resident     0.342 ms
+  kernel_launch_wait_sum      0.642 ms
+  host_dma_sync_gap           0.288 ms
+  total_chain                 0.930 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED
+=== resident synthetic S=64 ===
+Opening device 0
+Running resident synthetic sequence, S=64, q_chunks=8, k_chunks=1
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   0.280 ms
+  softmax_full_row_resident   1.160 ms
+  v_weighted_sum_resident     2.590 ms
+  kernel_launch_wait_sum      4.029 ms
+  host_dma_sync_gap           0.102 ms
+  total_chain                 4.131 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED
+=== resident synthetic S=128 ===
+Opening device 0
+Running resident synthetic sequence, S=128, q_chunks=16, k_chunks=2
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   1.114 ms
+  softmax_full_row_resident   1.835 ms
+  v_weighted_sum_resident     9.466 ms
+  kernel_launch_wait_sum      12.415 ms
+  host_dma_sync_gap           0.340 ms
+  total_chain                 12.755 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED
+=== resident synthetic S=256 ===
+Opening device 0
+Running resident synthetic sequence, S=256, q_chunks=32, k_chunks=4
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   4.429 ms
+  softmax_full_row_resident   3.360 ms
+  v_weighted_sum_resident     37.452 ms
+  kernel_launch_wait_sum      45.241 ms
+  host_dma_sync_gap           0.568 ms
+  total_chain                 45.809 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED
+=== resident synthetic S=512 ===
+Opening device 0
+Running resident synthetic sequence, S=512, q_chunks=64, k_chunks=8
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   15.567 ms
+  softmax_full_row_resident   8.583 ms
+  v_weighted_sum_resident     148.581 ms
+  kernel_launch_wait_sum      172.731 ms
+  host_dma_sync_gap           0.757 ms
+  total_chain                 173.489 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED

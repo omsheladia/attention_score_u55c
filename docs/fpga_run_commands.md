@@ -198,6 +198,46 @@ Use `--resident-debug` for the first small synthetic and real-vector runs; use
 plain `--resident` for timing, because debug mode intentionally reads back
 extra intermediate matrices.
 
+Verified O2 Linux/U55C results on 2026-05-04:
+
+- Resident HLS `csim/csynth` passed for score/mask/scale, full-row softmax,
+  and V weighted-sum.
+- `hw_emu` xclbin link passed after shortening resident CU names in
+  `host/vpp_link.cfg`.
+- `hw_emu --seq-len 8 --resident-debug` passed:
+
+```text
+Resident intermediate verification PASSED
+Resident attention output verification PASSED
+XRT chain verification PASSED
+```
+
+- Real hardware xclbin build passed. UUID:
+  `687b5e4a-591f-9d82-9263-e27bb7a727be`.
+- Routed timing met constraints: `WNS 0.003 ns`, `TNS 0`, `WHS 0.009 ns`.
+
+Resident real-card synthetic timing:
+
+| S | score_mask_scale ms | full-row softmax ms | V weighted sum ms | host/DMA/sync gap ms | total ms |
+|---:|---:|---:|---:|---:|---:|
+| 8 | 0.147 | 0.152 | 0.342 | 0.288 | 0.930 |
+| 64 | 0.280 | 1.160 | 2.590 | 0.102 | 4.131 |
+| 128 | 1.114 | 1.835 | 9.466 | 0.340 | 12.755 |
+| 256 | 4.429 | 3.360 | 37.452 | 0.568 | 45.809 |
+| 512 | 15.567 | 8.583 | 148.581 | 0.757 | 173.489 |
+
+Resident real-vector timing:
+
+| vector dir | S | total ms |
+|---|---:|---:|
+| `sim/real_tinyllama_s16` | 16 | 1.042 |
+| `sim/real_tinyllama_s64` | 64 | 3.369 |
+
+O2 reduced the `S=512` host/DMA/sync gap from O1 `16.231 ms` to `0.757 ms`,
+but total time regressed because resident V accumulation dominates. The next
+optimization should keep the V output tile on chip across K chunks and write
+final `attn_out` once.
+
 ## 1. Source The 2022.2 Environment
 
 ```bash

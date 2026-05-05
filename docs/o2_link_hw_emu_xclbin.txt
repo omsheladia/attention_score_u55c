@@ -1,0 +1,214 @@
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ link can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/link
+	Log files: /home/advent/Desktop/RC19/_x/logs/link
+Running Dispatch Server on port: 45143
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin.link_summary, at Mon May  4 19:22:18 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/link/v++_link_attention_score_chain_guidance.html', at Mon May  4 19:22:18 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw_emu/hw_emu.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-629] Linking for hardware emulation target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-1332] Run 'run_link' status: Not started
+INFO: [v++ 60-1443] [19:22:22] Run run_link: Step system_link: Started
+INFO: [v++ 60-1453] Command Line: system_link --xo /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_resident_u55c_kernel.xo -keep --config /home/advent/Desktop/RC19/_x/link/int/syslinkConfig.ini --xpfm /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm --target emu --output_dir /home/advent/Desktop/RC19/_x/link/int --temp_dir /home/advent/Desktop/RC19/_x/link/sys_link
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-70] Extracting xo v3 file /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_resident_u55c_kernel.xo
+INFO: [SYSTEM_LINK 82-53] Creating IP database /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml
+INFO: [SYSTEM_LINK 82-38] [19:22:23] build_xd_ip_db started: /home/advent/Vivado/Vitis/2022.2/bin/build_xd_ip_db -ip_search 0  -sds-pf /home/advent/Desktop/RC19/_x/link/sys_link/hw_emu.hpfm -clkid 0 -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_score_mask_scale_resident_u55c_kernel_1_0,score_mask_scale_resident_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_softmax_u55c_kernel_1_0,softmax_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_v_weighted_sum_u55c_kernel_1_0,v_weighted_sum_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_score_mask_scale_u55c_kernel_1_0,score_mask_scale_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_softmax_full_row_resident_u55c_kernel_1_0,softmax_full_row_resident_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_v_weighted_sum_resident_u55c_kernel_1_0,v_weighted_sum_resident_u55c_kernel -ip /home/advent/Desktop/RC19/_x/link/sys_link/iprepo/xilinx_com_hls_softmax_full_row_u55c_kernel_1_0,softmax_full_row_u55c_kernel -o /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml
+INFO: [SYSTEM_LINK 82-37] [19:22:27] build_xd_ip_db finished successfully
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:04 . Memory (MB): peak = 431.691 ; gain = 0.000 ; free physical = 12179 ; free virtual = 28140
+INFO: [SYSTEM_LINK 82-51] Create system connectivity graph
+INFO: [SYSTEM_LINK 82-102] Applying explicit connections to the system connectivity graph: /home/advent/Desktop/RC19/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml
+INFO: [SYSTEM_LINK 82-38] [19:22:27] cfgen started: /home/advent/Vivado/Vitis/2022.2/bin/cfgen  -nk score_mask_scale_resident_u55c_kernel:1:sms_res_1 -nk softmax_full_row_resident_u55c_kernel:1:sfr_res_1 -nk v_weighted_sum_resident_u55c_kernel:1:vws_res_1 -sp score_mask_scale_u55c_kernel_1.q_tile:HBM[0] -sp score_mask_scale_u55c_kernel_1.k_tile:HBM[1] -sp score_mask_scale_u55c_kernel_1.score_out:HBM[3] -sp sms_res_1.q_full:HBM[0] -sp sms_res_1.k_full:HBM[1] -sp sms_res_1.logits_out:HBM[3] -sp softmax_u55c_kernel_1.score_in:HBM[3] -sp softmax_u55c_kernel_1.prob_out:HBM[4] -sp softmax_full_row_u55c_kernel_1.score_in:HBM[4] -sp softmax_full_row_u55c_kernel_1.prob_out:HBM[5] -sp sfr_res_1.logits_in:HBM[3] -sp sfr_res_1.prob_out:HBM[5] -sp v_weighted_sum_u55c_kernel_1.weights_tile:HBM[5] -sp v_weighted_sum_u55c_kernel_1.v_tile:HBM[6] -sp v_weighted_sum_u55c_kernel_1.out_tile:HBM[7] -sp vws_res_1.weights_full:HBM[5] -sp vws_res_1.v_full:HBM[6] -sp vws_res_1.out_full:HBM[7] -dpa_mem_offload false -dmclkid 0 -r /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml -o /home/advent/Desktop/RC19/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml
+INFO: [CFGEN 83-0] Kernel Specs: 
+INFO: [CFGEN 83-0]   kernel: score_mask_scale_resident_u55c_kernel, num: 1  {sms_res_1}
+INFO: [CFGEN 83-0]   kernel: softmax_full_row_resident_u55c_kernel, num: 1  {sfr_res_1}
+INFO: [CFGEN 83-0]   kernel: v_weighted_sum_resident_u55c_kernel, num: 1  {vws_res_1}
+INFO: [CFGEN 83-0]   kernel: score_mask_scale_u55c_kernel, num: 1  {score_mask_scale_u55c_kernel_1}
+INFO: [CFGEN 83-0]   kernel: softmax_full_row_u55c_kernel, num: 1  {softmax_full_row_u55c_kernel_1}
+INFO: [CFGEN 83-0]   kernel: softmax_u55c_kernel, num: 1  {softmax_u55c_kernel_1}
+INFO: [CFGEN 83-0]   kernel: v_weighted_sum_u55c_kernel, num: 1  {v_weighted_sum_u55c_kernel_1}
+INFO: [CFGEN 83-0] Port Specs: 
+INFO: [CFGEN 83-0]   kernel: score_mask_scale_u55c_kernel_1, k_port: q_tile, sptag: HBM[0]
+INFO: [CFGEN 83-0]   kernel: score_mask_scale_u55c_kernel_1, k_port: k_tile, sptag: HBM[1]
+INFO: [CFGEN 83-0]   kernel: score_mask_scale_u55c_kernel_1, k_port: score_out, sptag: HBM[3]
+INFO: [CFGEN 83-0]   kernel: sms_res_1, k_port: q_full, sptag: HBM[0]
+INFO: [CFGEN 83-0]   kernel: sms_res_1, k_port: k_full, sptag: HBM[1]
+INFO: [CFGEN 83-0]   kernel: sms_res_1, k_port: logits_out, sptag: HBM[3]
+INFO: [CFGEN 83-0]   kernel: softmax_u55c_kernel_1, k_port: score_in, sptag: HBM[3]
+INFO: [CFGEN 83-0]   kernel: softmax_u55c_kernel_1, k_port: prob_out, sptag: HBM[4]
+INFO: [CFGEN 83-0]   kernel: softmax_full_row_u55c_kernel_1, k_port: score_in, sptag: HBM[4]
+INFO: [CFGEN 83-0]   kernel: softmax_full_row_u55c_kernel_1, k_port: prob_out, sptag: HBM[5]
+INFO: [CFGEN 83-0]   kernel: sfr_res_1, k_port: logits_in, sptag: HBM[3]
+INFO: [CFGEN 83-0]   kernel: sfr_res_1, k_port: prob_out, sptag: HBM[5]
+INFO: [CFGEN 83-0]   kernel: v_weighted_sum_u55c_kernel_1, k_port: weights_tile, sptag: HBM[5]
+INFO: [CFGEN 83-0]   kernel: v_weighted_sum_u55c_kernel_1, k_port: v_tile, sptag: HBM[6]
+INFO: [CFGEN 83-0]   kernel: v_weighted_sum_u55c_kernel_1, k_port: out_tile, sptag: HBM[7]
+INFO: [CFGEN 83-0]   kernel: vws_res_1, k_port: weights_full, sptag: HBM[5]
+INFO: [CFGEN 83-0]   kernel: vws_res_1, k_port: v_full, sptag: HBM[6]
+INFO: [CFGEN 83-0]   kernel: vws_res_1, k_port: out_full, sptag: HBM[7]
+INFO: [SYSTEM_LINK 82-37] [19:22:29] cfgen finished successfully
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 431.691 ; gain = 0.000 ; free physical = 12178 ; free virtual = 28138
+INFO: [SYSTEM_LINK 82-52] Create top-level block diagram
+INFO: [SYSTEM_LINK 82-38] [19:22:29] cf2bd started: /home/advent/Vivado/Vitis/2022.2/bin/cf2bd  --linux --trace_buffer 1024 --input_file /home/advent/Desktop/RC19/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml --ip_db /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml --cf_name dr --working_dir /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.xsd --temp_dir /home/advent/Desktop/RC19/_x/link/sys_link --output_dir /home/advent/Desktop/RC19/_x/link/int
+INFO: [CF2BD 82-31] Launching cf2xd: cf2xd -linux -trace-buffer 1024 -i /home/advent/Desktop/RC19/_x/link/sys_link/cfgraph/cfgen_cfgraph.xml -r /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.cdb/xd_ip_db.xml -o dr.xml
+INFO: [CF2BD 82-28] cf2xd finished successfully
+INFO: [CF2BD 82-31] Launching cf_xsd: cf_xsd -disable-address-gen -dn dr -dp /home/advent/Desktop/RC19/_x/link/sys_link/_sysl/.xsd
+INFO: [CF2BD 82-28] cf_xsd finished successfully
+INFO: [SYSTEM_LINK 82-37] [19:22:32] cf2bd finished successfully
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 431.691 ; gain = 0.000 ; free physical = 12169 ; free virtual = 28135
+INFO: [v++ 60-1441] [19:22:32] Run run_link: Step system_link: Completed
+Time (s): cpu = 00:00:10 ; elapsed = 00:00:10 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 12241 ; free virtual = 28207
+INFO: [v++ 60-1443] [19:22:32] Run run_link: Step cf2sw: Started
+INFO: [v++ 60-1453] Command Line: cf2sw -sdsl /home/advent/Desktop/RC19/_x/link/int/sdsl.dat -rtd /home/advent/Desktop/RC19/_x/link/int/cf2sw.rtd -nofilter /home/advent/Desktop/RC19/_x/link/int/cf2sw_full.rtd -xclbin /home/advent/Desktop/RC19/_x/link/int/xclbin_orig.xml -o /home/advent/Desktop/RC19/_x/link/int/xclbin_orig.1.xml
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [v++ 60-1441] [19:22:35] Run run_link: Step cf2sw: Completed
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 12244 ; free virtual = 28210
+INFO: [v++ 60-1443] [19:22:35] Run run_link: Step rtd2_system_diagram: Started
+INFO: [v++ 60-1453] Command Line: rtd2SystemDiagram
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [v++ 60-1441] [19:22:35] Run run_link: Step rtd2_system_diagram: Completed
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.24 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 12223 ; free virtual = 28189
+INFO: [v++ 60-1443] [19:22:35] Run run_link: Step vpl: Started
+INFO: [v++ 60-1453] Command Line: vpl -t hw_emu -f /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm -s --remote_ip_cache /home/advent/Desktop/RC19/.ipcache --output_dir /home/advent/Desktop/RC19/_x/link/int --log_dir /home/advent/Desktop/RC19/_x/logs/link --report_dir /home/advent/Desktop/RC19/_x/reports/link --config /home/advent/Desktop/RC19/_x/link/int/vplConfig.ini -k /home/advent/Desktop/RC19/_x/link/int/kernel_info.dat --webtalk_flag Vitis --temp_dir /home/advent/Desktop/RC19/_x/link --emulation_mode debug_waveform --no-info --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_v_weighted_sum_resident_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_v_weighted_sum_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_softmax_full_row_resident_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_score_mask_scale_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_softmax_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_softmax_full_row_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_score_mask_scale_resident_u55c_kernel_1_0 --messageDb /home/advent/Desktop/RC19/_x/link/run_link/vpl.pb /home/advent/Desktop/RC19/_x/link/int/dr.bd.tcl
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+
+****** vpl v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [VPL 60-839] Read in kernel information from file '/home/advent/Desktop/RC19/_x/link/int/kernel_info.dat'.
+INFO: [VPL 74-78] Compiler Version string: 2022.2
+INFO: [VPL 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [VPL 60-1032] Extracting hardware platform to /home/advent/Desktop/RC19/_x/link/vivado/vpl/.local/hw_platform
+[19:22:42] Run vpl: Step create_project: Started
+Creating Vivado project.
+[19:22:54] Run vpl: Step create_project: Completed
+[19:22:54] Run vpl: Step create_bd: Started
+[19:23:01] Run vpl: Step create_bd: Completed
+[19:23:01] Run vpl: Step update_bd: Started
+[19:23:01] Run vpl: Step update_bd: Completed
+[19:23:01] Run vpl: Step generate_target: Started
+[19:24:14] Run vpl: Step generate_target: Completed
+[19:24:14] Run vpl: Step config_hw_emu.gen_scripts: Started
+[19:24:37] Run vpl: Step config_hw_emu.gen_scripts: Completed
+[19:24:37] Run vpl: Step config_hw_emu.compile: Started
+[19:25:20] Run vpl: Step config_hw_emu.compile: Completed
+[19:25:20] Run vpl: Step config_hw_emu.elaborate: Started
+WARNING: [IP-LOCK-01] In your vivado project:prj for design:dr the IP bd_387c_one_0 is locked. The IP is locked for the following reason - * The IP Data in the repository is incompatible with the current instance (despite having identical Version and Revision). You will need to upgrade the IP before viewing the customization and generating outputs.
+.
+WARNING: [IP-LOCK-01] In your vivado project:prj for design:dr the IP bd_387c_s00mmu_0 is locked. The IP is locked for the following reason - * IP definition 'SC MMU (1.0)' for IP 'bd_387c_s00mmu_0' (customized with software release 2022.1) has a different revision in the IP Catalog.
+.
+WARNING: [IP-LOCK-01] In your vivado project:prj for design:dr the IP bd_387c_s00sic_0 is locked. The IP is locked for the following reason - * IP definition 'SC SI_CONVERTER (1.0)' for IP 'bd_387c_s00sic_0' (customized with software release 2022.1) has a different revision in the IP Catalog.
+.
+WARNING: [IP-LOCK-01] In your vivado project:prj for design:dr the IP pfm_top_axi_vip_0_0 is locked. The IP is locked for the following reason - * IP definition 'AXI Verification IP (1.1)' for IP 'pfm_top_axi_vip_0_0' (customized with software release 2022.1) has a different revision in the IP Catalog.
+.
+WARNING: [IP-LOCK-01] In your vivado project:prj for design:dr the IP pfm_top_connect_to_es_cu_0 is locked. The IP is locked for the following reason - * IP definition 'AXI Interconnect (2.1)' for IP 'pfm_top_connect_to_es_cu_0' (customized with software release 2022.1) has a different revision in the IP Catalog.
+.
+WARNING: [IP-LOCK-01] In your vivado project:prj for design:dr the IP pfm_top_smartconnect_0_0 is locked. The IP is locked for the following reason - * IP definition 'AXI SmartConnect (1.0)' for IP 'pfm_top_smartconnect_0_0' (customized with software release 2022.1) has a different revision in the IP Catalog.
+ * IP 'pfm_top_smartconnect_0_0' contains one or more locked subcores.* Target IP definition 'AXI SmartConnect (1.0)' requires a revision change. Please review the change log before upgrading the IP.
+.
+WARNING: [IP-LOCK-01] In your vivado project:prj for design:dr the IP pfm_top_xbar_0 is locked. The IP is locked for the following reason - * IP definition 'AXI Crossbar (2.1)' for IP 'pfm_top_xbar_0' (customized with software release 2022.1) has a different revision in the IP Catalog.
+.
+WARNING: [IP-LOCK-01] In your vivado project:prj for design:dr the IP bd_387c_m00e_0 is locked. The IP is locked for the following reason - * IP definition 'SC EXIT (1.0)' for IP 'bd_387c_m00e_0' (customized with software release 2022.1) has a different revision in the IP Catalog.
+.
+WARNING: [IP-LOCK-01] In your vivado project:prj for design:dr the IP bd_387c_m01e_0 is locked. The IP is locked for the following reason - * IP definition 'SC EXIT (1.0)' for IP 'bd_387c_m01e_0' (customized with software release 2022.1) has a different revision in the IP Catalog.
+.
+Check VPL, containing 2 checks, has run: 0 errors, 9 warning violations
+[19:26:20] Run vpl: Step config_hw_emu.elaborate: Completed
+[19:26:20] Run vpl: FINISHED. Run Status: config_hw_emu.elaborate Complete!
+INFO: [v++ 60-1441] [19:26:20] Run run_link: Step vpl: Completed
+Time (s): cpu = 00:00:04 ; elapsed = 00:03:45 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 8726 ; free virtual = 26668
+INFO: [v++ 60-1443] [19:26:20] Run run_link: Step rtdgen: Started
+INFO: [v++ 60-1453] Command Line: rtdgen
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [v++ 60-991] clock name 'kernel_clk/clk' (clock ID '0') is being mapped to clock name 'DATA_CLK' in the xclbin
+INFO: [v++ 60-1230] The compiler selected the following frequencies for the runtime controllable kernel clock(s) and scalable system clock(s): Kernel (DATA) clock: kernel_clk/clk = 300, Kernel (KERNEL) clock: kernel_clk/clk = 300
+INFO: [v++ 60-1453] Command Line: cf2sw -a /home/advent/Desktop/RC19/_x/link/int/address_map.xml -sdsl /home/advent/Desktop/RC19/_x/link/int/sdsl.dat -xclbin /home/advent/Desktop/RC19/_x/link/int/xclbin_orig.xml -rtd /home/advent/Desktop/RC19/_x/link/int/attention_score_chain.rtd -o /home/advent/Desktop/RC19/_x/link/int/attention_score_chain.xml
+INFO: [v++ 60-1652] Cf2sw returned exit code: 0
+WARNING: [v++ 60-1455] Debuggable symbols are not generated successfully, clean up /home/advent/Desktop/RC19/_x/link/int/consolidated.cf
+INFO: [v++ 60-1441] [19:26:28] Run run_link: Step rtdgen: Completed
+Time (s): cpu = 00:00:08 ; elapsed = 00:00:08 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 10019 ; free virtual = 28078
+INFO: [v++ 60-1443] [19:26:28] Run run_link: Step xclbinutil: Started
+INFO: [v++ 60-1453] Command Line: xclbinutil --add-section BITSTREAM:RAW:/home/advent/Desktop/RC19/_x/link/int/behav.xse --force --target hw_emu --key-value SYS:dfx_enable:false --add-section :JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.rtd --add-section CLOCK_FREQ_TOPOLOGY:JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_xml.rtd --add-section BUILD_METADATA:JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_build.rtd --add-section EMBEDDED_METADATA:RAW:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.xml --add-section SYSTEM_METADATA:RAW:/home/advent/Desktop/RC19/_x/link/int/systemDiagramModelSlrBaseAddress.json --key-value SYS:PlatformVBNV:xilinx_u55c_gen3x16_xdma_3_202210_1 --output /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+XRT Build Version: 2.14.354 (2022.2)
+       Build Date: 2022-10-08 09:49:58
+          Hash ID: 43926231f7183688add2dccfd391b36a1f000bea
+Creating a default 'in-memory' xclbin image.
+
+Section: 'BITSTREAM'(0) was successfully added.
+Size   : 109891713 bytes
+Format : RAW
+File   : '/home/advent/Desktop/RC19/_x/link/int/behav.xse'
+
+Section: 'MEM_TOPOLOGY'(6) was successfully added.
+Format : JSON
+File   : 'mem_topology'
+
+Section: 'IP_LAYOUT'(8) was successfully added.
+Format : JSON
+File   : 'ip_layout'
+
+Section: 'CONNECTIVITY'(7) was successfully added.
+Format : JSON
+File   : 'connectivity'
+
+Section: 'CLOCK_FREQ_TOPOLOGY'(11) was successfully added.
+Size   : 274 bytes
+Format : JSON
+File   : '/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_xml.rtd'
+
+Section: 'BUILD_METADATA'(14) was successfully added.
+Size   : 13948 bytes
+Format : JSON
+File   : '/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_build.rtd'
+
+Section: 'EMBEDDED_METADATA'(2) was successfully added.
+Size   : 347333 bytes
+Format : RAW
+File   : '/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.xml'
+
+Section: 'SYSTEM_METADATA'(22) was successfully added.
+Size   : 64500 bytes
+Format : RAW
+File   : '/home/advent/Desktop/RC19/_x/link/int/systemDiagramModelSlrBaseAddress.json'
+Successfully wrote (110352044 bytes) to the output file: /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin
+Leaving xclbinutil.
+INFO: [v++ 60-1441] [19:26:28] Run run_link: Step xclbinutil: Completed
+Time (s): cpu = 00:00:00.07 ; elapsed = 00:00:00.18 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 9955 ; free virtual = 28073
+INFO: [v++ 60-1443] [19:26:28] Run run_link: Step xclbinutilinfo: Started
+INFO: [v++ 60-1453] Command Line: xclbinutil --quiet --force --info /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin.info --input /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [v++ 60-1441] [19:26:29] Run run_link: Step xclbinutilinfo: Completed
+Time (s): cpu = 00:00:00.42 ; elapsed = 00:00:00.49 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 9953 ; free virtual = 28072
+INFO: [v++ 60-1443] [19:26:29] Run run_link: Step generate_sc_driver: Started
+INFO: [v++ 60-1453] Command Line: 
+INFO: [v++ 60-1454] Run Directory: /home/advent/Desktop/RC19/_x/link/run_link
+INFO: [v++ 60-1441] [19:26:29] Run run_link: Step generate_sc_driver: Completed
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 437.520 ; gain = 0.000 ; free physical = 9953 ; free virtual = 28072
+Check POST-VPL, containing 1 checks, has run: 0 errors
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/link/system_estimate_attention_score_chain.xtxt
+INFO: [v++ 60-586] Created attention_score_u55c/build/attention_score_chain.xclbin
+INFO: [v++ 60-1307] Run completed. Additional information can be found in:
+	Guidance: /home/advent/Desktop/RC19/_x/reports/link/v++_link_attention_score_chain_guidance.html
+	Steps Log File: /home/advent/Desktop/RC19/_x/logs/link/link.steps.log
+
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin.link_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 4m 20s
+INFO: [v++ 60-1653] Closing dispatch client.

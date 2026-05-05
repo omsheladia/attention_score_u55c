@@ -1,0 +1,12 @@
+Opening device 0
+Running resident vector sequence from sim/real_tinyllama_s16, S=16, q_chunks=2, k_chunks=1
+Resident intermediate verification PASSED
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   0.211 ms
+  softmax_full_row_resident   0.259 ms
+  v_weighted_sum_resident     0.731 ms
+  kernel_launch_wait_sum      1.201 ms
+  host_dma_sync_gap           0.092 ms
+  total_chain                 1.294 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED

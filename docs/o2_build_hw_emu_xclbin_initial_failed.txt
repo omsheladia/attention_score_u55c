@@ -1,0 +1,314 @@
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/score_mask_scale_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/score_mask_scale_u55c_kernel
+Running Dispatch Server on port: 43767
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_u55c_kernel.xo.compile_summary, at Mon May  4 19:16:56 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/score_mask_scale_u55c_kernel/v++_compile_score_mask_scale_u55c_kernel_guidance.html', at Mon May  4 19:16:56 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware emulation target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'score_mask_scale_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: score_mask_scale_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/score_mask_scale_u55c_kernel/score_mask_scale_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_61_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 2, loop 'VITIS_LOOP_61_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_78_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 2, loop 'VITIS_LOOP_78_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_143_1_VITIS_LOOP_144_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 13, loop 'VITIS_LOOP_143_1_VITIS_LOOP_144_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_175_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 13, loop 'VITIS_LOOP_175_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_200_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_200_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_302_1_VITIS_LOOP_303_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 4, loop 'VITIS_LOOP_302_1_VITIS_LOOP_303_2'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 411.00 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/score_mask_scale_u55c_kernel/system_estimate_score_mask_scale_u55c_kernel.xtxt
+WARNING: [v++-17-1525]  
+INFO: [v++ 60-586] Created attention_score_u55c/build/score_mask_scale_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 37s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/score_mask_scale_resident_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/score_mask_scale_resident_u55c_kernel
+Running Dispatch Server on port: 39905
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo.compile_summary, at Mon May  4 19:17:34 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/score_mask_scale_resident_u55c_kernel/v++_compile_score_mask_scale_resident_u55c_kernel_guidance.html', at Mon May  4 19:17:34 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware emulation target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'score_mask_scale_resident_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: score_mask_scale_resident_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/score_mask_scale_resident_u55c_kernel/score_mask_scale_resident_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_96_1_VITIS_LOOP_97_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_96_1_VITIS_LOOP_97_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_119_1_VITIS_LOOP_120_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_119_1_VITIS_LOOP_120_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_143_1_VITIS_LOOP_144_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 13, loop 'VITIS_LOOP_143_1_VITIS_LOOP_144_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_175_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 13, loop 'VITIS_LOOP_175_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_200_1'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_200_1'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_360_1_VITIS_LOOP_361_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 75, loop 'VITIS_LOOP_360_1_VITIS_LOOP_361_2'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 371.47 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/score_mask_scale_resident_u55c_kernel/system_estimate_score_mask_scale_resident_u55c_kernel.xtxt
+INFO: [v++ 60-586] Created attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 38s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/softmax_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/softmax_u55c_kernel
+Running Dispatch Server on port: 45705
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_u55c_kernel.xo.compile_summary, at Mon May  4 19:18:13 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/softmax_u55c_kernel/v++_compile_softmax_u55c_kernel_guidance.html', at Mon May  4 19:18:13 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware emulation target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'softmax_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: softmax_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/softmax_u55c_kernel/softmax_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_91_1_VITIS_LOOP_92_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_91_1_VITIS_LOOP_92_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_67_7'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_67_7'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_39_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = NA, Final II = 1, Depth = 5, loop 'VITIS_LOOP_39_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_46_3'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 3, Final II = 4, Depth = 28, loop 'VITIS_LOOP_46_3'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_52_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_52_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_57_5'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 15, loop 'VITIS_LOOP_57_5'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_62_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_62_6'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_104_3_VITIS_LOOP_105_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 4, loop 'VITIS_LOOP_104_3_VITIS_LOOP_105_4'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were NOT satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 404.86 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/softmax_u55c_kernel/system_estimate_softmax_u55c_kernel.xtxt
+WARNING: [v++-17-1525]  
+INFO: [v++ 60-586] Created attention_score_u55c/build/softmax_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 41s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/softmax_full_row_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/softmax_full_row_u55c_kernel
+Running Dispatch Server on port: 33753
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_u55c_kernel.xo.compile_summary, at Mon May  4 19:18:55 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/softmax_full_row_u55c_kernel/v++_compile_softmax_full_row_u55c_kernel_guidance.html', at Mon May  4 19:18:55 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware emulation target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'softmax_full_row_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: softmax_full_row_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/softmax_full_row_u55c_kernel/softmax_full_row_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_98_1_VITIS_LOOP_99_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 4, loop 'VITIS_LOOP_98_1_VITIS_LOOP_99_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_74_7'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_74_7'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_45_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 5, loop 'VITIS_LOOP_45_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_53_3'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 3, Final II = 4, Depth = 28, loop 'VITIS_LOOP_53_3'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_59_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_59_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_64_5'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 15, loop 'VITIS_LOOP_64_5'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_69_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_69_6'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_111_3_VITIS_LOOP_112_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 5, loop 'VITIS_LOOP_111_3_VITIS_LOOP_112_4'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were NOT satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 360.10 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/softmax_full_row_u55c_kernel/system_estimate_softmax_full_row_u55c_kernel.xtxt
+WARNING: [v++-17-1525]  
+INFO: [v++ 60-586] Created attention_score_u55c/build/softmax_full_row_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 41s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/softmax_full_row_resident_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/softmax_full_row_resident_u55c_kernel
+Running Dispatch Server on port: 42271
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo.compile_summary, at Mon May  4 19:19:38 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/softmax_full_row_resident_u55c_kernel/v++_compile_softmax_full_row_resident_u55c_kernel_guidance.html', at Mon May  4 19:19:38 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware emulation target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'softmax_full_row_resident_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: softmax_full_row_resident_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/softmax_full_row_resident_u55c_kernel/softmax_full_row_resident_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_141_1_VITIS_LOOP_142_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_141_1_VITIS_LOOP_142_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_74_7'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_74_7'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_45_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 5, loop 'VITIS_LOOP_45_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_53_3'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 3, Final II = 4, Depth = 28, loop 'VITIS_LOOP_53_3'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_59_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_59_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_64_5'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 15, loop 'VITIS_LOOP_64_5'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_69_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 1, loop 'VITIS_LOOP_69_6'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_155_3_VITIS_LOOP_156_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 4, loop 'VITIS_LOOP_155_3_VITIS_LOOP_156_4'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were NOT satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 360.10 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/softmax_full_row_resident_u55c_kernel/system_estimate_softmax_full_row_resident_u55c_kernel.xtxt
+INFO: [v++ 60-586] Created attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 41s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/v_weighted_sum_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/v_weighted_sum_u55c_kernel
+Running Dispatch Server on port: 44185
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo.compile_summary, at Mon May  4 19:20:21 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/v_weighted_sum_u55c_kernel/v++_compile_v_weighted_sum_u55c_kernel_guidance.html', at Mon May  4 19:20:21 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware emulation target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'v_weighted_sum_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: v_weighted_sum_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/v_weighted_sum_u55c_kernel/v_weighted_sum_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_57_1_VITIS_LOOP_58_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_57_1_VITIS_LOOP_58_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_64_3_VITIS_LOOP_65_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_64_3_VITIS_LOOP_65_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_20_1_VITIS_LOOP_21_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 518, loop 'VITIS_LOOP_20_1_VITIS_LOOP_21_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_78_5_VITIS_LOOP_79_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 4, loop 'VITIS_LOOP_78_5_VITIS_LOOP_79_6'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 411.00 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/v_weighted_sum_u55c_kernel/system_estimate_v_weighted_sum_u55c_kernel.xtxt
+WARNING: [v++-17-1525]  
+INFO: [v++ 60-586] Created attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 42s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+INFO: [v++ 60-1306] Additional information associated with this v++ compile can be found at:
+	Reports: /home/advent/Desktop/RC19/_x/reports/v_weighted_sum_resident_u55c_kernel
+	Log files: /home/advent/Desktop/RC19/_x/logs/v_weighted_sum_resident_u55c_kernel
+Running Dispatch Server on port: 41175
+INFO: [v++ 60-1548] Creating build summary session with primary output /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_resident_u55c_kernel.xo.compile_summary, at Mon May  4 19:21:04 2026
+INFO: [v++ 60-1315] Creating rulecheck session with output '/home/advent/Desktop/RC19/_x/reports/v_weighted_sum_resident_u55c_kernel/v++_compile_v_weighted_sum_resident_u55c_kernel_guidance.html', at Mon May  4 19:21:04 2026
+INFO: [v++ 60-895]   Target platform: /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
+INFO: [v++ 60-1578]   This platform contains Xilinx Shell Archive '/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/hw/hw.xsa'
+INFO: [v++ 74-78] Compiler Version string: 2022.2
+INFO: [v++ 60-585] Compiling for hardware emulation target
+INFO: [v++ 60-423]   Target device: xilinx_u55c_gen3x16_xdma_3_202210_1
+INFO: [v++ 60-242] Creating kernel: 'v_weighted_sum_resident_u55c_kernel'
+
+===>The following messages were generated while  performing high-level synthesis for kernel: v_weighted_sum_resident_u55c_kernel Log file: /home/advent/Desktop/RC19/_x/v_weighted_sum_resident_u55c_kernel/v_weighted_sum_resident_u55c_kernel/vitis_hls.log :
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_122_1_VITIS_LOOP_123_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 77, loop 'VITIS_LOOP_122_1_VITIS_LOOP_123_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_135_3_VITIS_LOOP_136_4'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 3, loop 'VITIS_LOOP_135_3_VITIS_LOOP_136_4'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_20_1_VITIS_LOOP_21_2'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 1, Depth = 518, loop 'VITIS_LOOP_20_1_VITIS_LOOP_21_2'
+INFO: [v++ 204-61] Pipelining loop 'VITIS_LOOP_149_5_VITIS_LOOP_150_6'.
+INFO: [v++ 200-1470] Pipelining result : Target II = 1, Final II = 143, Depth = 144, loop 'VITIS_LOOP_149_5_VITIS_LOOP_150_6'
+INFO: [v++ 200-790] **** Loop Constraint Status: All loop constraints were NOT satisfied.
+INFO: [v++ 200-789] **** Estimated Fmax: 203.95 MHz
+INFO: [v++ 60-594] Finished kernel compilation
+INFO: [v++ 60-244] Generating system estimate report...
+INFO: [v++ 60-1092] Generated system estimate report: /home/advent/Desktop/RC19/_x/reports/v_weighted_sum_resident_u55c_kernel/system_estimate_v_weighted_sum_resident_u55c_kernel.xtxt
+INFO: [v++ 60-586] Created attention_score_u55c/build/v_weighted_sum_resident_u55c_kernel.xo
+INFO: [v++ 60-2343] Use the vitis_analyzer tool to visualize and navigate the relevant reports. Run the following command. 
+    vitis_analyzer /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_resident_u55c_kernel.xo.compile_summary 
+INFO: [v++ 60-791] Total elapsed time: 0h 0m 43s
+INFO: [v++ 60-1653] Closing dispatch client.
+Option Map File Used: '/home/advent/Vivado/Vitis/2022.2/data/vitis/vpp/optMap.xml'
+
+****** v++ v2022.2 (64-bit)
+  **** SW Build 3671529 on 2022-10-13-17:52:11
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+
+ERROR: [v++ 60-1214] The total length of a kernel and its compute unit name cannot exceed 64: 'score_mask_scale_resident_u55c_kernel:score_mask_scale_resident_u55c_kernel_1'
+ERROR: [v++ 60-1214] The total length of a kernel and its compute unit name cannot exceed 64: 'softmax_full_row_resident_u55c_kernel:softmax_full_row_resident_u55c_kernel_1'
+ERROR: [v++ 60-1214] The total length of a kernel and its compute unit name cannot exceed 64: 'v_weighted_sum_resident_u55c_kernel:v_weighted_sum_resident_u55c_kernel_1'
+ERROR: [v++ 60-633] Failed to collect compute units: The kernel and its compute unit name length violation
+INFO: [v++ 60-1662] Stopping dispatch session having empty uuid.
+INFO: [v++ 60-1653] Closing dispatch client.

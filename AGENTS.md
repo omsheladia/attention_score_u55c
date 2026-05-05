@@ -1027,6 +1027,17 @@ On 2026-05-04, Optimization Track O1 baseline/profiling was completed on branch
   units as `No Trace`, so the native XRT API and host data-transfer summary are
   the authoritative O1 evidence
 
+Also on 2026-05-04, an intermittent non-resident `--seq-len 256` tiled
+verification failure was diagnosed in `host/attention_score_chain_xrt.cpp`.
+The double-buffered preload path could write the next K tile into a BO set
+before the previous kernel using that same BO set had completed. The host now
+calls `finish_pending_tile(next_set)` before preloading into `next_set`. This
+is a host-only fix; the existing fused xclbin UUID
+`56cd611d-8c32-c19b-f5ef-358bed40d459` is unchanged. After rebuilding the host
+binary, one direct `S=256` run and five repeated `S=256` runs all passed with
+`Tiled sequence verification PASSED`, `Attention output verification PASSED`,
+and `XRT chain verification PASSED`.
+
 On 2026-05-04, Optimization Track O2 Windows-side implementation was started:
 
 - `host/attention_score_chain_xrt.cpp` now has `--resident` and
@@ -1053,22 +1064,69 @@ On 2026-05-04, Optimization Track O2 Windows-side implementation was started:
 - not yet done: Vitis HLS/v++ compile, `hw_emu`, or real U55C verification for
   the resident xclbin
 
+Later on 2026-05-04, Optimization Track O2 Linux/U55C validation completed:
+
+- `host/vpp_link.cfg` was fixed for Vitis 2022.2 by adding short resident CU
+  instance names:
+  - `score_mask_scale_resident_u55c_kernel:1:sms_res_1`
+  - `softmax_full_row_resident_u55c_kernel:1:sfr_res_1`
+  - `v_weighted_sum_resident_u55c_kernel:1:vws_res_1`
+  This avoids the Vitis `kernel_name:cu_name` 64-character limit at link.
+- Resident HLS `csim/csynth` passed for:
+  - `score_mask_scale_resident_u55c_kernel`
+  - `softmax_full_row_resident_u55c_kernel`
+  - `v_weighted_sum_resident_u55c_kernel`
+- HLS/build warning to remember:
+  - resident V weighted-sum synthesized but misses II badly on the output
+    accumulation read-modify-write loop; HLS estimate was `164.34 MHz`, `v++`
+    estimate was `203.95 MHz`
+- `hw_emu` xclbin link passed; UUID
+  `2b6e9831-1168-cbfb-8ab9-55a08dbfcbaa`
+- `hw_emu --seq-len 8 --resident-debug` passed with
+  `Resident intermediate verification PASSED`,
+  `Resident attention output verification PASSED`, and
+  `XRT chain verification PASSED`; it took about `584178.703 ms`, so larger
+  resident `hw_emu` lengths were skipped as impractical
+- real hardware xclbin build passed in about `1h20m48s`; UUID
+  `687b5e4a-591f-9d82-9263-e27bb7a727be`; routed timing met constraints with
+  `WNS 0.003 ns`, `TNS 0`, `WHS 0.009 ns`
+- real U55C resident synthetic sweep passed:
+  - `S=8 0.930 ms`
+  - `S=64 4.131 ms`
+  - `S=128 12.755 ms`
+  - `S=256 45.809 ms`
+  - `S=512 173.489 ms`
+- real U55C resident real-vector runs passed:
+  - `sim/real_tinyllama_s16 1.042 ms`
+  - `sim/real_tinyllama_s64 3.369 ms`
+- `sim/real_tinyllama_s16 --resident-debug` also passed intermediate
+  logits/probability verification and final output verification, total
+  `1.294 ms`
+- O2 achieved the intended host-staging reduction: at `S=512`,
+  `host_dma_sync_gap` dropped from O1 `16.231 ms` to O2 `0.757 ms`
+- O2 regressed end-to-end timing because resident V accumulation dominates:
+  `v_weighted_sum_resident 148.581 ms` at `S=512`, total `173.489 ms` vs O1
+  total `60.328 ms`
+- fresh O2 reports and run artifacts were copied under `docs/` with the `o2_`
+  prefix; see `docs/track_d_results.md` for tables and interpretation
+
 ## Best Next Step
 
 Track A Step 5 is hardware-verified on the current
 `optimization-device-resident-online-attn` branch, and Track O1 baseline
-profiling is complete. Track O2 is implemented locally but still needs Linux
-Vitis/XRT build and U55C validation. Best next practical steps are:
+profiling is complete. Track O2 is implemented and real-card verified, but its
+resident V accumulation strategy is slower than O1. Best next practical steps
+are:
 
 1. use `docs/track_d_results.md` as the current fused-vs-staged timing and
-   utilization summary, including the O1 profile artifacts
-2. build the resident-kernel xclbin on the U55C Linux machine and run
-   `--resident-debug` first at small `S`
-3. run the resident synthetic sweep and compare against the O1 baseline
-4. then reduce launch count with Track O3 larger-grain kernels
-5. prioritize device-resident buffers, lower kernel launch count, and online
+   utilization summary, including O1 and O2 results
+2. start Track O3 with the V multi-K accumulation kernel first, keeping the
+   output tile on chip and writing final `attn_out` once per Q chunk
+3. then reduce pre-softmax launch count with larger-grain score/mask/scale
+   kernels
+4. prioritize device-resident buffers, lower kernel launch count, and online
    softmax fused with V accumulation before minor HLS/clock tuning
-6. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
+5. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
    `S=512` if broader real-input coverage is needed
 
 ## After That
@@ -1104,8 +1162,10 @@ At the time of writing:
   comparison; see `docs/track_d_results.md`
 - `docs/implementation_checklist_optimization.md` captures the next performance
   work after the completed required checklist
-- Optimization Track O1 is complete; Track O2 is locally implemented and now
-  needs U55C Linux build/verification
+- Optimization Track O1 is complete
+- Optimization Track O2 is implemented and real-card verified, but performance
+  regressed because resident V accumulation performs slow HBM read-modify-write
+  updates; Track O3 should fix that first
 
 Agents should avoid redoing exploration that this file already captures unless
 something materially changed.

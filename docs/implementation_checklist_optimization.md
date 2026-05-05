@@ -175,16 +175,57 @@ tile loops.
 
 ### Verification
 
-- [ ] Verify synthetic `S = 8, 64, 128` in `hw_emu`.
-- [ ] Verify synthetic `S = 8, 64, 128, 256, 512` on real U55C.
-- [ ] Verify `sim/real_tinyllama_s16` and `sim/real_tinyllama_s64`.
-- [ ] Compare timing against current fused Step 5 results.
+- [x] Verify synthetic `S = 8, 64, 128` in `hw_emu`.
+      Note: only `S=8 --resident-debug` was run in `hw_emu`; it passed
+      intermediate and final output verification, but took about `584179 ms`.
+      Larger `hw_emu` resident runs were skipped because real hardware
+      validation below covers the full sweep and the cycle simulator would take
+      hours.
+- [x] Verify synthetic `S = 8, 64, 128, 256, 512` on real U55C.
+- [x] Verify `sim/real_tinyllama_s16` and `sim/real_tinyllama_s64`.
+- [x] Compare timing against current fused Step 5 results.
+
+### 2026-05-04 Linux/U55C validation status
+
+- [x] Resident HLS `csim/csynth` passed for:
+  - `score_mask_scale_resident_u55c_kernel`
+  - `softmax_full_row_resident_u55c_kernel`
+  - `v_weighted_sum_resident_u55c_kernel`
+- [x] `hw_emu` xclbin link passed after shortening resident CU instance names
+      in `host/vpp_link.cfg` with `nk=...:sms_res_1/sfr_res_1/vws_res_1`.
+- [x] Real hardware xclbin build passed. UUID:
+      `687b5e4a-591f-9d82-9263-e27bb7a727be`.
+- [x] Real hardware routed timing met constraints: `WNS 0.003 ns`, `TNS 0`,
+      `WHS 0.009 ns`, no failing endpoints.
+- [x] Real hardware resident synthetic sweep passed:
+  - `S=8 0.930 ms`
+  - `S=64 4.131 ms`
+  - `S=128 12.755 ms`
+  - `S=256 45.809 ms`
+  - `S=512 173.489 ms`
+- [x] Real hardware resident real-vector runs passed:
+  - `sim/real_tinyllama_s16 1.042 ms`
+  - `sim/real_tinyllama_s64 3.369 ms`
+- [x] O2 report artifacts copied under `docs/` with the `o2_` prefix.
 
 ## Expected result
 
 - Same numerical output.
 - Less host/DMA/sync gap.
 - Still many launches, but far fewer host-visible intermediate transfers.
+
+## Actual O2 result
+
+- Correctness goal met on real hardware.
+- Host/DMA/sync gap improved sharply at `S=512`: O1 `16.231 ms` -> O2
+  `0.757 ms`.
+- End-to-end performance regressed at `S=512`: O1 `60.328 ms` -> O2
+  `173.489 ms`.
+- Root cause is the resident V output accumulation path. The resident V HLS
+  report misses II badly on the HBM read-modify-write output loop, and real
+  hardware shows `v_weighted_sum_resident` dominating at `148.581 ms`.
+- Track O3 should start with multi-K V accumulation that keeps the output tile
+  on chip and writes final `attn_out` once.
 
 ---
 
@@ -478,7 +519,7 @@ larger real TinyLlama-derived inputs, not only synthetic `--seq-len` data.
 ## Milestone 1 - Low-Risk Optimization
 
 - [x] Track O1 complete
-- [ ] Track O2 complete
+- [x] Track O2 complete
 - [ ] Same outputs as current fused Step 5 path
 - [ ] Measurable reduction in host/DMA/sync gap
 

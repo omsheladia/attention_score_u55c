@@ -1,0 +1,51 @@
+===============================================================================
+Version:    v++ v2022.2 (64-bit)
+Build:      SW Build 3671529 on 2022-10-13-17:52:11
+Copyright:  Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+Created:    Mon May  4 19:41:29 2026
+===============================================================================
+
+-------------------------------------------------------------------------------
+Design Name:             v_weighted_sum_u55c_kernel
+Target Device:           xilinx:u55c:gen3x16_xdma_3:202210.1
+Target Clock:            300.000000MHz
+Total number of kernels: 1
+-------------------------------------------------------------------------------
+
+Kernel Summary
+Kernel Name                 Type  Target              OpenCL Library              Compute Units
+--------------------------  ----  ------------------  --------------------------  -------------
+v_weighted_sum_u55c_kernel  c     fpga0:OCL_REGION_0  v_weighted_sum_u55c_kernel  1
+
+
+-------------------------------------------------------------------------------
+OpenCL Binary:     v_weighted_sum_u55c_kernel
+Kernels mapped to: clc_region
+
+Timing Information (MHz)
+Compute Unit                  Kernel Name                 Module Name                                                          Target Frequency  Estimated Frequency
+----------------------------  --------------------------  -------------------------------------------------------------------  ----------------  -------------------
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_57_1_VITIS_LOOP_58_2  300.300293        411.015198
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_64_3_VITIS_LOOP_65_4  300.300293        411.015198
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_core_hls                                              300.300293        426.985474
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_78_5_VITIS_LOOP_79_6  300.300293        411.015198
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel                                           300.300293        411.015198
+
+Latency Information
+Compute Unit                  Kernel Name                 Module Name                                                          Start Interval  Best (cycles)  Avg (cycles)  Worst (cycles)  Best (absolute)  Avg (absolute)  Worst (absolute)
+----------------------------  --------------------------  -------------------------------------------------------------------  --------------  -------------  ------------  --------------  ---------------  --------------  ----------------
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_57_1_VITIS_LOOP_58_2  515             515            515           515             1.716 us         1.716 us        1.716 us
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_64_3_VITIS_LOOP_65_4  4099            4099           4099          4099            13.662 us        13.662 us       13.662 us
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_core_hls                                              1030            1030           1030          1030            3.433 us         3.433 us        3.433 us
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_78_5_VITIS_LOOP_79_6  516             516            516           516             1.720 us         1.720 us        1.720 us
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel                                           5790            5789           5789          5789            19.295 us        19.295 us       19.295 us
+
+Area Information
+Compute Unit                  Kernel Name                 Module Name                                                          FF     LUT    DSP  BRAM  URAM
+----------------------------  --------------------------  -------------------------------------------------------------------  -----  -----  ---  ----  ----
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_57_1_VITIS_LOOP_58_2  1036   596    0    0     0
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_64_3_VITIS_LOOP_65_4  1049   620    0    0     0
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_core_hls                                              50068  25556  0    0     0
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel_Pipeline_VITIS_LOOP_78_5_VITIS_LOOP_79_6  1098   1045   0    0     0
+v_weighted_sum_u55c_kernel_1  v_weighted_sum_u55c_kernel  v_weighted_sum_u55c_kernel                                           68145  55972  0    49    0
+-------------------------------------------------------------------------------
