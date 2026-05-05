@@ -33,6 +33,16 @@ void v_weighted_sum_resident_u55c_kernel(
     std::uint32_t key_col_count,
     std::uint32_t clear_accum);
 
+// O3: loops over all K/V chunks internally; keeps 8x64 accumulator on chip;
+// writes final attn_out once per Q chunk — eliminates HBM read-modify-write.
+void v_weighted_sum_multik_u55c_kernel(
+    const float* probs_full,
+    const float* v_full,
+    float* attn_out,
+    std::uint32_t seq_len,
+    std::uint32_t query_base,
+    std::uint32_t query_row_count);
+
 }  // namespace v_weighted_sum
 }  // namespace attention_score_u55c
 

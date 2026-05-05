@@ -894,10 +894,12 @@ three-kernel/pre-Track-B wording and reflect the current staged five-kernel
 flow, real TinyLlama `S=16`/`S=64` vector results, and Track D GPU timing note.
 
 The architecture diagram at `docs/attention_architecture.drawio` was also
-refreshed from the older score-only sketch to the current one-head staged
-pipeline: host/XRT, HBM banks `[0]` through `[7]`, `attention_score`,
-`mask_scale`, `softmax_full_row`, `v_weighted_sum`, final `attn_out`, tiling
-model, verification tolerances, and scope boundary.
+refreshed from the older score-only sketch to the frozen master one-head
+pipeline: host/XRT, HBM banks `[0]` through `[7]`, fused `score_mask_scale`,
+host row assembly, `softmax_full_row`, `v_weighted_sum`, final `attn_out`,
+tiling model, verification scope, and the legacy single-tile export path.
+It intentionally excludes optimization-branch implementation details such as
+the O2 resident path.
 
 On 2026-05-04, Vitis report/diagram artifacts were added under `docs/` for the
 current five-kernel xclbin. New report-facing artifacts include
@@ -1110,24 +1112,42 @@ Later on 2026-05-04, Optimization Track O2 Linux/U55C validation completed:
 - fresh O2 reports and run artifacts were copied under `docs/` with the `o2_`
   prefix; see `docs/track_d_results.md` for tables and interpretation
 
+On 2026-05-05, Track O3 V multi-K accumulation kernel was implemented on
+Windows (local g++ only; csynth/hw_emu/real hardware pending):
+
+- added `v_weighted_sum_multik_u55c_kernel` to
+  `hls/v_weighted_sum/v_weighted_sum_core_hls.cpp` and
+  `hls/v_weighted_sum/v_weighted_sum_core_hls.hpp`
+- the kernel accepts `probs_full`, `v_full`, `attn_out`, `seq_len`,
+  `query_base`, `query_row_count`
+- it loops over all K/V chunks internally for one Q chunk; keeps the 8x64
+  output accumulator in registers (`ARRAY_PARTITION complete dim=2`) across all
+  K iterations; writes final `attn_out` to HBM exactly once per Q chunk
+- this eliminates the HBM read-modify-write output loop that caused
+  `v_weighted_sum_resident` to dominate at `148.581 ms` in O2
+- one kernel launch per Q chunk replaces 8 launches at `S=512`
+- `hls/v_weighted_sum/tb_v_weighted_sum.cpp` extended with two new test cases:
+  single K-chunk test (real loaded vectors, seq_len=64) and two-K-chunk test
+  (synthetic multi-chunk data, seq_len=128)
+- `hls/v_weighted_sum/run_hls_multik.tcl` added for Linux-side `csim`/`csynth`
+- local g++ bench passes: `v_weighted_sum test PASSED, max diff 5.96046e-08`
+- **gate before hw_emu or real hardware build:** csynth must show the inner
+  accumulation loop at II=1; if not, fix accumulator partitioning first
+
 ## Best Next Step
 
-Track A Step 5 is hardware-verified on the current
-`optimization-device-resident-online-attn` branch, and Track O1 baseline
-profiling is complete. Track O2 is implemented and real-card verified, but its
-resident V accumulation strategy is slower than O1. Best next practical steps
-are:
+Track O3 V multi-K accumulation kernel is implemented and local-bench verified.
+Next steps in order:
 
-1. use `docs/track_d_results.md` as the current fused-vs-staged timing and
-   utilization summary, including O1 and O2 results
-2. start Track O3 with the V multi-K accumulation kernel first, keeping the
-   output tile on chip and writing final `attn_out` once per Q chunk
-3. then reduce pre-softmax launch count with larger-grain score/mask/scale
-   kernels
-4. prioritize device-resident buffers, lower kernel launch count, and online
-   softmax fused with V accumulation before minor HLS/clock tuning
-5. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
-   `S=512` if broader real-input coverage is needed
+1. run `vitis_hls -f hls/v_weighted_sum/run_hls_multik.tcl` on Linux and check
+   csynth report: inner accumulation loop must show II=1
+2. if II > 1, add `#pragma HLS ARRAY_PARTITION complete dim=1` to `acc` and
+   re-run csynth
+3. after II=1 confirmed, integrate into XRT host (`--multik` mode), rebuild
+   xclbin, verify `hw_emu` at `S=8, 64, 128`, then real U55C sweep
+4. then implement the pre-softmax multi-K score/mask/scale kernel to reduce
+   512 → 64 launches at `S=512`
+5. record timing vs O1/O2 baselines in `docs/track_d_results.md`
 
 ## After That
 

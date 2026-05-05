@@ -225,6 +225,71 @@ int main(int argc, char** argv) {
     }
   }
 
+  // Multi-K kernel: single K chunk using real loaded vectors.
+  {
+    const std::uint32_t single_seq = key_col_count;
+    std::vector<float> probs_single(
+        static_cast<std::size_t>(single_seq) * single_seq, 0.0f);
+    for (std::uint32_t row = 0; row < query_row_count; ++row) {
+      for (std::uint32_t col = 0; col < single_seq; ++col) {
+        probs_single[(static_cast<std::size_t>(row) * single_seq) + col] =
+            weights_tile[(row * kScoreColsPerTile) + col];
+      }
+    }
+    std::vector<float> attn_out_single(
+        static_cast<std::size_t>(single_seq) * kHeadDim, 0.0f);
+
+    attention_score_u55c::v_weighted_sum::v_weighted_sum_multik_u55c_kernel(
+        probs_single.data(), v_tile, attn_out_single.data(),
+        single_seq, 0, query_row_count);
+
+    for (std::uint32_t row = 0; row < query_row_count; ++row) {
+      for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+        const std::size_t idx = (static_cast<std::size_t>(row) * kHeadDim) + dim;
+        const float diff = std::fabs(
+            attn_out_single[idx] - expected[(row * kHeadDim) + dim]);
+        if (diff > max_diff) max_diff = diff;
+        if (diff > 1.0e-4f) {
+          ++mismatch_count;
+          if (mismatch_count <= 8) {
+            std::cerr << "Multi-K single-chunk mismatch at row " << row
+                      << ", dim " << dim << ": got " << attn_out_single[idx]
+                      << ", expected " << expected[(row * kHeadDim) + dim]
+                      << ", diff " << diff << "\n";
+          }
+        }
+      }
+    }
+  }
+
+  // Multi-K kernel: two K chunks using synthetic multi-chunk data.
+  {
+    std::vector<float> multik_out(
+        static_cast<std::size_t>(kMultiSeqLen) * kHeadDim, 0.0f);
+
+    attention_score_u55c::v_weighted_sum::v_weighted_sum_multik_u55c_kernel(
+        multi_weights.data(), multi_v.data(), multik_out.data(),
+        kMultiSeqLen, 0, kScoreRowsPerTile);
+
+    for (std::uint32_t row = 0; row < kScoreRowsPerTile; ++row) {
+      for (std::uint32_t dim = 0; dim < kHeadDim; ++dim) {
+        const std::size_t idx = (static_cast<std::size_t>(row) * kHeadDim) + dim;
+        const float diff = std::fabs(
+            multik_out[idx] - multi_expected[(row * kHeadDim) + dim]);
+        if (diff > max_diff) max_diff = diff;
+        if (diff > 1.0e-4f) {
+          ++mismatch_count;
+          if (mismatch_count <= 8) {
+            std::cerr << "Multi-K two-chunk mismatch at row " << row
+                      << ", dim " << dim << ": got " << multik_out[idx]
+                      << ", expected " << multi_expected[(row * kHeadDim) + dim]
+                      << ", diff " << diff << "\n";
+          }
+        }
+      }
+    }
+  }
+
   if (mismatch_count != 0) {
     std::cerr << "v_weighted_sum test FAILED with " << mismatch_count
               << " mismatches, max diff " << max_diff << "\n";

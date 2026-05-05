@@ -37,6 +37,7 @@ hls/
   softmax/           stage 3 — row-wise softmax
   softmax_full_row/  full-row softmax for tiled S <= 512
   v_weighted_sum/    stage 5 — partial softmax @ V
+  score_and_mask_scale/  fused pre-softmax kernel (stages 1+2 combined)
   common/            shared fixed-point types (fixed_types.hpp)
 host/       XRT host app, build scripts, vpp_link.cfg, bring-up guide
 sim/
@@ -61,8 +62,13 @@ docs/       offload design notes
 | Real vector export (single-tile) | [model/export_real_vectors.py](model/export_real_vectors.py) |
 | CPU attention baseline | [model/benchmark_cpu.py](model/benchmark_cpu.py) |
 | GPU attention baseline | [model/benchmark_gpu.py](model/benchmark_gpu.py) |
+| CPU/GPU baseline helpers | [model/benchmark_common.py](model/benchmark_common.py) |
+| CPU/GPU/FPGA results | [docs/track_d_results.md](docs/track_d_results.md) |
 | Score GEMM HLS | [hls/attention_score/attention_score_core_hls.cpp](hls/attention_score/attention_score_core_hls.cpp) |
 | Mask+scale HLS | [hls/mask_and_scale/mask_scale_core_hls.cpp](hls/mask_and_scale/mask_scale_core_hls.cpp) |
+| Full-row softmax HLS | [hls/softmax_full_row/softmax_full_row_hls.cpp](hls/softmax_full_row/softmax_full_row_hls.cpp) |
+| V weighted sum HLS | [hls/v_weighted_sum/v_weighted_sum_core_hls.cpp](hls/v_weighted_sum/v_weighted_sum_core_hls.cpp) |
+| Fused score+mask+scale HLS | [hls/score_and_mask_scale/score_mask_scale_core_hls.cpp](hls/score_and_mask_scale/score_mask_scale_core_hls.cpp) |
 | Causal mask HLS | [hls/causal_mask/causal_mask_core_hls.cpp](hls/causal_mask/causal_mask_core_hls.cpp) |
 | Score scale HLS | [hls/score_scale/score_scale_core_hls.cpp](hls/score_scale/score_scale_core_hls.cpp) |
 | Softmax HLS | [hls/softmax/softmax_core_hls.cpp](hls/softmax/softmax_core_hls.cpp) |
@@ -388,7 +394,7 @@ Repeat the pattern for `causal_mask`, `score_scale`, and `softmax` testbenches.
 ## FPGA Build & Run (Linux only)
 
 Full bring-up requires Linux with Vitis/XRT + U55C platform. The current
-3-kernel xclbin was built and run with Vitis/XRT 2022.2 and the local U55C
+five-kernel xclbin was built and run with Vitis/XRT 2022.2 and the local U55C
 platform path below.
 Follow [host/LINUX_BRINGUP.md](host/LINUX_BRINGUP.md) step by step.
 
@@ -429,8 +435,9 @@ Pass signal: `XRT chain verification PASSED`
 
 ## What "Correct" Means Here
 
-Correctness is scoped to: the 3-kernel runtime chain matches the exported reference
-vectors for the chosen tile format. It does **not** mean full TinyLlama attention
+Correctness is scoped to: the five-kernel staged pipeline matches the exported
+reference vectors for the chosen tile/sequence format, including final `attn_out`
+when V/reference files are present. It does **not** mean full TinyLlama attention
 or full model execution is verified.
 
 ---
@@ -465,30 +472,32 @@ real `Q_rot` (RoPE-rotated), `K_rot` (RoPE-rotated), and `V` (projected,
 not RoPE-rotated) tensors. Quantize Q/K to INT8; V stays float32. Export in
 the same file format the host app already reads.
 
-Steps 1–4 are implemented for the current single-tile design:
+Steps 1–5 are implemented for the current staged one-head design:
 `model/check_tinyllama_setup.py` verifies the TinyLlama environment;
 `model/extract_tinyllama_qkv.py` extracts Q/K/V via a forward-hook, applies
 INT8 symmetric quantization to Q and K, and validates against PyTorch SDPA
-output; `model/export_real_vectors.py` exports real TinyLlama Q/K/V vectors
-to `sim/real_tinyllama_tile/` in the same file format the host app reads.
-The current real-vector export is still limited to one 8-token tile, while the
-synthetic Track A tiled host path now supports `S = 8, 64, 128, 256, 512`.
-The current single-tile real-vector directory has passed on the real U55C with
-`Attention output verification PASSED`, `XRT chain verification PASSED`, and a
-0.258 ms total-chain timing through the V weighted-sum stage.
-Remaining work is extending Step 4/5 to the full tiling loop, multiple sequence
-lengths, and FPGA `attn_out` comparison for multi-sequence real-vector cases.
+output; `model/export_real_vectors.py` exports both the legacy single-tile
+directory (`sim/real_tinyllama_tile/`) and full-sequence tiled directories for
+any `S <= 512`. Verified full-sequence real-vector directories:
+`sim/real_tinyllama_s16` (S=16) and `sim/real_tinyllama_s64` (S=64), both
+passed on the real U55C with `Tiled sequence verification PASSED`,
+`Attention output verification PASSED`, and `XRT chain verification PASSED`.
+Recorded quantized-vs-float `attn_out` max errors: `2.67604024e-04` at S=16
+and `1.62767614e-04` at S=64.
 
 **Track D — CPU/GPU baseline and benchmarking**
 Measure FPGA `attn_out` latency against CPU/GPU at S = 8, 64, 128, 256, 512.
 CPU and GPU baselines run on Windows. FPGA timing requires Linux + XRT.
 
-Steps 1–2 are implemented: `model/benchmark_cpu.py` runs the CPU baseline for
-synthetic S = 8, 64, 128, 256, 512 and real-vector input, validated with zero
-tiled-vs-brute difference for softmax and `softmax @ V`; `model/benchmark_gpu.py`
-runs the CUDA baseline with the same inputs, verified on an RTX 3050 Laptop GPU
-(`torch 2.11.0+cu128`). Final speedup numbers can now use the Track B
-five-kernel real U55C synthetic and saved-vector runs.
+Steps 1–3 are implemented and results are in `docs/track_d_results.md`:
+`model/benchmark_cpu.py` runs the CPU baseline for synthetic S = 8, 64, 128,
+256, 512 and real-vector input (S=16/S=64); `model/benchmark_gpu.py` runs the
+CUDA baseline verified on an RTX 3050 Laptop GPU (`torch 2.11.0+cu128`); the
+host app prints `kernel_launch_wait_sum`, `host_dma_sync_gap`, and
+`total_chain` for FPGA timing. Main conclusion: the staged FPGA path is correct
+but slower than one-head CPU NumPy due to repeated kernel launch and HBM
+round-trip overhead; `docs/track_d_results.md` contains the full comparison
+tables, real-vector tables, HBM bank mapping, and performance interpretation.
 
 See [docs/implementation_checklist.md](docs/implementation_checklist.md) for the
 full step-by-step plan for all four tracks.
@@ -617,7 +626,7 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
 - `model/benchmark_cpu.py` verified synthetic S = 8, 64, 128, 256, 512 and real vectors S=16/S=64.
 - `model/benchmark_gpu.py` was verified on the Windows RTX 3050 Laptop GPU; `docs/track_d_results.md` now includes those Windows GPU timings with a note that the Linux/U55C report machine had no CUDA-visible GPU.
 - `host/attention_score_chain_xrt.cpp` now prints `kernel_launch_wait_sum`, `host_dma_sync_gap`, and `total_chain`.
-- `docs/track_d_results.md` contains CPU/FPGA comparison tables, real-vector tables, HBM bank usage, and the performance interpretation.
+- `docs/track_d_results.md` contains CPU/FPGA comparison tables, real-vector tables, HBM bank usage, performance interpretation, O1 fused-kernel timing, and O2 resident-kernel timing.
 - Main conclusion: correct staged FPGA path, HBM banks `[0]` through `[7]` used, but slower than one-head CPU NumPy due kernel launch and HBM staging overhead.
 
 **Track A Step 5 — Hardware verified on `track-a-step5-fused-score-mask-scale`:**

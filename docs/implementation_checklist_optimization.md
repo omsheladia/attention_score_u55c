@@ -520,8 +520,8 @@ larger real TinyLlama-derived inputs, not only synthetic `--seq-len` data.
 
 - [x] Track O1 complete
 - [x] Track O2 complete
-- [ ] Same outputs as current fused Step 5 path
-- [ ] Measurable reduction in host/DMA/sync gap
+- [x] Same outputs as current fused Step 5 path
+- [x] Measurable reduction in host/DMA/sync gap
 
 ## Milestone 2 - Fewer Launches
 
