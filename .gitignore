@@ -42,3 +42,5 @@ emulation_debug.log
 
 # Local preservation backups
 backups/
+
+tmp/

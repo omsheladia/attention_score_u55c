@@ -180,11 +180,16 @@ void v_weighted_sum_multik_u55c_kernel(
   float acc[kScoreRowsPerTile][kHeadDim];
   float weights_local[kScoreRowsPerTile][kScoreColsPerTile];
   float v_local[kScoreColsPerTile][kHeadDim];
+// acc: fully partitioned so each element is an independent register.
 #pragma HLS ARRAY_PARTITION variable=acc complete dim=1
 #pragma HLS ARRAY_PARTITION variable=acc complete dim=2
-// Full col unroll requires 64-wide parallel read on both arrays.
+// Both arrays fully partitioned: row and col are compile-time constants in
+// the restructured loop (row unrolled, col unrolled, dim pipelined), so
+// HLS addresses every element directly without a runtime mux.
+#pragma HLS ARRAY_PARTITION variable=weights_local complete dim=1
 #pragma HLS ARRAY_PARTITION variable=weights_local complete dim=2
 #pragma HLS ARRAY_PARTITION variable=v_local complete dim=1
+#pragma HLS ARRAY_PARTITION variable=v_local complete dim=2
 
   const int seq = static_cast<int>(seq_len);
   const int q_base = static_cast<int>(query_base);
@@ -224,13 +229,15 @@ void v_weighted_sum_multik_u55c_kernel(
       }
     }
 
-    for (int row = 0; row < kScoreRowsPerTile; ++row) {
-      for (int dim = 0; dim < kHeadDim; ++dim) {
+    // Pipeline over dim; unroll row and col so every acc[row][dim] element
+    // is addressed with compile-time-constant indices — no runtime mux on
+    // the read-modify-write path.
+    for (int dim = 0; dim < kHeadDim; ++dim) {
 #pragma HLS PIPELINE II=1
+      for (int row = 0; row < kScoreRowsPerTile; ++row) {
+#pragma HLS UNROLL
         float partial = 0.0f;
         for (int col = 0; col < kScoreColsPerTile; ++col) {
-// Full unroll builds a single 64-input adder tree — no sequential partial
-// accumulation recurrence, which was causing II=3 with factor=16.
 #pragma HLS UNROLL
           partial += weights_local[row][col] * v_local[col][dim];
         }
