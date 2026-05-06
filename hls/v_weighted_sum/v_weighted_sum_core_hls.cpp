@@ -180,10 +180,11 @@ void v_weighted_sum_multik_u55c_kernel(
   float acc[kScoreRowsPerTile][kHeadDim];
   float weights_local[kScoreRowsPerTile][kScoreColsPerTile];
   float v_local[kScoreColsPerTile][kHeadDim];
-#pragma HLS ARRAY_PARTITION variable=acc complete dim=2
 #pragma HLS ARRAY_PARTITION variable=acc complete dim=1
-#pragma HLS ARRAY_PARTITION variable=weights_local cyclic factor=16 dim=2
-#pragma HLS ARRAY_PARTITION variable=v_local cyclic factor=16 dim=1
+#pragma HLS ARRAY_PARTITION variable=acc complete dim=2
+// Full col unroll requires 64-wide parallel read on both arrays.
+#pragma HLS ARRAY_PARTITION variable=weights_local complete dim=2
+#pragma HLS ARRAY_PARTITION variable=v_local complete dim=1
 
   const int seq = static_cast<int>(seq_len);
   const int q_base = static_cast<int>(query_base);
@@ -228,7 +229,9 @@ void v_weighted_sum_multik_u55c_kernel(
 #pragma HLS PIPELINE II=1
         float partial = 0.0f;
         for (int col = 0; col < kScoreColsPerTile; ++col) {
-#pragma HLS UNROLL factor=16
+// Full unroll builds a single 64-input adder tree — no sequential partial
+// accumulation recurrence, which was causing II=3 with factor=16.
+#pragma HLS UNROLL
           partial += weights_local[row][col] * v_local[col][dim];
         }
         acc[row][dim] += partial;
