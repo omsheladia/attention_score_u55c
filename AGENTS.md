@@ -1171,16 +1171,43 @@ On 2026-05-05, the O3 V multi-K HLS gate was run on Linux with Vitis HLS
 - do **not** proceed to `hw_emu` or real U55C for this O3 kernel until the
   accumulation loop reaches II=1
 
+Later on 2026-05-05, the O3 V multi-K dot-product loop was changed to full
+64-way unroll:
+
+- `weights_local` is now completely partitioned on dim=2 and `v_local` is now
+  completely partitioned on dim=1 so HLS can read all 64 columns in parallel
+- the inner col loop now uses full `#pragma HLS UNROLL` instead of
+  `UNROLL factor=16`
+- rerun command:
+  `source attention_score_u55c/host/setup_2022_2_env.sh && vitis_hls -f attention_score_u55c/hls/v_weighted_sum/run_hls_multik.tcl`
+- `csim PASS`: `v_weighted_sum test PASSED, max diff 5.96046e-08`
+- `csynth` still did **not** pass the II gate:
+  - top estimated Fmax: `243.12 MHz`
+  - top resources: `0 BRAM_18K`, `113 DSP`, `63483 FF`, `49804 LUT`, `0 URAM`
+  - hot loop:
+    `v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_227_8_VITIS_LOOP_228_9`
+  - hot-loop latency `1989 cycles`, iteration latency `457`, achieved II `3`,
+    target II `1`
+- important interpretation:
+  - full unroll removed the earlier 16-way partial-accumulation explanation
+  - the remaining II=3 blocker is the final `acc[row][dim] += partial`
+    read-modify-write on a muxed fully-partitioned accumulator register bank
+  - HLS still reports the FP32 add path at line 237 as the critical dependency
+- preserved artifacts:
+  - `docs/o3_hls_v_weighted_sum_multik_full_unroll.txt`
+  - `docs/o3_v_weighted_sum_multik_csynth_full_unroll.rpt`
+  - `docs/o3_v_weighted_sum_multik_accum_loop_full_unroll.rpt`
+
 ## Best Next Step
 
 Track O3 V multi-K accumulation needs one more HLS iteration before XRT
 integration. Next steps in order:
 
-1. restructure the hot accumulation loop to remove the muxed
-   read-modify-write recurrence on `acc[row][dim]`; likely options are
-   row-local 64-wide accumulators, explicit per-row accumulator helpers, or a
-   ping-pong/reduction structure that makes the accumulator index static enough
-   for HLS
+1. restructure the final accumulator update so HLS no longer sees
+   `acc[row][dim] += partial` as a loop-carried recurrence through a muxed
+   register bank; likely options are row-local/static accumulators, explicit
+   per-row helper functions, or a ping-pong/reduction structure that separates
+   the read and write timing
 2. rerun `vitis_hls -f hls/v_weighted_sum/run_hls_multik.tcl` and require the
    hot accumulation loop to show achieved II=1 before continuing
 3. after II=1 is confirmed, integrate into XRT host (`--multik` mode), rebuild

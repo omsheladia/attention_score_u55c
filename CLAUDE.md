@@ -708,12 +708,17 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
   misses the required gate: achieved II `3` vs target II `1`.
 - Added complete accumulator partitioning on `acc` dim=1 and dim=2; HLS
   accepted both partitions, but the loop still reports II=3.
-- Final checked HLS estimate: `243.12 MHz`, `16 BRAM_18K`, `113 DSP`,
-  `59198 FF`, `43845 LUT`, `0 URAM`.
+- Full 64-way unroll of the dot-product col loop plus complete local
+  partitioning for `weights_local` and `v_local` also did not clear the gate.
+- Final checked full-unroll HLS estimate: `243.12 MHz`, `0 BRAM_18K`,
+  `113 DSP`, `63483 FF`, `49804 LUT`, `0 URAM`.
 - The blocking loop is
-  `v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_226_8_VITIS_LOOP_227_9`;
+  `v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_227_8_VITIS_LOOP_228_9`;
   its report is preserved at
-  `docs/o3_v_weighted_sum_multik_accum_loop_final_dim1_only.rpt`.
+  `docs/o3_v_weighted_sum_multik_accum_loop_full_unroll.rpt`.
+- Current interpretation: the remaining II=3 blocker is the final
+  `acc[row][dim] += partial` update, not the dot-product `partial`
+  accumulation.
 - Do not move this O3 kernel into `hw_emu` or real hardware until the
   accumulation loop reaches II=1.
 

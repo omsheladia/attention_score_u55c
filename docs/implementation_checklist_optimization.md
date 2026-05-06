@@ -304,8 +304,11 @@ one launch per sequence/head
       `v_weighted_sum_multik_u55c_kernel` passes csim, but csynth still reports
       the hot accumulation loop at achieved II=3 vs target II=1 after complete
       dim=1/dim=2 accumulator partitioning.
-- [ ] Restructure the accumulator loop so the hot loop reaches II=1, then
-      proceed to `hw_emu` and real U55C verification.
+- [ ] Full 64-way unroll of the dot-product loop plus complete local
+      `weights_local`/`v_local` partitioning was tried and still reports II=3;
+      the remaining blocker is the final `acc[row][dim] += partial` update.
+- [ ] Restructure the final accumulator update so the hot loop reaches II=1,
+      then proceed to `hw_emu` and real U55C verification.
 
 ### Host update
 
