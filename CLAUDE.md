@@ -701,30 +701,92 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
 - Next optimization should fix V accumulation first by keeping the output tile
   on chip across K chunks and writing final `attn_out` once.
 
-**Optimization Track O3 — V multi-K HLS gate not yet passed:**
+**Optimization Track O3 — V multi-K passes hw_emu, real HW blocked at placement:**
 - `v_weighted_sum_multik_u55c_kernel` is present and local/csim verified:
   `v_weighted_sum test PASSED, max diff 5.96046e-08`.
-- Vitis HLS 2022.2 `csynth` completed, but the hot accumulation loop still
-  misses the required gate: achieved II `3` vs target II `1`.
 - Added complete accumulator partitioning on `acc` dim=1 and dim=2; HLS
   accepted both partitions, but the loop still reports II=3.
 - Full 64-way unroll of the dot-product col loop plus complete local
   partitioning for `weights_local` and `v_local` also did not clear the gate.
-- Final checked full-unroll HLS estimate: `243.12 MHz`, `0 BRAM_18K`,
-  `113 DSP`, `63483 FF`, `49804 LUT`, `0 URAM`.
+- The pulled dim-outer/row-unrolled version from commit `1a3a7af` was also
+  verified. It pipelines over `dim`, fully unrolls `row` and `col`, and fully
+  partitions `acc`, `weights_local`, and `v_local` on both dimensions.
+- Final checked dim-outer/row-unrolled HLS estimate: `283.37 MHz`,
+  `0 BRAM_18K`, `858 DSP`, `478810 FF`, `176824 LUT`, `0 URAM`.
 - The blocking loop is
-  `v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_227_8_VITIS_LOOP_228_9`;
+  `v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_235_8`;
   its report is preserved at
-  `docs/o3_v_weighted_sum_multik_accum_loop_full_unroll.rpt`.
+  `docs/o3_v_weighted_sum_multik_accum_loop_dim_outer_row_unroll.rpt`.
 - Current interpretation: the remaining II=3 blocker is the final
   `acc[row][dim] += partial` update, not the dot-product `partial`
-  accumulation.
-- Do not move this O3 kernel into `hw_emu` or real hardware until the
-  accumulation loop reaches II=1.
+  accumulation. The new structure improves Fmax, but HLS still reports
+  achieved II `3` vs target II `1` for the accumulator update.
+- A simple `#pragma HLS DEPENDENCE variable=acc inter false` on the
+  dim-pipelined loop was tried and removed after verification; HLS recognized
+  false dependencies but still reported achieved II `3` on `VITIS_LOOP_235_8`.
+- A ping-pong accumulator fix was then implemented: compute
+  `acc_next[row][dim] = acc[row][dim] + partial` in the hot loop, then copy
+  `acc_next` back to `acc` in a separate pipelined loop.
+- Final checked ping-pong HLS estimate: `342.47 MHz`, `0 BRAM_18K`,
+  `2579 DSP`, `640121 FF`, `242598 LUT`, `0 URAM`.
+- The hot accumulation loop is now
+  `v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_238_8`; achieved
+  II `1` vs target II `1`, latency `522 cycles`, iteration latency `460`.
+- Resource warning: HLS estimates this one kernel at `85%` of one SLR's DSP
+  budget, so full-link placement/timing must be checked before assuming it
+  deploys cleanly.
+- Preserved reports:
+  `docs/o3_hls_v_weighted_sum_multik_pingpong_acc.txt`,
+  `docs/o3_v_weighted_sum_multik_csynth_pingpong_acc.rpt`, and
+  `docs/o3_v_weighted_sum_multik_accum_loop_pingpong_acc.rpt`.
+- XRT integration is now present:
+  - host option `--multik` enables the resident path and launches
+    `v_weighted_sum_multik_u55c_kernel`
+  - old O2 resident path remains available with `--resident`
+  - `host/build_xclbin.sh` accepts optional profile `[full|o3_multik]`
+  - `host/vpp_link_o3_multik.cfg` links only resident score/mask/scale,
+    resident full-row softmax, and O3 V multi-K
+- Host build passed with:
+  `source attention_score_u55c/host/setup_2022_2_env.sh && bash attention_score_u55c/host/build_host.sh`.
+- Full-profile `hw_emu` xclbin build passed with:
+  `bash attention_score_u55c/host/build_xclbin.sh hw_emu /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm`.
+- `hw_emu` `S=8` run passed with:
+  `./attention_score_u55c/build/host_attention_score_chain --xclbin attention_score_u55c/build/attention_score_chain.xclbin --seq-len 8 --multik --device 0`.
+- `hw_emu` result: `Resident attention output verification PASSED` and
+  `XRT chain verification PASSED`.
+- `hw_emu` timings from `docs/o3_multik_hw_emu_s8_run.txt`:
+  `score_mask_scale_resident 54006.446 ms`,
+  `softmax_full_row_resident 471053.255 ms`,
+  `v_weighted_sum_multik 188019.873 ms`,
+  `total_chain 713177.781 ms`.
+- Real `hw` full-profile link failed during Vivado `place_design`; the full
+  profile included both old V resident kernels and the new O3 V multi-K kernel.
+  Full-profile synthed utilization showed `3389 / 9024 DSP = 37.56%`, with
+  `vws_mk_1` at `375302 LUT`, `596554 REG`, and `2580 DSP`.
+- Real `hw` lean `o3_multik` profile also failed during `place_design`.
+  Vivado reported only `37424 CLBs` available in the pblock, while unplaced
+  instances required `40471 CLBs`; reported control sets were `7670`.
+- Lean-profile synthed utilization showed `2663 / 9024 DSP = 29.51%`.
+  `vws_mk_1` still dominated at `375302 LUT`, `596554 REG`, and `2580 DSP`.
+- Preserved XRT/build artifacts include:
+  `docs/o3_multik_hw_emu_xclbin.info`,
+  `docs/o3_multik_hw_emu_link_summary`,
+  `docs/o3_multik_hw_emu_s8_run.txt`,
+  `docs/o3_multik_hw_full_place_fail_full_util_synthed.rpt`,
+  `docs/o3_multik_hw_full_place_fail_kernel_util_synthed.rpt`,
+  `docs/o3_multik_only_hw_place_fail_full_util_synthed.rpt`, and
+  `docs/o3_multik_only_hw_place_fail_kernel_util_synthed.rpt`.
 
 **Future:**
-1. Restructure O3 V multi-K accumulation so the hot loop reaches II=1
-2. Then integrate O3 into XRT and run hw_emu/real U55C
-3. Then reduce pre-softmax launch count with larger-grain kernels
-4. Consider Track O4 online softmax fused with V accumulation
-5. Connect to full TinyLlama attention subgraph
+1. Narrow the O3 V multi-K datapath before the next real hardware build, for
+   example factor-32 or factor-16 column parallelism with the same local
+   accumulator strategy.
+2. Re-run HLS and preserve near-II=1 behavior before paying for another
+   hardware link.
+3. Rebuild the lean `o3_multik` profile first; only run the full profile after
+   lean placement succeeds.
+4. If lean hardware places, run real U55C timing at
+   `S=8, 64, 128, 256, 512` and compare against O1/O2.
+5. Then reduce pre-softmax launch count with larger-grain kernels.
+6. Consider Track O4 online softmax fused with V accumulation.
+7. Connect to full TinyLlama attention subgraph.

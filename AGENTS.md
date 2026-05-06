@@ -1198,23 +1198,197 @@ Later on 2026-05-05, the O3 V multi-K dot-product loop was changed to full
   - `docs/o3_v_weighted_sum_multik_csynth_full_unroll.rpt`
   - `docs/o3_v_weighted_sum_multik_accum_loop_full_unroll.rpt`
 
+Later on 2026-05-05, commit `1a3a7af` was pulled and verified. This version
+flips the hot loop to pipeline over `dim` while fully unrolling `row` and `col`,
+with complete partitioning on both dimensions of `weights_local` and `v_local`:
+
+- rerun command:
+  `source attention_score_u55c/host/setup_2022_2_env.sh && vitis_hls -f attention_score_u55c/hls/v_weighted_sum/run_hls_multik.tcl`
+- `csim PASS`: `v_weighted_sum test PASSED, max diff 5.96046e-08`
+- HLS confirms:
+  - row loop unrolled completely by factor `8`
+  - col loop unrolled completely by factor `64`
+  - `acc`, `weights_local`, and `v_local` all completely partitioned on both
+    dimensions
+- `csynth` still did **not** pass the II gate:
+  - top estimated Fmax: `283.37 MHz`
+  - top resources: `0 BRAM_18K`, `858 DSP`, `478810 FF`, `176824 LUT`,
+    `0 URAM`
+  - hot loop: `v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_235_8`
+  - hot-loop latency `646 cycles`, iteration latency `458`, achieved II `3`,
+    target II `1`
+- interpretation:
+  - the dim-outer/row-unrolled structure improves timing and removes some mux
+    depth, but HLS still reports a carried dependence on the
+    `acc[...] += partial` read-modify-write at line 244
+  - the critical path is now a load from the selected accumulator register,
+    one mux, and an FP32 add; the dependence remains the blocker
+  - do not proceed to `hw_emu` or real hardware yet
+- preserved artifacts:
+  - `docs/o3_hls_v_weighted_sum_multik_dim_outer_row_unroll.txt`
+  - `docs/o3_v_weighted_sum_multik_csynth_dim_outer_row_unroll.rpt`
+  - `docs/o3_v_weighted_sum_multik_accum_loop_dim_outer_row_unroll.rpt`
+
+Later on 2026-05-05, an `acc` inter-dependence override was tried on the
+dim-pipelined loop:
+
+- source experiment:
+  `#pragma HLS DEPENDENCE variable=acc inter false` directly under
+  `#pragma HLS PIPELINE II=1`
+- `csim PASS`: `v_weighted_sum test PASSED, max diff 5.96046e-08`
+- HLS emitted many `Found false inter dependency` messages, so the pragma was
+  recognized by analysis
+- `csynth` still did **not** pass the II gate:
+  - top estimated Fmax: `283.37 MHz`
+  - top resources: `0 BRAM_18K`, `858 DSP`, `495194 FF`, `187960 LUT`,
+    `0 URAM`
+  - hot loop: `v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_235_8`
+  - hot-loop latency `646 cycles`, iteration latency `458`, achieved II `3`,
+    target II `1`
+- the failed pragma experiment was removed from source to avoid keeping a broad
+  dependence override that does not improve synthesis
+- preserved artifacts:
+  - `docs/o3_hls_v_weighted_sum_multik_dependence_dim_outer.txt`
+  - `docs/o3_v_weighted_sum_multik_csynth_dependence_dim_outer.rpt`
+  - `docs/o3_v_weighted_sum_multik_accum_loop_dependence_dim_outer.rpt`
+
+Later on 2026-05-05, the O3 V multi-K accumulator was changed to use a
+ping-pong accumulator:
+
+- source change:
+  - added fully partitioned `acc_next[kScoreRowsPerTile][kHeadDim]`
+  - changed the hot loop from `acc[row][dim] += partial` to
+    `acc_next[row][dim] = acc[row][dim] + partial`
+  - copies `acc_next` back to `acc` in a separate pipelined loop after each
+    K/V chunk
+- local bench command:
+  `g++ -std=c++17 -Ihls -Ihls/common -Ihls/v_weighted_sum hls/v_weighted_sum/tb_v_weighted_sum.cpp hls/v_weighted_sum/v_weighted_sum_core_hls.cpp -o /tmp/tb_v_weighted_sum && /tmp/tb_v_weighted_sum sim/attention_score_tile`
+- local bench result:
+  `v_weighted_sum test PASSED, max diff 5.96046e-08`
+- HLS command:
+  `source attention_score_u55c/host/setup_2022_2_env.sh && vitis_hls -f attention_score_u55c/hls/v_weighted_sum/run_hls_multik.tcl`
+- HLS result:
+  - `csim PASS`: `v_weighted_sum test PASSED, max diff 5.96046e-08`
+  - `csynth PASS`
+  - loop constraints satisfied
+  - estimated Fmax: `342.47 MHz`
+  - top latency estimate: min `1039 cycles`, interval min `1040 cycles`
+  - top resources: `0 BRAM_18K`, `2579 DSP`, `640121 FF`, `242598 LUT`,
+    `0 URAM`
+  - SLR utilization estimate: `85% DSP`, `73% FF`, `55% LUT`
+  - hot accumulation loop:
+    `v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_238_8`
+  - hot-loop latency `522 cycles`, iteration latency `460`, achieved II `1`,
+    target II `1`, trip count `64`, pipelined `yes`
+- interpretation:
+  - the ping-pong structure clears the II=3 read-modify-write recurrence that
+    blocked the earlier O3 variants
+  - this passes the O3 HLS gate and is acceptable to move into XRT integration,
+    `hw_emu`, and then real U55C testing
+  - watch resource pressure during full xclbin link: HLS estimates this kernel
+    alone at `2579 DSP`, which is `85%` of one SLR's DSP budget
+- preserved artifacts:
+  - `docs/o3_hls_v_weighted_sum_multik_pingpong_acc.txt`
+  - `docs/o3_v_weighted_sum_multik_csynth_pingpong_acc.rpt`
+  - `docs/o3_v_weighted_sum_multik_accum_loop_pingpong_acc.rpt`
+
+Later on 2026-05-05, the O3 V multi-K kernel was integrated into the XRT
+resident path:
+
+- host change:
+  - added `--multik`, which enables the resident path and launches
+    `v_weighted_sum_multik_u55c_kernel`
+  - old O2 resident V path remains available with `--resident`
+  - `run_resident_inputs` now dispatches either the old per-K resident V kernel
+    or the O3 multi-K kernel
+- build change:
+  - full profile adds `v_weighted_sum_multik_u55c_kernel` to
+    `host/vpp_link.cfg`
+  - `host/build_xclbin.sh` now accepts optional profile
+    `[full|o3_multik]`
+  - `o3_multik` links only the resident score/mask/scale, full-row softmax,
+    and O3 V multi-K kernels via `host/vpp_link_o3_multik.cfg`
+- host build command:
+  `source attention_score_u55c/host/setup_2022_2_env.sh && bash attention_score_u55c/host/build_host.sh`
+- host build result:
+  `Built attention_score_u55c/build/host_attention_score_chain`
+- full `hw_emu` xclbin command:
+  `source attention_score_u55c/host/setup_2022_2_env.sh && bash attention_score_u55c/host/build_xclbin.sh hw_emu /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm`
+- full `hw_emu` xclbin result:
+  - build PASS
+  - preserved artifacts:
+    - `docs/o3_multik_hw_emu_build.log`
+    - `docs/o3_multik_hw_emu_xclbin.info`
+    - `docs/o3_multik_hw_emu_link_summary`
+- `hw_emu` run command:
+  `source attention_score_u55c/host/setup_2022_2_env.sh && export XCL_EMULATION_MODE=hw_emu && ./attention_score_u55c/build/host_attention_score_chain --xclbin attention_score_u55c/build/attention_score_chain.xclbin --seq-len 8 --multik --device 0`
+- `hw_emu` run result:
+  - `Resident attention output verification PASSED`
+  - `XRT chain verification PASSED`
+  - timings from `docs/o3_multik_hw_emu_s8_run.txt`:
+    - `score_mask_scale_resident`: `54006.446 ms`
+    - `softmax_full_row_resident`: `471053.255 ms`
+    - `v_weighted_sum_multik`: `188019.873 ms`
+    - `kernel_launch_wait_sum`: `713079.574 ms`
+    - `total_chain`: `713177.781 ms`
+  - only `S=8` was run in `hw_emu` because this small case already took about
+    713 seconds
+- real `hw` full-profile command:
+  `source attention_score_u55c/host/setup_2022_2_env.sh && unset XCL_EMULATION_MODE && bash attention_score_u55c/host/build_xclbin.sh hw /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm`
+- real `hw` full-profile result:
+  - link failed during Vivado `place_design`
+  - the full profile included both old V resident kernels and new O3 multi-K V
+    kernel, and Vivado was killed during placement
+  - total synthed DSP use was `3389 / 9024 = 37.56%`
+  - `vws_mk_1` dominated the kernel utilization at `375302 LUT`,
+    `596554 REG`, and `2580 DSP`
+  - preserved artifacts:
+    - `docs/o3_multik_hw_build.log`
+    - `docs/o3_multik_hw_full_place_fail_runme.log`
+    - `docs/o3_multik_hw_full_place_fail_full_util_synthed.rpt`
+    - `docs/o3_multik_hw_full_place_fail_kernel_util_synthed.rpt`
+- real `hw` lean-profile command:
+  `source attention_score_u55c/host/setup_2022_2_env.sh && unset XCL_EMULATION_MODE && bash attention_score_u55c/host/build_xclbin.sh hw /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm o3_multik`
+- real `hw` lean-profile result:
+  - link also failed during Vivado `place_design`
+  - failure was a CLB packing/pblock capacity issue:
+    `37424 CLBs are available`, but unplaced instances require `40471 CLBs`
+  - reported control sets: `7670`
+  - total synthed DSP use was `2663 / 9024 = 29.51%`
+  - `vws_mk_1` again dominated at `375302 LUT`, `596554 REG`, and `2580 DSP`
+  - preserved artifacts:
+    - `docs/o3_multik_only_hw_build.log`
+    - `docs/o3_multik_only_hw_place_fail_runme.log`
+    - `docs/o3_multik_only_hw_place_fail_full_util_synthed.rpt`
+    - `docs/o3_multik_only_hw_place_fail_kernel_util_synthed.rpt`
+- interpretation:
+  - O3 V multi-K is functionally integrated and passes `hw_emu`
+  - current full-width ping-pong datapath is too large or too control-set-heavy
+    to place cleanly on the U55C shell, even in the lean `o3_multik` profile
+  - real-card execution is blocked until this kernel is narrowed or otherwise
+    made easier to place
+
 ## Best Next Step
 
-Track O3 V multi-K accumulation needs one more HLS iteration before XRT
-integration. Next steps in order:
+Track O3 V multi-K accumulation has passed HLS, host build, full-profile
+`hw_emu` build, and `S=8` `hw_emu` verification. Real U55C is blocked at
+hardware link placement. Next steps in order:
 
-1. restructure the final accumulator update so HLS no longer sees
-   `acc[row][dim] += partial` as a loop-carried recurrence through a muxed
-   register bank; likely options are row-local/static accumulators, explicit
-   per-row helper functions, or a ping-pong/reduction structure that separates
-   the read and write timing
-2. rerun `vitis_hls -f hls/v_weighted_sum/run_hls_multik.tcl` and require the
-   hot accumulation loop to show achieved II=1 before continuing
-3. after II=1 is confirmed, integrate into XRT host (`--multik` mode), rebuild
-   xclbin, verify `hw_emu` at `S=8, 64, 128`, then real U55C sweep
-4. then implement the pre-softmax multi-K score/mask/scale kernel to reduce
+1. reduce the O3 V datapath footprint before the next real `hw` build:
+   consider factor-32 or factor-16 column parallelism with the same local
+   accumulator strategy, or split row/dim parallelism so `vws_mk_1` uses fewer
+   LUTs, FFs, DSPs, and control sets
+2. rerun Vitis HLS and require the hot accumulation loop to stay close to II=1
+   before paying for another hardware link
+3. rebuild the lean `o3_multik` hardware profile first
+4. if the lean profile places, run the real U55C sweep at
+   `S=8, 64, 128, 256, 512` and compare against O1/O2 timing
+5. optionally try a Vivado placer-effort Tcl pre-hook such as
+   `set_param place.sliceLegEffortLimit 2000`, but treat it as secondary
+   because the lean profile is already over the pblock CLB packing limit
+6. then implement the pre-softmax multi-K score/mask/scale kernel to reduce
    512 → 64 launches at `S=512`
-5. record timing vs O1/O2 baselines in `docs/track_d_results.md`
+7. record timing vs O1/O2 baselines in `docs/track_d_results.md`
 
 ## After That
 

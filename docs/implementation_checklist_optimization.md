@@ -299,27 +299,70 @@ one launch per sequence/head
 - [x] Add a kernel variant that loops across all K/V chunks for one Q chunk.
 - [x] Accumulate `8 x 64` output on chip.
 - [x] Write final `attn_out` tile once.
-- [ ] Avoid returning each partial output to host.
-- [ ] Clear the HLS gate before XRT integration:
-      `v_weighted_sum_multik_u55c_kernel` passes csim, but csynth still reports
-      the hot accumulation loop at achieved II=3 vs target II=1 after complete
-      dim=1/dim=2 accumulator partitioning.
-- [ ] Full 64-way unroll of the dot-product loop plus complete local
+- [x] Avoid returning each partial output to host.
+- [x] Clear the HLS gate before XRT integration.
+- [x] Baseline complete dim=1/dim=2 accumulator partitioning was tried first:
+      `v_weighted_sum_multik_u55c_kernel` passed csim, but csynth reported the
+      hot accumulation loop at achieved II=3 vs target II=1.
+- [x] Full 64-way unroll of the dot-product loop plus complete local
       `weights_local`/`v_local` partitioning was tried and still reports II=3;
       the remaining blocker is the final `acc[row][dim] += partial` update.
-- [ ] Restructure the final accumulator update so the hot loop reaches II=1,
-      then proceed to `hw_emu` and real U55C verification.
+- [x] Dim-outer/row-unrolled version from commit `1a3a7af` improves Fmax to
+      `283.37 MHz`, but still reports achieved II=3 vs target II=1 on
+      `VITIS_LOOP_235_8`; resource estimate rises to `858 DSP`,
+      `478810 FF`, `176824 LUT`.
+- [x] Simple `#pragma HLS DEPENDENCE variable=acc inter false` on the
+      dim-pipelined loop was tried, recognized by analysis, and removed after
+      it still reported achieved II=3 on `VITIS_LOOP_235_8`.
+- [x] Restructure the final accumulator update so the hot loop reaches II=1:
+      ping-pong accumulator uses `acc_next[row][dim] = acc[row][dim] + partial`
+      in the hot loop and copies `acc_next` back to `acc` afterward.
+- [x] Vitis HLS 2022.2 ping-pong result: csim PASS, csynth PASS, loop
+      constraints satisfied, estimated Fmax `342.47 MHz`, hot loop
+      `VITIS_LOOP_238_8` achieved II=1 vs target II=1.
+- [x] Integrate into the XRT host behind `--multik`; old O2 resident V path
+      remains available with `--resident`.
+- [x] Add build support for the O3 multi-K kernel in the full profile.
+- [x] Add lean `o3_multik` build profile using only resident score/mask/scale,
+      resident full-row softmax, and O3 V multi-K.
+- [x] Full-profile `hw_emu` xclbin build PASS.
+- [x] `hw_emu` `S=8 --multik` PASS:
+      `Resident attention output verification PASSED` and
+      `XRT chain verification PASSED`.
+- [x] Preserve O3 `hw_emu` artifacts:
+      `docs/o3_multik_hw_emu_xclbin.info`,
+      `docs/o3_multik_hw_emu_link_summary`, and
+      `docs/o3_multik_hw_emu_s8_run.txt`.
+- [x] Attempt real U55C full-profile hardware link; failed during Vivado
+      `place_design`. Full-profile synthed utilization shows
+      `3389 / 9024 DSP = 37.56%`, with `vws_mk_1` at `375302 LUT`,
+      `596554 REG`, and `2580 DSP`.
+- [x] Attempt real U55C lean `o3_multik` hardware link; failed during Vivado
+      `place_design` with a CLB packing/pblock capacity error:
+      `37424 CLBs` available vs `40471 CLBs` required by unplaced instances,
+      plus `7670` control sets.
+- [ ] Reduce O3 V multi-K placement footprint before the next real hardware
+      build. Recommended first pass: factor-32 or factor-16 column parallelism
+      with local/ping-pong accumulation, then re-check HLS II and resources.
+- [ ] Re-run lean `o3_multik` real hardware link after narrowing the datapath.
+- [ ] If lean hardware places, run real U55C verification and timing at
+      `S=8, 64, 128, 256, 512`.
 
 ### Host update
 
-- [ ] Replace nested per-tile launch loops with per-Q-chunk launches.
-- [ ] Keep old path behind a debug flag until the new path is stable.
+- [x] Replace nested per-tile V launches with one per-Q-chunk launch for
+      `--multik`.
+- [x] Keep old O2 resident V path available as `--resident` until the new path
+      is stable.
+- [x] Add `host/vpp_link_o3_multik.cfg` for a smaller hardware build target.
 
 ## Expected result
 
 - Large launch-count reduction.
 - Bigger improvement at larger `S`.
 - Still materializes logits/probabilities unless Track O4 is also done.
+- Current blocker: the O3 V multi-K ping-pong datapath passes HLS and `hw_emu`
+  but is too large or too control-set-heavy to place on the current U55C shell.
 
 ---
 
@@ -536,6 +579,8 @@ larger real TinyLlama-derived inputs, not only synthetic `--seq-len` data.
 
 - [ ] Track O3 pre-softmax multi-K kernel complete
 - [ ] Track O3 V multi-K accumulation kernel complete
+      HLS, host integration, and `hw_emu S=8` are complete; real hardware link
+      is blocked by placement until the V datapath is narrowed.
 - [ ] `S=512` launch count reduced substantially
 - [ ] FPGA timing improves over current fused Step 5 timing
 

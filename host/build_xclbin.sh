@@ -2,12 +2,13 @@
 set -euo pipefail
 
 if [[ $# -lt 2 ]]; then
-  echo "Usage: $0 <hw|hw_emu> <platform.xpfm>"
+  echo "Usage: $0 <hw|hw_emu> <platform.xpfm> [full|o3_multik]"
   exit 1
 fi
 
 TARGET="$1"
 PLATFORM="$2"
+PROFILE="${3:-full}"
 BUILD_DIR="attention_score_u55c/build"
 VPP_COMMON_FLAGS=(--save-temps)
 
@@ -23,6 +24,38 @@ if v++ --version 2>&1 | grep -q "v++ v (64-bit)"; then
 fi
 
 mkdir -p "$BUILD_DIR"
+
+if [[ "$PROFILE" == "o3_multik" ]]; then
+  v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
+    -k score_mask_scale_resident_u55c_kernel \
+    -o "$BUILD_DIR/score_mask_scale_resident_u55c_kernel.xo" \
+    attention_score_u55c/hls/score_and_mask_scale/score_mask_scale_core_hls.cpp
+
+  v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
+    -k softmax_full_row_resident_u55c_kernel \
+    -o "$BUILD_DIR/softmax_full_row_resident_u55c_kernel.xo" \
+    attention_score_u55c/hls/softmax_full_row/softmax_full_row_hls.cpp
+
+  v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
+    -k v_weighted_sum_multik_u55c_kernel \
+    -o "$BUILD_DIR/v_weighted_sum_multik_u55c_kernel.xo" \
+    attention_score_u55c/hls/v_weighted_sum/v_weighted_sum_core_hls.cpp
+
+  v++ "${VPP_COMMON_FLAGS[@]}" -l -t "$TARGET" --platform "$PLATFORM" \
+    --config attention_score_u55c/host/vpp_link_o3_multik.cfg \
+    -o "$BUILD_DIR/attention_score_chain.xclbin" \
+    "$BUILD_DIR/score_mask_scale_resident_u55c_kernel.xo" \
+    "$BUILD_DIR/softmax_full_row_resident_u55c_kernel.xo" \
+    "$BUILD_DIR/v_weighted_sum_multik_u55c_kernel.xo"
+
+  echo "Built $BUILD_DIR/attention_score_chain.xclbin"
+  exit 0
+fi
+
+if [[ "$PROFILE" != "full" ]]; then
+  echo "Unknown build profile '$PROFILE'. Expected 'full' or 'o3_multik'."
+  exit 1
+fi
 
 v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
   -k score_mask_scale_u55c_kernel \
@@ -59,6 +92,11 @@ v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
   -o "$BUILD_DIR/v_weighted_sum_resident_u55c_kernel.xo" \
   attention_score_u55c/hls/v_weighted_sum/v_weighted_sum_core_hls.cpp
 
+v++ "${VPP_COMMON_FLAGS[@]}" -c -t "$TARGET" --platform "$PLATFORM" \
+  -k v_weighted_sum_multik_u55c_kernel \
+  -o "$BUILD_DIR/v_weighted_sum_multik_u55c_kernel.xo" \
+  attention_score_u55c/hls/v_weighted_sum/v_weighted_sum_core_hls.cpp
+
 v++ "${VPP_COMMON_FLAGS[@]}" -l -t "$TARGET" --platform "$PLATFORM" \
   --config attention_score_u55c/host/vpp_link.cfg \
   -o "$BUILD_DIR/attention_score_chain.xclbin" \
@@ -68,6 +106,7 @@ v++ "${VPP_COMMON_FLAGS[@]}" -l -t "$TARGET" --platform "$PLATFORM" \
   "$BUILD_DIR/softmax_full_row_u55c_kernel.xo" \
   "$BUILD_DIR/softmax_full_row_resident_u55c_kernel.xo" \
   "$BUILD_DIR/v_weighted_sum_u55c_kernel.xo" \
-  "$BUILD_DIR/v_weighted_sum_resident_u55c_kernel.xo"
+  "$BUILD_DIR/v_weighted_sum_resident_u55c_kernel.xo" \
+  "$BUILD_DIR/v_weighted_sum_multik_u55c_kernel.xo"
 
 echo "Built $BUILD_DIR/attention_score_chain.xclbin"

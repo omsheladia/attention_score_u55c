@@ -50,6 +50,7 @@ struct Args {
   float k_scale = kDefaultKScale;
   bool resident = false;
   bool resident_debug = false;
+  bool multik = false;
 };
 
 struct TimedStage {
@@ -159,11 +160,14 @@ Args parse_args(int argc, char** argv) {
     } else if (arg == "--resident-debug") {
       args.resident = true;
       args.resident_debug = true;
+    } else if (arg == "--multik") {
+      args.resident = true;
+      args.multik = true;
     } else {
       throw std::runtime_error(
           "Usage: host_attention_score_chain --xclbin <path> [--vectors <dir>] "
           "[--device <idx>] [--seq-len <S>] [--q-scale <float>] [--k-scale <float>] "
-          "[--resident] [--resident-debug]");
+          "[--resident] [--resident-debug] [--multik]");
     }
   }
 
@@ -852,6 +856,7 @@ int run_resident_inputs(
     const std::vector<float>& attn_out_expected,
     float attn_out_tolerance,
     bool resident_debug,
+    bool multik,
     xrt::device& device,
     const xrt::uuid& uuid) {
   if (q_full.empty() || k_full.empty() || v_full.empty()) {
@@ -884,7 +889,7 @@ int run_resident_inputs(
       (seq_len + static_cast<std::uint32_t>(kScoreColsPerTile) - 1U) /
       static_cast<std::uint32_t>(kScoreColsPerTile);
 
-  std::cout << "Running resident " << label << ", S=" << seq_len
+  std::cout << "Running resident " << (multik ? "multi-K " : "") << label << ", S=" << seq_len
             << ", q_chunks=" << q_chunks
             << ", k_chunks=" << k_chunks << "\n";
 
@@ -892,8 +897,10 @@ int run_resident_inputs(
       xrt::kernel(device, uuid, "score_mask_scale_resident_u55c_kernel");
   auto softmax_full_row_kernel =
       xrt::kernel(device, uuid, "softmax_full_row_resident_u55c_kernel");
-  auto v_weighted_sum_kernel =
-      xrt::kernel(device, uuid, "v_weighted_sum_resident_u55c_kernel");
+  auto v_weighted_sum_kernel = xrt::kernel(
+      device,
+      uuid,
+      multik ? "v_weighted_sum_multik_u55c_kernel" : "v_weighted_sum_resident_u55c_kernel");
 
   auto q_full_bo =
       xrt::bo(device, sizeof(std::int8_t) * q_full.size(), score_mask_scale_kernel.group_id(0));
@@ -912,7 +919,7 @@ int run_resident_inputs(
   std::vector<TimedStage> timings = {
       {"score_mask_scale_resident", 0.0},
       {"softmax_full_row_resident", 0.0},
-      {"v_weighted_sum_resident", 0.0},
+      {multik ? "v_weighted_sum_multik" : "v_weighted_sum_resident", 0.0},
   };
 
   const auto chain_start = Clock::now();
@@ -954,22 +961,34 @@ int run_resident_inputs(
           query_rows);
     }, false);
 
-    for (std::uint32_t key_base = 0; key_base < seq_len; key_base += kScoreColsPerTile) {
-      const std::uint32_t key_cols =
-          std::min<std::uint32_t>(kScoreColsPerTile, seq_len - key_base);
-      const std::uint32_t clear_accum = (key_base == 0U) ? 1U : 0U;
-      timings[2].milliseconds += run_timed("resident v weighted sum tile", [&]() {
+    if (multik) {
+      timings[2].milliseconds += run_timed("resident v weighted sum multi-K", [&]() {
         return v_weighted_sum_kernel(
             probs_bo,
             v_full_bo,
             attn_out_bo,
             seq_len,
             query_base,
-            key_base,
-            query_rows,
-            key_cols,
-            clear_accum);
+            query_rows);
       }, false);
+    } else {
+      for (std::uint32_t key_base = 0; key_base < seq_len; key_base += kScoreColsPerTile) {
+        const std::uint32_t key_cols =
+            std::min<std::uint32_t>(kScoreColsPerTile, seq_len - key_base);
+        const std::uint32_t clear_accum = (key_base == 0U) ? 1U : 0U;
+        timings[2].milliseconds += run_timed("resident v weighted sum tile", [&]() {
+          return v_weighted_sum_kernel(
+              probs_bo,
+              v_full_bo,
+              attn_out_bo,
+              seq_len,
+              query_base,
+              key_base,
+              query_rows,
+              key_cols,
+              clear_accum);
+        }, false);
+      }
     }
   }
 
@@ -1069,6 +1088,7 @@ int run_resident_sequence(const Args& args, xrt::device& device, const xrt::uuid
       attn_out_expected,
       1.0e-4f,
       args.resident_debug,
+      args.multik,
       device,
       uuid);
 }
@@ -1152,6 +1172,7 @@ int run_resident_vector_sequence(const Args& args, xrt::device& device, const xr
       attn_out_expected,
       attn_out_tolerance,
       args.resident_debug,
+      args.multik,
       device,
       uuid);
 }

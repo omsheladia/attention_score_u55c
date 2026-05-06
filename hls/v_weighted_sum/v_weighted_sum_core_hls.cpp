@@ -178,11 +178,14 @@ void v_weighted_sum_multik_u55c_kernel(
 #pragma HLS INTERFACE s_axilite port=return bundle=control
 
   float acc[kScoreRowsPerTile][kHeadDim];
+  float acc_next[kScoreRowsPerTile][kHeadDim];
   float weights_local[kScoreRowsPerTile][kScoreColsPerTile];
   float v_local[kScoreColsPerTile][kHeadDim];
-// acc: fully partitioned so each element is an independent register.
+// acc/acc_next: fully partitioned so each element is an independent register.
 #pragma HLS ARRAY_PARTITION variable=acc complete dim=1
 #pragma HLS ARRAY_PARTITION variable=acc complete dim=2
+#pragma HLS ARRAY_PARTITION variable=acc_next complete dim=1
+#pragma HLS ARRAY_PARTITION variable=acc_next complete dim=2
 // Both arrays fully partitioned: row and col are compile-time constants in
 // the restructured loop (row unrolled, col unrolled, dim pipelined), so
 // HLS addresses every element directly without a runtime mux.
@@ -199,6 +202,7 @@ void v_weighted_sum_multik_u55c_kernel(
     for (int dim = 0; dim < kHeadDim; ++dim) {
 #pragma HLS PIPELINE II=1
       acc[row][dim] = 0.0f;
+      acc_next[row][dim] = 0.0f;
     }
   }
 
@@ -229,9 +233,8 @@ void v_weighted_sum_multik_u55c_kernel(
       }
     }
 
-    // Pipeline over dim; unroll row and col so every acc[row][dim] element
-    // is addressed with compile-time-constant indices — no runtime mux on
-    // the read-modify-write path.
+    // Compute into acc_next, then copy back after the pipelined loop. This
+    // avoids a same-loop read-modify-write recurrence on acc[row][dim].
     for (int dim = 0; dim < kHeadDim; ++dim) {
 #pragma HLS PIPELINE II=1
       for (int row = 0; row < kScoreRowsPerTile; ++row) {
@@ -241,7 +244,14 @@ void v_weighted_sum_multik_u55c_kernel(
 #pragma HLS UNROLL
           partial += weights_local[row][col] * v_local[col][dim];
         }
-        acc[row][dim] += partial;
+        acc_next[row][dim] = acc[row][dim] + partial;
+      }
+    }
+
+    for (int row = 0; row < kScoreRowsPerTile; ++row) {
+      for (int dim = 0; dim < kHeadDim; ++dim) {
+#pragma HLS PIPELINE II=1
+        acc[row][dim] = acc_next[row][dim];
       }
     }
   }
