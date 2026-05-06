@@ -181,6 +181,7 @@ void v_weighted_sum_multik_u55c_kernel(
   float weights_local[kScoreRowsPerTile][kScoreColsPerTile];
   float v_local[kScoreColsPerTile][kHeadDim];
 #pragma HLS ARRAY_PARTITION variable=acc complete dim=2
+#pragma HLS ARRAY_PARTITION variable=acc complete dim=1
 #pragma HLS ARRAY_PARTITION variable=weights_local cyclic factor=16 dim=2
 #pragma HLS ARRAY_PARTITION variable=v_local cyclic factor=16 dim=1
 

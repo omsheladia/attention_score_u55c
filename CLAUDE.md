@@ -701,8 +701,25 @@ the real U55C for `S = 8, 64, 128, 256, 512`.
 - Next optimization should fix V accumulation first by keeping the output tile
   on chip across K chunks and writing final `attn_out` once.
 
+**Optimization Track O3 — V multi-K HLS gate not yet passed:**
+- `v_weighted_sum_multik_u55c_kernel` is present and local/csim verified:
+  `v_weighted_sum test PASSED, max diff 5.96046e-08`.
+- Vitis HLS 2022.2 `csynth` completed, but the hot accumulation loop still
+  misses the required gate: achieved II `3` vs target II `1`.
+- Added complete accumulator partitioning on `acc` dim=1 and dim=2; HLS
+  accepted both partitions, but the loop still reports II=3.
+- Final checked HLS estimate: `243.12 MHz`, `16 BRAM_18K`, `113 DSP`,
+  `59198 FF`, `43845 LUT`, `0 URAM`.
+- The blocking loop is
+  `v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_226_8_VITIS_LOOP_227_9`;
+  its report is preserved at
+  `docs/o3_v_weighted_sum_multik_accum_loop_final_dim1_only.rpt`.
+- Do not move this O3 kernel into `hw_emu` or real hardware until the
+  accumulation loop reaches II=1.
+
 **Future:**
-1. Start Track O3 with multi-K V accumulation
-2. Then reduce pre-softmax launch count with larger-grain kernels
-3. Consider Track O4 online softmax fused with V accumulation
-4. Connect to full TinyLlama attention subgraph
+1. Restructure O3 V multi-K accumulation so the hot loop reaches II=1
+2. Then integrate O3 into XRT and run hw_emu/real U55C
+3. Then reduce pre-softmax launch count with larger-grain kernels
+4. Consider Track O4 online softmax fused with V accumulation
+5. Connect to full TinyLlama attention subgraph

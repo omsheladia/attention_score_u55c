@@ -1134,16 +1134,56 @@ Windows (local g++ only; csynth/hw_emu/real hardware pending):
 - **gate before hw_emu or real hardware build:** csynth must show the inner
   accumulation loop at II=1; if not, fix accumulator partitioning first
 
+On 2026-05-05, the O3 V multi-K HLS gate was run on Linux with Vitis HLS
+2022.2:
+
+- command used from `/home/advent/Desktop/RC19`:
+  `source attention_score_u55c/host/setup_2022_2_env.sh && vitis_hls -f attention_score_u55c/hls/v_weighted_sum/run_hls_multik.tcl`
+- `csim PASS`: `v_weighted_sum test PASSED, max diff 5.96046e-08`
+- `csynth` completed but the required accumulation-loop gate did **not** pass
+- added `#pragma HLS ARRAY_PARTITION variable=acc complete dim=1` in addition
+  to the existing dim=2 partition, as planned; HLS confirms complete
+  partitioning on both dimensions
+- after the dim=1 partition, the hot accumulation loop still reports
+  `Target II = 1, Final II = 3`
+- final checked report snapshot:
+  - top estimated Fmax: `243.12 MHz`
+  - top resources: `16 BRAM_18K`, `113 DSP`, `59198 FF`, `43845 LUT`, `0 URAM`
+  - top latency lower bound: `1039 cycles`; variable upper bound due dynamic
+    `seq_len`
+  - hot loop report:
+    `v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_226_8_VITIS_LOOP_227_9`,
+    latency `1989 cycles`, iteration latency `457`, achieved II `3`, target
+    II `1`
+- critical path remains the accumulator update at
+  `hls/v_weighted_sum/v_weighted_sum_core_hls.cpp`, with a muxed accumulator
+  load feeding FP32 add; estimated period `4.113 ns` against 4 ns target
+- attempted `DEPENDENCE variable=acc inter false` plus loop-flatten control did
+  not improve II and was removed; the only retained source change is dim=1
+  accumulator partitioning
+- preserved artifacts:
+  - `docs/o3_hls_v_weighted_sum_multik_after_acc_dim1.txt`
+  - `docs/o3_hls_v_weighted_sum_multik_after_dependence.txt`
+  - `docs/o3_hls_v_weighted_sum_multik_after_loop_flatten_off.txt`
+  - `docs/o3_hls_v_weighted_sum_multik_final_dim1_only.txt`
+  - `docs/o3_v_weighted_sum_multik_csynth_final_dim1_only.rpt`
+  - `docs/o3_v_weighted_sum_multik_accum_loop_final_dim1_only.rpt`
+- do **not** proceed to `hw_emu` or real U55C for this O3 kernel until the
+  accumulation loop reaches II=1
+
 ## Best Next Step
 
-Track O3 V multi-K accumulation kernel is implemented and local-bench verified.
-Next steps in order:
+Track O3 V multi-K accumulation needs one more HLS iteration before XRT
+integration. Next steps in order:
 
-1. run `vitis_hls -f hls/v_weighted_sum/run_hls_multik.tcl` on Linux and check
-   csynth report: inner accumulation loop must show II=1
-2. if II > 1, add `#pragma HLS ARRAY_PARTITION complete dim=1` to `acc` and
-   re-run csynth
-3. after II=1 confirmed, integrate into XRT host (`--multik` mode), rebuild
+1. restructure the hot accumulation loop to remove the muxed
+   read-modify-write recurrence on `acc[row][dim]`; likely options are
+   row-local 64-wide accumulators, explicit per-row accumulator helpers, or a
+   ping-pong/reduction structure that makes the accumulator index static enough
+   for HLS
+2. rerun `vitis_hls -f hls/v_weighted_sum/run_hls_multik.tcl` and require the
+   hot accumulation loop to show achieved II=1 before continuing
+3. after II=1 is confirmed, integrate into XRT host (`--multik` mode), rebuild
    xclbin, verify `hw_emu` at `S=8, 64, 128`, then real U55C sweep
 4. then implement the pre-softmax multi-K score/mask/scale kernel to reduce
    512 → 64 launches at `S=512`

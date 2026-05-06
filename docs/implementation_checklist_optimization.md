@@ -296,10 +296,16 @@ one launch per sequence/head
 
 ### V multi-K accumulation kernel
 
-- [ ] Add a kernel variant that loops across all K/V chunks for one Q chunk.
-- [ ] Accumulate `8 x 64` output on chip.
-- [ ] Write final `attn_out` tile once.
+- [x] Add a kernel variant that loops across all K/V chunks for one Q chunk.
+- [x] Accumulate `8 x 64` output on chip.
+- [x] Write final `attn_out` tile once.
 - [ ] Avoid returning each partial output to host.
+- [ ] Clear the HLS gate before XRT integration:
+      `v_weighted_sum_multik_u55c_kernel` passes csim, but csynth still reports
+      the hot accumulation loop at achieved II=3 vs target II=1 after complete
+      dim=1/dim=2 accumulator partitioning.
+- [ ] Restructure the accumulator loop so the hot loop reaches II=1, then
+      proceed to `hw_emu` and real U55C verification.
 
 ### Host update
 
