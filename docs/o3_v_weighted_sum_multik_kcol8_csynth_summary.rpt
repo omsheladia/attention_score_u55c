@@ -1,0 +1,483 @@
+
+
+================================================================
+== Synthesis Summary Report of 'v_weighted_sum_multik_u55c_kernel'
+================================================================
++ General Information: 
+    * Date:           Wed May  6 12:40:35 2026
+    * Version:        2022.2 (Build 3670227 on Oct 13 2022)
+    * Project:        v_weighted_sum_multik_prj
+    * Solution:       sol1 (Vivado IP Flow Target)
+    * Product family: virtexuplus
+    * Target device:  xcu55c-fsvh2892-2L-e
+    
+
++ Performance & Resource Estimates: 
+    
+    PS: '+' for module; 'o' for loop; '*' for dataflow
+    +-------------------------------------------------------------------------------------+------+------+---------+-----------+----------+---------+------+----------+---------+----------+-------------+------------+-----+
+    |                                       Modules                                       | Issue|      | Latency |  Latency  | Iteration|         | Trip |          |         |          |             |            |     |
+    |                                       & Loops                                       | Type | Slack| (cycles)|    (ns)   |  Latency | Interval| Count| Pipelined|  BRAM   |    DSP   |      FF     |     LUT    | URAM|
+    +-------------------------------------------------------------------------------------+------+------+---------+-----------+----------+---------+------+----------+---------+----------+-------------+------------+-----+
+    |+ v_weighted_sum_multik_u55c_kernel                                                  |     -|  0.00|        -|          -|         -|        -|     -|        no|  8 (~0%)|  339 (3%)|  128099 (4%)|  55688 (4%)|    -|
+    | + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_203_1_VITIS_LOOP_204_2      |     -|  0.92|      514|  2.056e+03|         -|      514|     -|        no|        -|         -|     23 (~0%)|   139 (~0%)|    -|
+    |  o VITIS_LOOP_203_1_VITIS_LOOP_204_2                                                |     -|  2.92|      512|  2.048e+03|         1|        1|   512|       yes|        -|         -|            -|           -|    -|
+    | + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_265_14_VITIS_LOOP_266_15    |     -|  0.00|      514|  2.056e+03|         -|      514|     -|        no|        -|         -|     57 (~0%)|  2432 (~0%)|    -|
+    |  o VITIS_LOOP_265_14_VITIS_LOOP_266_15                                              |     -|  2.92|      512|  2.048e+03|         2|        1|   512|       yes|        -|         -|            -|           -|    -|
+    | o VITIS_LOOP_211_3                                                                  |     -|  2.92|        -|          -|      9327|        -|     -|        no|        -|         -|            -|           -|    -|
+    |  + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_217_5                      |     -|  0.00|      525|  2.100e+03|         -|      525|     -|        no|        -|   3 (~0%)|   1449 (~0%)|   806 (~0%)|    -|
+    |   o VITIS_LOOP_216_4_VITIS_LOOP_217_5                                               |     -|  2.92|      523|  2.092e+03|        13|        1|   512|       yes|        -|         -|            -|           -|    -|
+    |  + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_227_6_VITIS_LOOP_228_7     |     -|  0.00|     4099|  1.640e+04|         -|     4099|     -|        no|        -|         -|    156 (~0%)|   252 (~0%)|    -|
+    |   o VITIS_LOOP_227_6_VITIS_LOOP_228_7                                               |     -|  2.92|     4097|  1.639e+04|         3|        1|  4096|       yes|        -|         -|            -|           -|    -|
+    |  o VITIS_LOOP_241_8                                                                 |     -|  2.92|     5216|  2.086e+04|       652|        -|     8|        no|        -|         -|            -|           -|    -|
+    |   + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_242_9                     |     -|  0.19|      133|    532.000|         -|      133|     -|        no|        -|  336 (3%)|   53392 (2%)|  26215 (2%)|    -|
+    |    o VITIS_LOOP_242_9                                                               |     -|  2.92|      131|    524.000|        69|        1|    64|       yes|        -|         -|            -|           -|    -|
+    |   + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_256_12_VITIS_LOOP_257_13  |     -|  0.68|      514|  2.056e+03|         -|      514|     -|        no|        -|         -|     23 (~0%)|  2366 (~0%)|    -|
+    |    o VITIS_LOOP_256_12_VITIS_LOOP_257_13                                            |     -|  2.92|      512|  2.048e+03|         1|        1|   512|       yes|        -|         -|            -|           -|    -|
+    +-------------------------------------------------------------------------------------+------+------+---------+-----------+----------+---------+------+----------+---------+----------+-------------+------------+-----+
+
+
+================================================================
+== HW Interfaces
+================================================================
+* M_AXI
++--------------------+------------+---------------+---------+--------+----------+-----------+--------------+--------------+-------------+-------------+
+| Interface          | Data Width | Address Width | Latency | Offset | Register | Max Widen | Max Read     | Max Write    | Num Read    | Num Write   |
+|                    | (SW->HW)   |               |         |        |          | Bitwidth  | Burst Length | Burst Length | Outstanding | Outstanding |
++--------------------+------------+---------------+---------+--------+----------+-----------+--------------+--------------+-------------+-------------+
+| m_axi_gmem_out     | 32 -> 32   | 64            | 0       | slave  | 0        | 0         | 16           | 16           | 16          | 16          |
+| m_axi_gmem_v       | 32 -> 32   | 64            | 0       | slave  | 0        | 0         | 16           | 16           | 16          | 16          |
+| m_axi_gmem_weights | 32 -> 32   | 64            | 0       | slave  | 0        | 0         | 16           | 16           | 16          | 16          |
++--------------------+------------+---------------+---------+--------+----------+-----------+--------------+--------------+-------------+-------------+
+
+* S_AXILITE Interfaces
++---------------+------------+---------------+--------+----------+
+| Interface     | Data Width | Address Width | Offset | Register |
++---------------+------------+---------------+--------+----------+
+| s_axi_control | 32         | 7             | 16     | 0        |
++---------------+------------+---------------+--------+----------+
+
+* S_AXILITE Registers
++---------------+-----------------+--------+-------+--------+----------------------------------+----------------------------------------------------------------------+
+| Interface     | Register        | Offset | Width | Access | Description                      | Bit Fields                                                           |
++---------------+-----------------+--------+-------+--------+----------------------------------+----------------------------------------------------------------------+
+| s_axi_control | CTRL            | 0x00   | 32    | RW     | Control signals                  | 0=AP_START 1=AP_DONE 2=AP_IDLE 3=AP_READY 7=AUTO_RESTART 9=INTERRUPT |
+| s_axi_control | GIER            | 0x04   | 32    | RW     | Global Interrupt Enable Register | 0=Enable                                                             |
+| s_axi_control | IP_IER          | 0x08   | 32    | RW     | IP Interrupt Enable Register     | 0=CHAN0_INT_EN 1=CHAN1_INT_EN                                        |
+| s_axi_control | IP_ISR          | 0x0c   | 32    | RW     | IP Interrupt Status Register     | 0=CHAN0_INT_ST 1=CHAN1_INT_ST                                        |
+| s_axi_control | probs_full_1    | 0x10   | 32    | W      | Data signal of probs_full        |                                                                      |
+| s_axi_control | probs_full_2    | 0x14   | 32    | W      | Data signal of probs_full        |                                                                      |
+| s_axi_control | v_full_1        | 0x1c   | 32    | W      | Data signal of v_full            |                                                                      |
+| s_axi_control | v_full_2        | 0x20   | 32    | W      | Data signal of v_full            |                                                                      |
+| s_axi_control | attn_out_1      | 0x28   | 32    | W      | Data signal of attn_out          |                                                                      |
+| s_axi_control | attn_out_2      | 0x2c   | 32    | W      | Data signal of attn_out          |                                                                      |
+| s_axi_control | seq_len         | 0x34   | 32    | W      | Data signal of seq_len           |                                                                      |
+| s_axi_control | query_base      | 0x3c   | 32    | W      | Data signal of query_base        |                                                                      |
+| s_axi_control | query_row_count | 0x44   | 32    | W      | Data signal of query_row_count   |                                                                      |
++---------------+-----------------+--------+-------+--------+----------------------------------+----------------------------------------------------------------------+
+
+* TOP LEVEL CONTROL
++-----------+------------+-----------+
+| Interface | Type       | Ports     |
++-----------+------------+-----------+
+| ap_clk    | clock      | ap_clk    |
+| ap_rst_n  | reset      | ap_rst_n  |
+| interrupt | interrupt  | interrupt |
+| ap_ctrl   | ap_ctrl_hs |           |
++-----------+------------+-----------+
+
+
+================================================================
+== SW I/O Information
+================================================================
+* Top Function Arguments
++-----------------+-----------+---------------+
+| Argument        | Direction | Datatype      |
++-----------------+-----------+---------------+
+| probs_full      | in        | float const * |
+| v_full          | in        | float const * |
+| attn_out        | out       | float*        |
+| seq_len         | in        | unsigned int  |
+| query_base      | in        | unsigned int  |
+| query_row_count | in        | unsigned int  |
++-----------------+-----------+---------------+
+
+* SW-to-HW Mapping
++-----------------+--------------------+-----------+----------+-------------------------------------------+
+| Argument        | HW Interface       | HW Type   | HW Usage | HW Info                                   |
++-----------------+--------------------+-----------+----------+-------------------------------------------+
+| probs_full      | m_axi_gmem_weights | interface |          |                                           |
+| probs_full      | s_axi_control      | register  | offset   | name=probs_full_1 offset=0x10 range=32    |
+| probs_full      | s_axi_control      | register  | offset   | name=probs_full_2 offset=0x14 range=32    |
+| v_full          | m_axi_gmem_v       | interface |          |                                           |
+| v_full          | s_axi_control      | register  | offset   | name=v_full_1 offset=0x1c range=32        |
+| v_full          | s_axi_control      | register  | offset   | name=v_full_2 offset=0x20 range=32        |
+| attn_out        | m_axi_gmem_out     | interface |          |                                           |
+| attn_out        | s_axi_control      | register  | offset   | name=attn_out_1 offset=0x28 range=32      |
+| attn_out        | s_axi_control      | register  | offset   | name=attn_out_2 offset=0x2c range=32      |
+| seq_len         | s_axi_control      | register  |          | name=seq_len offset=0x34 range=32         |
+| query_base      | s_axi_control      | register  |          | name=query_base offset=0x3c range=32      |
+| query_row_count | s_axi_control      | register  |          | name=query_row_count offset=0x44 range=32 |
++-----------------+--------------------+-----------+----------+-------------------------------------------+
+
+
+================================================================
+== M_AXI Burst Information
+================================================================
+ Note: All burst requests might be further partitioned into multiple requests during RTL generation based on max_read_burst_length or max_write_burst_length settings.
+
+* Inferred Burst Summary
++--------------------+-------------------+-----------+----------+-------+------------------------------------------------------------------------------------------------------+
+| HW Interface       | Loop              | Direction | Length   | Width | Location                                                                                             |
++--------------------+-------------------+-----------+----------+-------+------------------------------------------------------------------------------------------------------+
+| m_axi_gmem_weights | VITIS_LOOP_217_5  | read      | variable | 32    | /home/advent/Desktop/RC19/attention_score_u55c/hls/v_weighted_sum/v_weighted_sum_core_hls.cpp:217:25 |
+| m_axi_gmem_v       | VITIS_LOOP_227_6  | read      | variable | 32    | /home/advent/Desktop/RC19/attention_score_u55c/hls/v_weighted_sum/v_weighted_sum_core_hls.cpp:227:23 |
+| m_axi_gmem_out     | VITIS_LOOP_265_14 | write     | variable | 32    | /home/advent/Desktop/RC19/attention_score_u55c/hls/v_weighted_sum/v_weighted_sum_core_hls.cpp:265:22 |
++--------------------+-------------------+-----------+----------+-------+------------------------------------------------------------------------------------------------------+
+
+* Inferred Bursts and Widening Missed
++--------------------+------------+------------------+------------------------+------------+------------------------------------------------------------------------------------------------------+
+| HW Interface       | Variable   | Loop             | Problem                | Resolution | Location                                                                                             |
++--------------------+------------+------------------+------------------------+------------+------------------------------------------------------------------------------------------------------+
+| m_axi_gmem_weights | probs_full | VITIS_LOOP_216_4 | Stride is incompatible | 214-230    | /home/advent/Desktop/RC19/attention_score_u55c/hls/v_weighted_sum/v_weighted_sum_core_hls.cpp:216:23 |
+| m_axi_gmem_v       | v_full     | VITIS_LOOP_211_3 | Stride is incompatible | 214-230    | /home/advent/Desktop/RC19/attention_score_u55c/hls/v_weighted_sum/v_weighted_sum_core_hls.cpp:211:21 |
++--------------------+------------+------------------+------------------------+------------+------------------------------------------------------------------------------------------------------+
+
+    * Resolution URL: www.xilinx.com/cgi-bin/docs/rdoc?v=2022.2;t=hls+guidance;d=XXX-YYY.html (replace XXX-YYY with column value)
+
+================================================================
+== Bind Op Report
+================================================================
++-----------------------------------------------------------------------------------+-----+--------+--------------+------+---------+---------+
+| Name                                                                              | DSP | Pragma | Variable     | Op   | Impl    | Latency |
++-----------------------------------------------------------------------------------+-----+--------+--------------+------+---------+---------+
+| + v_weighted_sum_multik_u55c_kernel                                               | 339 |        |              |      |         |         |
+|   add_ln211_fu_26642_p2                                                           | -   |        | add_ln211    | add  | fabric  | 0       |
+|   add_ln211_1_fu_26662_p2                                                         | -   |        | add_ln211_1  | add  | fabric  | 0       |
+|   add_ln211_2_fu_31806_p2                                                         | -   |        | add_ln211_2  | add  | fabric  | 0       |
+|   add_ln212_fu_31815_p2                                                           | -   |        | add_ln212    | add  | fabric  | 0       |
+|   sub_ln212_fu_31834_p2                                                           | -   |        | sub_ln212    | sub  | fabric  | 0       |
+|   add_ln212_1_fu_31855_p2                                                         | -   |        | add_ln212_1  | add  | fabric  | 0       |
+|   add_ln241_fu_32102_p2                                                           | -   |        | add_ln241    | add  | fabric  | 0       |
+|   add_ln265_fu_31913_p2                                                           | -   |        | add_ln265    | add  | fabric  | 0       |
+|  + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_203_1_VITIS_LOOP_204_2   | 0   |        |              |      |         |         |
+|    add_ln203_1_fu_13526_p2                                                        | -   |        | add_ln203_1  | add  | fabric  | 0       |
+|    add_ln203_fu_13538_p2                                                          | -   |        | add_ln203    | add  | fabric  | 0       |
+|    add_ln204_fu_18694_p2                                                          | -   |        | add_ln204    | add  | fabric  | 0       |
+|  + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_217_5                    | 3   |        |              |      |         |         |
+|    add_ln216_4_fu_1276_p2                                                         | -   |        | add_ln216_4  | add  | fabric  | 0       |
+|    add_ln216_fu_1285_p2                                                           | -   |        | add_ln216    | add  | fabric  | 0       |
+|    add_ln216_1_fu_1341_p2                                                         | -   |        | add_ln216_1  | add  | fabric  | 0       |
+|    mul_33s_31ns_62_2_1_U1025                                                      | 3   |        | mul_ln216    | mul  | auto    | 1       |
+|    add_ln216_2_fu_1416_p2                                                         | -   |        | add_ln216_2  | add  | fabric  | 0       |
+|    add_ln216_3_fu_1428_p2                                                         | -   |        | add_ln216_3  | add  | fabric  | 0       |
+|    add_ln217_fu_1381_p2                                                           | -   |        | add_ln217    | add  | fabric  | 0       |
+|  + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_227_6_VITIS_LOOP_228_7   | 0   |        |              |      |         |         |
+|    add_ln227_1_fu_295_p2                                                          | -   |        | add_ln227_1  | add  | fabric  | 0       |
+|    add_ln227_fu_304_p2                                                            | -   |        | add_ln227    | add  | fabric  | 0       |
+|    add_ln234_fu_376_p2                                                            | -   |        | add_ln234    | add  | fabric  | 0       |
+|    add_ln228_fu_382_p2                                                            | -   |        | add_ln228    | add  | fabric  | 0       |
+|  + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_242_9                    | 336 |        |              |      |         |         |
+|    add_ln242_fu_18778_p2                                                          | -   |        | add_ln242    | add  | fabric  | 0       |
+|    add_ln250_fu_18788_p2                                                          | -   |        | add_ln250    | add  | fabric  | 0       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1182                                            | 3   |        | mul          | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1110                                           | 2   |        | partial      | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1190                                            | 3   |        | mul102_s     | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1118                                           | 2   |        | partial_1    | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1198                                            | 3   |        | mul102_8     | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1126                                           | 2   |        | partial_2    | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1206                                            | 3   |        | mul102_9     | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1134                                           | 2   |        | partial_3    | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1214                                            | 3   |        | mul102_10    | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1142                                           | 2   |        | partial_4    | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1222                                            | 3   |        | mul102_11    | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1150                                           | 2   |        | partial_5    | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1230                                            | 3   |        | mul102_12    | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1158                                           | 2   |        | partial_6    | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1238                                            | 3   |        | mul102_13    | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1166                                           | 2   |        | partial_7    | fadd | fulldsp | 6       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1174                                           | 2   |        | acc_next_512 | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1183                                            | 3   |        | mul102_1     | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1111                                           | 2   |        | partial_8    | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1191                                            | 3   |        | mul102_1_1   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1119                                           | 2   |        | partial_9    | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1199                                            | 3   |        | mul102_1_2   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1127                                           | 2   |        | partial_10   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1207                                            | 3   |        | mul102_1_3   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1135                                           | 2   |        | partial_11   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1215                                            | 3   |        | mul102_1_4   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1143                                           | 2   |        | partial_12   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1223                                            | 3   |        | mul102_1_5   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1151                                           | 2   |        | partial_13   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1231                                            | 3   |        | mul102_1_6   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1159                                           | 2   |        | partial_14   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1239                                            | 3   |        | mul102_1_7   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1167                                           | 2   |        | partial_15   | fadd | fulldsp | 6       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1175                                           | 2   |        | acc_next_513 | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1184                                            | 3   |        | mul102_2     | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1112                                           | 2   |        | partial_16   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1192                                            | 3   |        | mul102_2_1   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1120                                           | 2   |        | partial_17   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1200                                            | 3   |        | mul102_2_2   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1128                                           | 2   |        | partial_18   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1208                                            | 3   |        | mul102_2_3   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1136                                           | 2   |        | partial_19   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1216                                            | 3   |        | mul102_2_4   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1144                                           | 2   |        | partial_20   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1224                                            | 3   |        | mul102_2_5   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1152                                           | 2   |        | partial_21   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1232                                            | 3   |        | mul102_2_6   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1160                                           | 2   |        | partial_22   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1240                                            | 3   |        | mul102_2_7   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1168                                           | 2   |        | partial_23   | fadd | fulldsp | 6       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1176                                           | 2   |        | acc_next_514 | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1185                                            | 3   |        | mul102_3     | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1113                                           | 2   |        | partial_24   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1193                                            | 3   |        | mul102_3_1   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1121                                           | 2   |        | partial_25   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1201                                            | 3   |        | mul102_3_2   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1129                                           | 2   |        | partial_26   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1209                                            | 3   |        | mul102_3_3   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1137                                           | 2   |        | partial_27   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1217                                            | 3   |        | mul102_3_4   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1145                                           | 2   |        | partial_28   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1225                                            | 3   |        | mul102_3_5   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1153                                           | 2   |        | partial_29   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1233                                            | 3   |        | mul102_3_6   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1161                                           | 2   |        | partial_30   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1241                                            | 3   |        | mul102_3_7   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1169                                           | 2   |        | partial_31   | fadd | fulldsp | 6       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1177                                           | 2   |        | acc_next_515 | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1186                                            | 3   |        | mul102_4     | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1114                                           | 2   |        | partial_32   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1194                                            | 3   |        | mul102_4_1   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1122                                           | 2   |        | partial_33   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1202                                            | 3   |        | mul102_4_2   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1130                                           | 2   |        | partial_34   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1210                                            | 3   |        | mul102_4_3   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1138                                           | 2   |        | partial_35   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1218                                            | 3   |        | mul102_4_4   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1146                                           | 2   |        | partial_36   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1226                                            | 3   |        | mul102_4_5   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1154                                           | 2   |        | partial_37   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1234                                            | 3   |        | mul102_4_6   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1162                                           | 2   |        | partial_38   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1242                                            | 3   |        | mul102_4_7   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1170                                           | 2   |        | partial_39   | fadd | fulldsp | 6       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1178                                           | 2   |        | acc_next_516 | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1187                                            | 3   |        | mul102_5     | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1115                                           | 2   |        | partial_40   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1195                                            | 3   |        | mul102_5_1   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1123                                           | 2   |        | partial_41   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1203                                            | 3   |        | mul102_5_2   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1131                                           | 2   |        | partial_42   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1211                                            | 3   |        | mul102_5_3   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1139                                           | 2   |        | partial_43   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1219                                            | 3   |        | mul102_5_4   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1147                                           | 2   |        | partial_44   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1227                                            | 3   |        | mul102_5_5   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1155                                           | 2   |        | partial_45   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1235                                            | 3   |        | mul102_5_6   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1163                                           | 2   |        | partial_46   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1243                                            | 3   |        | mul102_5_7   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1171                                           | 2   |        | partial_47   | fadd | fulldsp | 6       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1179                                           | 2   |        | acc_next_517 | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1188                                            | 3   |        | mul102_6     | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1116                                           | 2   |        | partial_48   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1196                                            | 3   |        | mul102_6_1   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1124                                           | 2   |        | partial_49   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1204                                            | 3   |        | mul102_6_2   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1132                                           | 2   |        | partial_50   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1212                                            | 3   |        | mul102_6_3   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1140                                           | 2   |        | partial_51   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1220                                            | 3   |        | mul102_6_4   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1148                                           | 2   |        | partial_52   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1228                                            | 3   |        | mul102_6_5   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1156                                           | 2   |        | partial_53   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1236                                            | 3   |        | mul102_6_6   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1164                                           | 2   |        | partial_54   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1244                                            | 3   |        | mul102_6_7   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1172                                           | 2   |        | partial_55   | fadd | fulldsp | 6       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1180                                           | 2   |        | acc_next_518 | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1189                                            | 3   |        | mul102_7     | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1117                                           | 2   |        | partial_56   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1197                                            | 3   |        | mul102_7_1   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1125                                           | 2   |        | partial_57   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1205                                            | 3   |        | mul102_7_2   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1133                                           | 2   |        | partial_58   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1213                                            | 3   |        | mul102_7_3   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1141                                           | 2   |        | partial_59   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1221                                            | 3   |        | mul102_7_4   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1149                                           | 2   |        | partial_60   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1229                                            | 3   |        | mul102_7_5   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1157                                           | 2   |        | partial_61   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1237                                            | 3   |        | mul102_7_6   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1165                                           | 2   |        | partial_62   | fadd | fulldsp | 6       |
+|    fmul_32ns_32ns_32_4_max_dsp_1_U1245                                            | 3   |        | mul102_7_7   | fmul | maxdsp  | 3       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1173                                           | 2   |        | partial_63   | fadd | fulldsp | 6       |
+|    fadd_32ns_32ns_32_7_full_dsp_1_U1181                                           | 2   |        | acc_next_519 | fadd | fulldsp | 6       |
+|  + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_256_12_VITIS_LOOP_257_13 | 0   |        |              |      |         |         |
+|    add_ln256_1_fu_5336_p2                                                         | -   |        | add_ln256_1  | add  | fabric  | 0       |
+|    add_ln256_fu_5348_p2                                                           | -   |        | add_ln256    | add  | fabric  | 0       |
+|    add_ln257_fu_9550_p2                                                           | -   |        | add_ln257    | add  | fabric  | 0       |
+|  + v_weighted_sum_multik_u55c_kernel_Pipeline_VITIS_LOOP_265_14_VITIS_LOOP_266_15 | 0   |        |              |      |         |         |
+|    add_ln265_fu_4245_p2                                                           | -   |        | add_ln265    | add  | fabric  | 0       |
+|    add_ln265_1_fu_4254_p2                                                         | -   |        | add_ln265_1  | add  | fabric  | 0       |
+|    add_ln266_fu_5402_p2                                                           | -   |        | add_ln266    | add  | fabric  | 0       |
++-----------------------------------------------------------------------------------+-----+--------+--------------+------+---------+---------+
+
+
+================================================================
+== Bind Storage Report
+================================================================
++-------------------------------------+------+------+--------+------------------+---------+------+---------+
+| Name                                | BRAM | URAM | Pragma | Variable         | Storage | Impl | Latency |
++-------------------------------------+------+------+--------+------------------+---------+------+---------+
+| + v_weighted_sum_multik_u55c_kernel | 8    | 0    |        |                  |         |      |         |
+|   weights_local_U                   | -    | -    |        | weights_local    | ram_1p  | auto | 1       |
+|   weights_local_1_U                 | -    | -    |        | weights_local_1  | ram_1p  | auto | 1       |
+|   weights_local_2_U                 | -    | -    |        | weights_local_2  | ram_1p  | auto | 1       |
+|   weights_local_3_U                 | -    | -    |        | weights_local_3  | ram_1p  | auto | 1       |
+|   weights_local_4_U                 | -    | -    |        | weights_local_4  | ram_1p  | auto | 1       |
+|   weights_local_5_U                 | -    | -    |        | weights_local_5  | ram_1p  | auto | 1       |
+|   weights_local_6_U                 | -    | -    |        | weights_local_6  | ram_1p  | auto | 1       |
+|   weights_local_7_U                 | -    | -    |        | weights_local_7  | ram_1p  | auto | 1       |
+|   weights_local_8_U                 | -    | -    |        | weights_local_8  | ram_1p  | auto | 1       |
+|   weights_local_9_U                 | -    | -    |        | weights_local_9  | ram_1p  | auto | 1       |
+|   weights_local_10_U                | -    | -    |        | weights_local_10 | ram_1p  | auto | 1       |
+|   weights_local_11_U                | -    | -    |        | weights_local_11 | ram_1p  | auto | 1       |
+|   weights_local_12_U                | -    | -    |        | weights_local_12 | ram_1p  | auto | 1       |
+|   weights_local_13_U                | -    | -    |        | weights_local_13 | ram_1p  | auto | 1       |
+|   weights_local_14_U                | -    | -    |        | weights_local_14 | ram_1p  | auto | 1       |
+|   weights_local_15_U                | -    | -    |        | weights_local_15 | ram_1p  | auto | 1       |
+|   weights_local_16_U                | -    | -    |        | weights_local_16 | ram_1p  | auto | 1       |
+|   weights_local_17_U                | -    | -    |        | weights_local_17 | ram_1p  | auto | 1       |
+|   weights_local_18_U                | -    | -    |        | weights_local_18 | ram_1p  | auto | 1       |
+|   weights_local_19_U                | -    | -    |        | weights_local_19 | ram_1p  | auto | 1       |
+|   weights_local_20_U                | -    | -    |        | weights_local_20 | ram_1p  | auto | 1       |
+|   weights_local_21_U                | -    | -    |        | weights_local_21 | ram_1p  | auto | 1       |
+|   weights_local_22_U                | -    | -    |        | weights_local_22 | ram_1p  | auto | 1       |
+|   weights_local_23_U                | -    | -    |        | weights_local_23 | ram_1p  | auto | 1       |
+|   weights_local_24_U                | -    | -    |        | weights_local_24 | ram_1p  | auto | 1       |
+|   weights_local_25_U                | -    | -    |        | weights_local_25 | ram_1p  | auto | 1       |
+|   weights_local_26_U                | -    | -    |        | weights_local_26 | ram_1p  | auto | 1       |
+|   weights_local_27_U                | -    | -    |        | weights_local_27 | ram_1p  | auto | 1       |
+|   weights_local_28_U                | -    | -    |        | weights_local_28 | ram_1p  | auto | 1       |
+|   weights_local_29_U                | -    | -    |        | weights_local_29 | ram_1p  | auto | 1       |
+|   weights_local_30_U                | -    | -    |        | weights_local_30 | ram_1p  | auto | 1       |
+|   weights_local_31_U                | -    | -    |        | weights_local_31 | ram_1p  | auto | 1       |
+|   weights_local_32_U                | -    | -    |        | weights_local_32 | ram_1p  | auto | 1       |
+|   weights_local_33_U                | -    | -    |        | weights_local_33 | ram_1p  | auto | 1       |
+|   weights_local_34_U                | -    | -    |        | weights_local_34 | ram_1p  | auto | 1       |
+|   weights_local_35_U                | -    | -    |        | weights_local_35 | ram_1p  | auto | 1       |
+|   weights_local_36_U                | -    | -    |        | weights_local_36 | ram_1p  | auto | 1       |
+|   weights_local_37_U                | -    | -    |        | weights_local_37 | ram_1p  | auto | 1       |
+|   weights_local_38_U                | -    | -    |        | weights_local_38 | ram_1p  | auto | 1       |
+|   weights_local_39_U                | -    | -    |        | weights_local_39 | ram_1p  | auto | 1       |
+|   weights_local_40_U                | -    | -    |        | weights_local_40 | ram_1p  | auto | 1       |
+|   weights_local_41_U                | -    | -    |        | weights_local_41 | ram_1p  | auto | 1       |
+|   weights_local_42_U                | -    | -    |        | weights_local_42 | ram_1p  | auto | 1       |
+|   weights_local_43_U                | -    | -    |        | weights_local_43 | ram_1p  | auto | 1       |
+|   weights_local_44_U                | -    | -    |        | weights_local_44 | ram_1p  | auto | 1       |
+|   weights_local_45_U                | -    | -    |        | weights_local_45 | ram_1p  | auto | 1       |
+|   weights_local_46_U                | -    | -    |        | weights_local_46 | ram_1p  | auto | 1       |
+|   weights_local_47_U                | -    | -    |        | weights_local_47 | ram_1p  | auto | 1       |
+|   weights_local_48_U                | -    | -    |        | weights_local_48 | ram_1p  | auto | 1       |
+|   weights_local_49_U                | -    | -    |        | weights_local_49 | ram_1p  | auto | 1       |
+|   weights_local_50_U                | -    | -    |        | weights_local_50 | ram_1p  | auto | 1       |
+|   weights_local_51_U                | -    | -    |        | weights_local_51 | ram_1p  | auto | 1       |
+|   weights_local_52_U                | -    | -    |        | weights_local_52 | ram_1p  | auto | 1       |
+|   weights_local_53_U                | -    | -    |        | weights_local_53 | ram_1p  | auto | 1       |
+|   weights_local_54_U                | -    | -    |        | weights_local_54 | ram_1p  | auto | 1       |
+|   weights_local_55_U                | -    | -    |        | weights_local_55 | ram_1p  | auto | 1       |
+|   weights_local_56_U                | -    | -    |        | weights_local_56 | ram_1p  | auto | 1       |
+|   weights_local_57_U                | -    | -    |        | weights_local_57 | ram_1p  | auto | 1       |
+|   weights_local_58_U                | -    | -    |        | weights_local_58 | ram_1p  | auto | 1       |
+|   weights_local_59_U                | -    | -    |        | weights_local_59 | ram_1p  | auto | 1       |
+|   weights_local_60_U                | -    | -    |        | weights_local_60 | ram_1p  | auto | 1       |
+|   weights_local_61_U                | -    | -    |        | weights_local_61 | ram_1p  | auto | 1       |
+|   weights_local_62_U                | -    | -    |        | weights_local_62 | ram_1p  | auto | 1       |
+|   weights_local_63_U                | -    | -    |        | weights_local_63 | ram_1p  | auto | 1       |
+|   v_local_U                         | 1    | -    |        | v_local          | ram_1p  | auto | 1       |
+|   v_local_1_U                       | 1    | -    |        | v_local_1        | ram_1p  | auto | 1       |
+|   v_local_2_U                       | 1    | -    |        | v_local_2        | ram_1p  | auto | 1       |
+|   v_local_3_U                       | 1    | -    |        | v_local_3        | ram_1p  | auto | 1       |
+|   v_local_4_U                       | 1    | -    |        | v_local_4        | ram_1p  | auto | 1       |
+|   v_local_5_U                       | 1    | -    |        | v_local_5        | ram_1p  | auto | 1       |
+|   v_local_6_U                       | 1    | -    |        | v_local_6        | ram_1p  | auto | 1       |
+|   v_local_7_U                       | 1    | -    |        | v_local_7        | ram_1p  | auto | 1       |
++-------------------------------------+------+------+--------+------------------+---------+------+---------+
+
+
+================================================================
+== Pragma Report
+================================================================
+* Valid Pragma Syntax
++-----------------+-----------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------+
+| Type            | Options                                                               | Location                                                                                                  |
++-----------------+-----------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------+
+| inline          | off                                                                   | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:20 in v_weighted_sum_core_hls                               |
+| array_partition | variable=weights_tile cyclic factor=16 dim=2                          | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:21 in v_weighted_sum_core_hls, weights_tile                 |
+| array_partition | variable=v_tile cyclic factor=16 dim=1                                | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:22 in v_weighted_sum_core_hls, v_tile                       |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:26 in v_weighted_sum_core_hls                               |
+| unroll          | factor=16                                                             | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:29 in v_weighted_sum_core_hls                               |
+| interface       | m_axi port=weights_tile offset=slave bundle=gmem_weights depth=512    | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:45 in v_weighted_sum_u55c_kernel, weights_tile              |
+| interface       | m_axi port=v_tile offset=slave bundle=gmem_v depth=4096               | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:46 in v_weighted_sum_u55c_kernel, v_tile                    |
+| interface       | m_axi port=out_tile offset=slave bundle=gmem_out depth=512            | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:47 in v_weighted_sum_u55c_kernel, out_tile                  |
+| interface       | s_axilite port=weights_tile bundle=control                            | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:48 in v_weighted_sum_u55c_kernel, weights_tile              |
+| interface       | s_axilite port=v_tile bundle=control                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:49 in v_weighted_sum_u55c_kernel, v_tile                    |
+| interface       | s_axilite port=out_tile bundle=control                                | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:50 in v_weighted_sum_u55c_kernel, out_tile                  |
+| interface       | s_axilite port=query_row_count bundle=control                         | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:51 in v_weighted_sum_u55c_kernel, query_row_count           |
+| interface       | s_axilite port=key_col_count bundle=control                           | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:52 in v_weighted_sum_u55c_kernel, key_col_count             |
+| interface       | s_axilite port=return bundle=control                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:53 in v_weighted_sum_u55c_kernel, return                    |
+| array_partition | variable=weights_local cyclic factor=16 dim=2                         | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:58 in v_weighted_sum_u55c_kernel, weights_local             |
+| array_partition | variable=v_local cyclic factor=16 dim=1                               | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:59 in v_weighted_sum_u55c_kernel, v_local                   |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:63 in v_weighted_sum_u55c_kernel                            |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:70 in v_weighted_sum_u55c_kernel                            |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:84 in v_weighted_sum_u55c_kernel                            |
+| interface       | m_axi port=weights_full offset=slave bundle=gmem_weights depth=262144 | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:100 in v_weighted_sum_resident_u55c_kernel, weights_full    |
+| interface       | m_axi port=v_full offset=slave bundle=gmem_v depth=32768              | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:101 in v_weighted_sum_resident_u55c_kernel, v_full          |
+| interface       | m_axi port=out_full offset=slave bundle=gmem_out depth=32768          | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:102 in v_weighted_sum_resident_u55c_kernel, out_full        |
+| interface       | s_axilite port=weights_full bundle=control                            | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:103 in v_weighted_sum_resident_u55c_kernel, weights_full    |
+| interface       | s_axilite port=v_full bundle=control                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:104 in v_weighted_sum_resident_u55c_kernel, v_full          |
+| interface       | s_axilite port=out_full bundle=control                                | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:105 in v_weighted_sum_resident_u55c_kernel, out_full        |
+| interface       | s_axilite port=seq_len bundle=control                                 | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:106 in v_weighted_sum_resident_u55c_kernel, seq_len         |
+| interface       | s_axilite port=query_pos_base bundle=control                          | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:107 in v_weighted_sum_resident_u55c_kernel, query_pos_base  |
+| interface       | s_axilite port=key_pos_base bundle=control                            | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:108 in v_weighted_sum_resident_u55c_kernel, key_pos_base    |
+| interface       | s_axilite port=query_row_count bundle=control                         | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:109 in v_weighted_sum_resident_u55c_kernel, query_row_count |
+| interface       | s_axilite port=key_col_count bundle=control                           | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:110 in v_weighted_sum_resident_u55c_kernel, key_col_count   |
+| interface       | s_axilite port=clear_accum bundle=control                             | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:111 in v_weighted_sum_resident_u55c_kernel, clear_accum     |
+| interface       | s_axilite port=return bundle=control                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:112 in v_weighted_sum_resident_u55c_kernel, return          |
+| array_partition | variable=weights_local cyclic factor=16 dim=2                         | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:117 in v_weighted_sum_resident_u55c_kernel, weights_local   |
+| array_partition | variable=v_local cyclic factor=16 dim=1                               | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:118 in v_weighted_sum_resident_u55c_kernel, v_local         |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:128 in v_weighted_sum_resident_u55c_kernel                  |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:141 in v_weighted_sum_resident_u55c_kernel                  |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:155 in v_weighted_sum_resident_u55c_kernel                  |
+| interface       | m_axi port=probs_full offset=slave bundle=gmem_weights depth=262144   | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:173 in v_weighted_sum_multik_u55c_kernel, probs_full        |
+| interface       | m_axi port=v_full offset=slave bundle=gmem_v depth=32768              | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:174 in v_weighted_sum_multik_u55c_kernel, v_full            |
+| interface       | m_axi port=attn_out offset=slave bundle=gmem_out depth=32768          | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:175 in v_weighted_sum_multik_u55c_kernel, attn_out          |
+| interface       | s_axilite port=probs_full bundle=control                              | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:176 in v_weighted_sum_multik_u55c_kernel, probs_full        |
+| interface       | s_axilite port=v_full bundle=control                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:177 in v_weighted_sum_multik_u55c_kernel, v_full            |
+| interface       | s_axilite port=attn_out bundle=control                                | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:178 in v_weighted_sum_multik_u55c_kernel, attn_out          |
+| interface       | s_axilite port=seq_len bundle=control                                 | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:179 in v_weighted_sum_multik_u55c_kernel, seq_len           |
+| interface       | s_axilite port=query_base bundle=control                              | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:180 in v_weighted_sum_multik_u55c_kernel, query_base        |
+| interface       | s_axilite port=query_row_count bundle=control                         | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:181 in v_weighted_sum_multik_u55c_kernel, query_row_count   |
+| interface       | s_axilite port=return bundle=control                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:182 in v_weighted_sum_multik_u55c_kernel, return            |
+| array_partition | variable=acc complete dim=1                                           | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:189 in v_weighted_sum_multik_u55c_kernel, acc               |
+| array_partition | variable=acc complete dim=2                                           | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:190 in v_weighted_sum_multik_u55c_kernel, acc               |
+| array_partition | variable=acc_next complete dim=1                                      | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:191 in v_weighted_sum_multik_u55c_kernel, acc_next          |
+| array_partition | variable=acc_next complete dim=2                                      | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:192 in v_weighted_sum_multik_u55c_kernel, acc_next          |
+| array_partition | variable=weights_local complete dim=1                                 | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:195 in v_weighted_sum_multik_u55c_kernel, weights_local     |
+| array_partition | variable=weights_local cyclic factor=kMultikColChunk dim=2            | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:196 in v_weighted_sum_multik_u55c_kernel, weights_local     |
+| array_partition | variable=v_local cyclic factor=kMultikColChunk dim=1                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:197 in v_weighted_sum_multik_u55c_kernel, v_local           |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:205 in v_weighted_sum_multik_u55c_kernel                    |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:218 in v_weighted_sum_multik_u55c_kernel                    |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:229 in v_weighted_sum_multik_u55c_kernel                    |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:243 in v_weighted_sum_multik_u55c_kernel                    |
+| unroll          |                                                                       | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:245 in v_weighted_sum_multik_u55c_kernel                    |
+| unroll          | factor=kMultikColChunk                                                | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:248 in v_weighted_sum_multik_u55c_kernel                    |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:258 in v_weighted_sum_multik_u55c_kernel                    |
+| pipeline        | II=1                                                                  | ../v_weighted_sum/v_weighted_sum_core_hls.cpp:267 in v_weighted_sum_multik_u55c_kernel                    |
++-----------------+-----------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------+
+
+

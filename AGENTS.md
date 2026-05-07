@@ -1361,31 +1361,147 @@ resident path:
     - `docs/o3_multik_only_hw_place_fail_runme.log`
     - `docs/o3_multik_only_hw_place_fail_full_util_synthed.rpt`
     - `docs/o3_multik_only_hw_place_fail_kernel_util_synthed.rpt`
+
+On 2026-05-06, narrowed O3 V multi-K datapaths were tested on Linux/U55C:
+
+- `kMultikColChunk=16`:
+  - local g++ bench passed:
+    `v_weighted_sum test PASSED, max diff 5.96046e-08`
+  - Vitis HLS 2022.2 passed `csim` and `csynth`
+  - HLS estimate: `342.47 MHz`, `16 BRAM_18K`, `659 DSP`,
+    `166160 FF`, `78126 LUT`, `0 URAM`
+  - hot loop `VITIS_LOOP_242_9` achieved II `1` vs target II `1`
+  - lean `o3_multik` `hw_emu` xclbin build passed
+  - `hw_emu` `S=8 --multik` passed:
+    `Resident attention output verification PASSED` and
+    `XRT chain verification PASSED`
+  - `hw_emu` timings:
+    `score_mask_scale_resident 7000.744 ms`,
+    `softmax_full_row_resident 57007.102 ms`,
+    `v_weighted_sum_multik 34004.074 ms`,
+    `total_chain 98094.464 ms`
+  - lean real `hw` build passed placement but failed route with global
+    congestion level `7`; route log reported `627723` node overlaps and
+    severe directional congestion, including West max `149.269%`
+  - placed `vws_mk_1`: `76490 LUT`, `2907 LUTMem`, `152607 REG`,
+    `9 BRAM`, `660 DSP`
+  - preserved artifacts include:
+    `docs/o3_multik_kcol16_hls.txt`,
+    `docs/o3_v_weighted_sum_multik_kcol16_csynth.rpt`,
+    `docs/o3_multik_kcol16_hw_emu_s8_run.txt`, and
+    `docs/o3_multik_kcol16_hw_route_fail_runme.log`
+- `kMultikColChunk=8` with full 8-row parallelism:
+  - local g++ bench passed:
+    `v_weighted_sum test PASSED, max diff 5.96046e-08`
+  - Vitis HLS 2022.2 passed `csim` and `csynth`
+  - HLS estimate: `342.47 MHz`, `8 BRAM_18K`, `339 DSP`,
+    `128099 FF`, `55688 LUT`, `0 URAM`
+  - hot loop `VITIS_LOOP_242_9` achieved II `1` vs target II `1`
+  - lean `o3_multik` `hw_emu` xclbin build passed
+  - `hw_emu` `S=8 --multik` passed:
+    `Resident attention output verification PASSED` and
+    `XRT chain verification PASSED`
+  - `hw_emu` timings:
+    `score_mask_scale_resident 4000.634 ms`,
+    `softmax_full_row_resident 29003.717 ms`,
+    `v_weighted_sum_multik 21002.745 ms`,
+    `total_chain 54089.590 ms`
+  - lean real `hw` build reached route finalization/verifying routed nets, but
+    failed with partially-conflicted nets; route log reported `106270` signals
+    failed to route, `308985` node overlaps, and global congestion level `7`
+  - placed `vws_mk_1`: `61022 LUT`, `1810 LUTMem`, `120906 REG`,
+    `5 BRAM`, `340 DSP`
+  - full placed lean design: `72952 LUT`, `5883 LUTMem`, `131485 REG`,
+    `9 BRAM`, `2 URAM`, `419 DSP`
+  - preserved artifacts include:
+    `docs/o3_multik_kcol8_hls.txt`,
+    `docs/o3_v_weighted_sum_multik_kcol8_csynth.rpt`,
+    `docs/o3_multik_kcol8_hw_emu_s8_run.txt`, and
+    `docs/o3_multik_kcol8_hw_route_fail_runme.log`
+- `kMultikColChunk=8` with `kMultikRowChunk=4` is the newest current source
+  state:
+  - row-parallelism was reduced from 8 rows/cycle to 4 rows/cycle in
+    `v_weighted_sum_multik_u55c_kernel`; accumulator and weights row
+    partitioning now use cyclic factor 4
+  - local g++ bench passed:
+    `v_weighted_sum test PASSED, max diff 5.96046e-08`
+  - Vitis HLS 2022.2 passed `csim` and `csynth`
+  - HLS estimate: `342.47 MHz`, `8 BRAM_18K`, `171 DSP`,
+    `59180 FF`, `76945 LUT`, `0 URAM`
+  - hot loop `VITIS_LOOP_245_10` achieved II `1` vs target II `1`;
+    loop latency `132 cycles`, iteration latency `70`, trip count `64`
+  - `v++` compile for the V kernel also satisfied all loop constraints and
+    estimated `411.00 MHz`
+  - lean `o3_multik` `hw_emu` xclbin build passed
+  - `hw_emu` `S=8 --multik` passed:
+    `Resident attention output verification PASSED` and
+    `XRT chain verification PASSED`
+  - `hw_emu` timings:
+    `score_mask_scale_resident 3000.438 ms`,
+    `softmax_full_row_resident 15001.574 ms`,
+    `v_weighted_sum_multik 12001.359 ms`,
+    `total_chain 30085.022 ms`
+  - lean real `hw` build completed and produced a bitstream xclbin, UUID
+    `c17bb877-f252-f7b1-e56c-f9fb19e7f383`
+  - important deployment constraint: routed timing does **not** meet
+    constraints; timing summary reports WNS `-3.120 ns`, TNS `-39738.168 ns`,
+    failing clock `clk_kernel_00_unbuffered_net`
+  - xclbin clocks: HBM `450 MHz`, KERNEL `500 MHz`, DATA achieved
+    `154.9 MHz` despite requested `300 MHz`
+  - routed kernel utilization for `vws_mk_1`: `31881 LUT`, `13027 LUTAsMem`,
+    `54548 REG`, `5 BRAM`, `0 URAM`, `172 DSP`
+  - full routed lean design: `170661 CLB LUTs` (`13.09%`),
+    `240029 CLB registers` (`9.21%`), `208 Block RAM tiles` (`10.32%`),
+    `2 URAM` (`0.21%`), `255 DSP` (`2.83%`)
+  - router behavior improved materially: congestion dropped from the previous
+    row8 level `7` failure to level `6`; rip-up/reroute repeatedly reached
+    `0` node overlaps, then continued iterating for timing
+  - real U55C synthetic `--multik` sweep passed despite timing risk:
+    - `S=8 0.750 ms`
+    - `S=64 3.324 ms`
+    - `S=128 7.506 ms`
+    - `S=256 21.608 ms`
+    - `S=512 74.638 ms`
+  - real TinyLlama vector `--multik` runs passed:
+    - `sim/real_tinyllama_s16 1.153 ms`
+    - `sim/real_tinyllama_s64 3.084 ms`
+  - preserved artifacts include:
+    `docs/o3_multik_kcol8_row4_hls.txt`,
+    `docs/o3_v_weighted_sum_multik_kcol8_row4_csynth.rpt`,
+    `docs/o3_multik_kcol8_row4_hw_emu_s8_run.txt`,
+    `docs/o3_multik_kcol8_row4_hw_build.txt`,
+    `docs/o3_multik_kcol8_row4_hw_timing_summary_routed.rpt`,
+    `docs/o3_multik_kcol8_row4_hw_sweep_run.txt`, and
+    `docs/o3_multik_kcol8_row4_hw_real_vectors_run.txt`
 - interpretation:
   - O3 V multi-K is functionally integrated and passes `hw_emu`
-  - current full-width ping-pong datapath is too large or too control-set-heavy
-    to place cleanly on the U55C shell, even in the lean `o3_multik` profile
-  - real-card execution is blocked until this kernel is narrowed or otherwise
-    made easier to place
+  - narrowing from full-width to `kMultikColChunk=16` fixed the original
+    placement-capacity failure, but route congestion still failed
+  - narrowing further to `kMultikColChunk=8` cut `vws_mk_1` to `340 DSP` and
+    got much deeper into route, but the design still failed routed-net
+    verification from congestion
+  - reducing row parallelism to 4 cut `vws_mk_1` further to `172 DSP`, allowed
+    a real hardware bitstream to build, and real-card verification passed
+  - the current blocker is timing closure, not routing legality or functional
+    verification
 
 ## Best Next Step
 
-Track O3 V multi-K accumulation has passed HLS, host build, full-profile
-`hw_emu` build, and `S=8` `hw_emu` verification. Real U55C is blocked at
-hardware link placement. Next steps in order:
+Track O3 V multi-K accumulation has passed local bench, HLS, host build, lean
+`hw_emu`, lean real `hw` build, real U55C synthetic sweep, and real TinyLlama
+S=16/S=64 vector verification with the current row4 source. The xclbin is
+functionally useful but **not timing-clean**. Next steps in order:
 
-1. reduce the O3 V datapath footprint before the next real `hw` build:
-   consider factor-32 or factor-16 column parallelism with the same local
-   accumulator strategy, or split row/dim parallelism so `vws_mk_1` uses fewer
-   LUTs, FFs, DSPs, and control sets
-2. rerun Vitis HLS and require the hot accumulation loop to stay close to II=1
-   before paying for another hardware link
-3. rebuild the lean `o3_multik` hardware profile first
-4. if the lean profile places, run the real U55C sweep at
-   `S=8, 64, 128, 256, 512` and compare against O1/O2 timing
-5. optionally try a Vivado placer-effort Tcl pre-hook such as
-   `set_param place.sliceLegEffortLimit 2000`, but treat it as secondary
-   because the lean profile is already over the pblock CLB packing limit
+1. close timing for the row4 O3 V design before treating it as a stable
+   deployable baseline; current WNS is `-3.120 ns`
+2. first try a lower data/kernel target or v++ clock setting for the lean
+   `o3_multik` profile, because the DATA clock already fell to about
+   `154.9 MHz` and the failing clock is `clk_kernel_00_unbuffered_net`
+3. if timing still fails, reduce row parallelism to `kMultikRowChunk=2` and
+   rerun local bench, HLS, lean `hw_emu`, and lean real `hw`
+4. preserve and compare timing/resource reports against the row4 artifacts
+5. once timing closes, rerun the real U55C sweep at `S=8,64,128,256,512`
+   and the real TinyLlama S=16/S=64 vector checks
 6. then implement the pre-softmax multi-K score/mask/scale kernel to reduce
    512 → 64 launches at `S=512`
 7. record timing vs O1/O2 baselines in `docs/track_d_results.md`

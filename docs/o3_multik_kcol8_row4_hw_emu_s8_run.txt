@@ -1,0 +1,21 @@
+Opening device 0
+CRITICAL WARNING: [HW-EMU 08-0] Unable to find emconfig.json. Using default device "xilinx:pcie-hw-em:7v3:1.0"
+INFO: [HW-EMU 05] Path of the simulation directory : /home/advent/Desktop/RC19/attention_score_u55c/build/.run/1773782/hw_em/device0/binary_0/behav_waveform/xsim
+
+ server socket name is	/tmp/advent/device0_0_1773782
+INFO: [HW-EMU 01] Hardware emulation runs simulation underneath. Using a large data set will result in long simulation times. It is recommended that a small dataset is used for faster execution. The flow uses approximate models for Global memories and interconnect and hence the performance data generated is approximate.
+configuring penguin scheduler mode
+scheduler config ert(0), dataflow(1), slots(16), cudma(1), cuisr(0), cdma(0), cus(3)
+Running resident multi-K synthetic sequence, S=8, q_chunks=1, k_chunks=1
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   3000.438 ms
+  softmax_full_row_resident   15001.574 ms
+  v_weighted_sum_multik       12001.359 ms
+  kernel_launch_wait_sum      30003.372 ms
+  host_dma_sync_gap           81.650 ms
+  total_chain                 30085.022 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED
+INFO: [HW-EMU 06-0] Waiting for the simulator process to exit
+INFO: [HW-EMU 06-1] All the simulator processes exited successfully
+INFO: [HW-EMU 07-0] Please refer the path "/home/advent/Desktop/RC19/attention_score_u55c/build/.run/1773782/hw_em/device0/binary_0/behav_waveform/xsim/simulate.log" for more detailed simulation infos, errors and warnings.

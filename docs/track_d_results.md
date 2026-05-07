@@ -321,6 +321,84 @@ Fresh O2 reports are checked in under `docs/` with the `o2_` prefix, including
 `o2_system_diagram.json`, O2 system-estimate files, Vitis guidance files, and
 `o2_attention_score_chain_xclbin_info.txt`.
 
+## Optimization Track O3 V Multi-K Row4 Results
+
+Track O3 replaces per-K V launches with one `v_weighted_sum_multik_u55c_kernel`
+launch per Q chunk. The current route-reduction variant uses
+`kMultikColChunk=8` and `kMultikRowChunk=4`.
+
+Run command:
+
+```bash
+source host/setup_2022_2_env.sh
+unset XCL_EMULATION_MODE
+
+for s in 8 64 128 256 512; do
+  ./build/host_attention_score_chain \
+    --xclbin build/attention_score_chain.xclbin \
+    --seq-len "$s" \
+    --multik \
+    --device 0
+done
+```
+
+Build and timing caveat:
+
+| Item | Value |
+|---|---|
+| xclbin UUID | `c17bb877-f252-f7b1-e56c-f9fb19e7f383` |
+| kernels in lean xclbin | resident score/mask/scale, resident full-row softmax, O3 V multi-K |
+| clocks | HBM 450 MHz, kernel 500 MHz, data 154.9 MHz achieved |
+| routed timing | **not met**: WNS `-3.120 ns`, TNS `-39738.168 ns` |
+| failing clock | `clk_kernel_00_unbuffered_net` |
+
+The bitstream built and the real-card checks below passed, but this is not a
+timing-closed deployment baseline yet.
+
+O3 row4 synthetic real-card results:
+
+| S | q_chunks | k_chunks | score ms | softmax ms | V multi-K ms | kernel launch/wait sum ms | host/DMA/sync gap ms | total ms |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 8 | 1 | 1 | 0.114 | 0.200 | 0.155 | 0.470 | 0.280 | 0.750 |
+| 64 | 8 | 1 | 0.725 | 1.436 | 0.762 | 2.924 | 0.400 | 3.324 |
+| 128 | 16 | 2 | 1.674 | 2.517 | 3.042 | 7.233 | 0.273 | 7.506 |
+| 256 | 32 | 4 | 5.241 | 6.065 | 10.036 | 21.342 | 0.266 | 21.608 |
+| 512 | 64 | 8 | 19.097 | 16.921 | 38.030 | 74.048 | 0.590 | 74.638 |
+
+All O3 row4 synthetic runs printed:
+
+```text
+Resident attention output verification PASSED
+XRT chain verification PASSED
+```
+
+O3 row4 real TinyLlama vector results:
+
+| vector dir | S | score ms | softmax ms | V multi-K ms | kernel launch/wait sum ms | host/DMA/sync gap ms | total ms |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `sim/real_tinyllama_s16` | 16 | 0.233 | 0.382 | 0.198 | 0.813 | 0.340 | 1.153 |
+| `sim/real_tinyllama_s64` | 64 | 0.832 | 1.231 | 0.766 | 2.829 | 0.255 | 3.084 |
+
+Both O3 row4 real-vector runs printed:
+
+```text
+Resident attention output verification PASSED
+XRT chain verification PASSED
+```
+
+Comparison at `S=512`:
+
+| Flow | launches | total ms | note |
+|---|---:|---:|---|
+| O1 fused staged | 1088 | 60.328 | timing-clean baseline |
+| O2 resident | 640 | 173.489 | avoids host staging, but V read-modify-write dominates |
+| O3 row4 V multi-K | 192 | 74.638 | functionally passes real hardware, but timing is not closed |
+
+O3 row4 fixed the O2 V bottleneck (`148.581 ms` -> `38.030 ms` at `S=512`) and
+proved the reduced launch-count path can run on the card. It is still slower
+than O1 fused staged because score and full-row softmax remain separate
+per-tile/per-Q passes, and this row4 xclbin is not timing clean.
+
 ## HBM Usage
 
 The current fused Step 5 xclbin uses HBM banks `[0]` through `[7]`, but the raw

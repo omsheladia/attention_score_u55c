@@ -1,0 +1,913 @@
+<ENTRY>
+{
+ "thisFile": "/home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin.link_summary",
+ "connectId": "",
+ "serverToken": "",
+ "timestamp": "0"
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_CmdStep",
+ "dateTimestamp": "Wed May  6 12:44:38 2026",
+ "timestampMillis": "1778096678628",
+ "buildStep": {
+  "cmdId": "e99c6a8d-c56b-468a-b6f3-7d7d83ac8dce",
+  "name": "v++",
+  "logFile": "/home/advent/Desktop/RC19/_x/link/link.steps.log",
+  "commandLine": "/home/advent/Vivado/Vitis/2022.2/bin/unwrapped/lnx64.o/v++  --vivado.prop \"run.__KERNEL__.{STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS}={-directive sdx_optimization_effort_high}\" --advanced.misc \"report=type report_timing_summary name impl_report_timing_summary_route_design_summary steps {route_design} runs {impl_1} options {-max_paths 10}\" --advanced.misc \"report=type report_timing_summary name impl_report_timing_summary_post_route_phys_opt_design_summary steps {post_route_phys_opt_design} runs {impl_1} options {-max_paths 10}\" --save-temps -l -t hw_emu --platform /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm --config attention_score_u55c/host/vpp_link_o3_multik.cfg -o attention_score_u55c/build/attention_score_chain.xclbin attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo attention_score_u55c/build/v_weighted_sum_multik_u55c_kernel.xo ",
+  "args": [
+   "--save-temps",
+   "-l",
+   "-t",
+   "hw_emu",
+   "--platform",
+   "/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm",
+   "--config",
+   "attention_score_u55c/host/vpp_link_o3_multik.cfg",
+   "-o",
+   "attention_score_u55c/build/attention_score_chain.xclbin",
+   "attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo",
+   "attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo",
+   "attention_score_u55c/build/v_weighted_sum_multik_u55c_kernel.xo"
+  ],
+  "iniFiles": [
+   {
+    "path": "/home/advent/Desktop/RC19/attention_score_u55c/host/vpp_link_o3_multik.cfg",
+    "content": "[connectivity]\nnk=score_mask_scale_resident_u55c_kernel:1:sms_res_1\nnk=softmax_full_row_resident_u55c_kernel:1:sfr_res_1\nnk=v_weighted_sum_multik_u55c_kernel:1:vws_mk_1\nsp=sms_res_1.q_full:HBM[0]\nsp=sms_res_1.k_full:HBM[1]\nsp=sms_res_1.logits_out:HBM[3]\nsp=sfr_res_1.logits_in:HBM[3]\nsp=sfr_res_1.prob_out:HBM[5]\nsp=vws_mk_1.probs_full:HBM[5]\nsp=vws_mk_1.v_full:HBM[6]\nsp=vws_mk_1.attn_out:HBM[7]\n"
+   }
+  ],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:44:38 2026",
+ "timestampMillis": "1778096678628",
+ "status": {
+  "cmdId": "e99c6a8d-c56b-468a-b6f3-7d7d83ac8dce",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_FlowMetaData",
+ "dateTimestamp": "Wed May  6 12:44:41 2026",
+ "timestampMillis": "1778096681347",
+ "buildSummary": {
+  "hardwarePlatform": "xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm",
+  "hardwareDsa": "",
+  "platformDirectory": "/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1",
+  "runtime": "OpenCL",
+  "systemConfig": "Linux",
+  "flow": "BF_LINK",
+  "target": "TT_HW_EMU",
+  "binaryContainer": {
+   "base": {
+    "type": "BT_UKNOWN",
+    "name": "attention_score_chain",
+    "file": "/home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin",
+    "reports": [],
+    "uuid": ""
+   },
+   "kernels": []
+  },
+  "kernels": [
+   {
+    "base": {
+     "type": "KERNEL",
+     "name": "score_mask_scale_resident_u55c_kernel",
+     "file": "/home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo",
+     "reports": [],
+     "uuid": ""
+    },
+    "sources": [
+     "/home/advent/Desktop/RC19/_x/link/int/xo/score_mask_scale_resident_u55c_kernel/score_mask_scale_resident_u55c_kernel/cpu_sources/score_mask_scale_core_hls.cpp"
+    ],
+    "psSources": [],
+    "cuNames": [
+     "sms_res_1"
+    ],
+    "type": "HLS",
+    "frequency": 0,
+    "freqUnits": ""
+   },
+   {
+    "base": {
+     "type": "KERNEL",
+     "name": "softmax_full_row_resident_u55c_kernel",
+     "file": "/home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo",
+     "reports": [],
+     "uuid": ""
+    },
+    "sources": [
+     "/home/advent/Desktop/RC19/_x/link/int/xo/softmax_full_row_resident_u55c_kernel/softmax_full_row_resident_u55c_kernel/cpu_sources/softmax_full_row_hls.cpp"
+    ],
+    "psSources": [],
+    "cuNames": [
+     "sfr_res_1"
+    ],
+    "type": "HLS",
+    "frequency": 0,
+    "freqUnits": ""
+   },
+   {
+    "base": {
+     "type": "KERNEL",
+     "name": "v_weighted_sum_multik_u55c_kernel",
+     "file": "/home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_multik_u55c_kernel.xo",
+     "reports": [],
+     "uuid": ""
+    },
+    "sources": [
+     "/home/advent/Desktop/RC19/_x/link/int/xo/v_weighted_sum_multik_u55c_kernel/v_weighted_sum_multik_u55c_kernel/cpu_sources/v_weighted_sum_core_hls.cpp"
+    ],
+    "psSources": [],
+    "cuNames": [
+     "vws_mk_1"
+    ],
+    "type": "HLS",
+    "frequency": 0,
+    "freqUnits": ""
+   }
+  ],
+  "toolVersion": "Vitis V++ Compiler Release 2022.2. SW Build 3671529 on 2022-10-13-17:52:11"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:44:41 2026",
+ "timestampMillis": "1778096681631",
+ "buildStep": {
+  "cmdId": "8341ee09-8d1b-4fd9-b59a-d0b245e8135f",
+  "name": "system_link",
+  "logFile": "",
+  "commandLine": "system_link --xo /home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo --xo /home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_multik_u55c_kernel.xo -keep --config /home/advent/Desktop/RC19/_x/link/int/syslinkConfig.ini --xpfm /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm --target emu --output_dir /home/advent/Desktop/RC19/_x/link/int --temp_dir /home/advent/Desktop/RC19/_x/link/sys_link",
+  "args": [
+   "--xo",
+   "/home/advent/Desktop/RC19/attention_score_u55c/build/score_mask_scale_resident_u55c_kernel.xo",
+   "--xo",
+   "/home/advent/Desktop/RC19/attention_score_u55c/build/softmax_full_row_resident_u55c_kernel.xo",
+   "--xo",
+   "/home/advent/Desktop/RC19/attention_score_u55c/build/v_weighted_sum_multik_u55c_kernel.xo",
+   "-keep",
+   "--config",
+   "/home/advent/Desktop/RC19/_x/link/int/syslinkConfig.ini",
+   "--xpfm",
+   "/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm",
+   "--target",
+   "emu",
+   "--output_dir",
+   "/home/advent/Desktop/RC19/_x/link/int",
+   "--temp_dir",
+   "/home/advent/Desktop/RC19/_x/link/sys_link"
+  ],
+  "iniFiles": [
+   {
+    "path": "/home/advent/Desktop/RC19/_x/link/int/syslinkConfig.ini",
+    "content": "nk=score_mask_scale_resident_u55c_kernel:1:sms_res_1\nnk=softmax_full_row_resident_u55c_kernel:1:sfr_res_1\nnk=v_weighted_sum_multik_u55c_kernel:1:vws_mk_1\nsp=sms_res_1.q_full:HBM[0]\nsp=sms_res_1.k_full:HBM[1]\nsp=sms_res_1.logits_out:HBM[3]\nsp=sfr_res_1.logits_in:HBM[3]\nsp=sfr_res_1.prob_out:HBM[5]\nsp=vws_mk_1.probs_full:HBM[5]\nsp=vws_mk_1.v_full:HBM[6]\nsp=vws_mk_1.attn_out:HBM[7]\n\n"
+   }
+  ],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:44:41 2026",
+ "timestampMillis": "1778096681631",
+ "status": {
+  "cmdId": "8341ee09-8d1b-4fd9-b59a-d0b245e8135f",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:44:50 2026",
+ "timestampMillis": "1778096690187",
+ "status": {
+  "cmdId": "8341ee09-8d1b-4fd9-b59a-d0b245e8135f",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:44:50 2026",
+ "timestampMillis": "1778096690188",
+ "buildStep": {
+  "cmdId": "3a09077c-ea23-41ea-bba4-a8764c675029",
+  "name": "cf2sw",
+  "logFile": "",
+  "commandLine": "cf2sw -sdsl /home/advent/Desktop/RC19/_x/link/int/sdsl.dat -rtd /home/advent/Desktop/RC19/_x/link/int/cf2sw.rtd -nofilter /home/advent/Desktop/RC19/_x/link/int/cf2sw_full.rtd -xclbin /home/advent/Desktop/RC19/_x/link/int/xclbin_orig.xml -o /home/advent/Desktop/RC19/_x/link/int/xclbin_orig.1.xml",
+  "args": [
+   "-sdsl",
+   "/home/advent/Desktop/RC19/_x/link/int/sdsl.dat",
+   "-rtd",
+   "/home/advent/Desktop/RC19/_x/link/int/cf2sw.rtd",
+   "-nofilter",
+   "/home/advent/Desktop/RC19/_x/link/int/cf2sw_full.rtd",
+   "-xclbin",
+   "/home/advent/Desktop/RC19/_x/link/int/xclbin_orig.xml",
+   "-o",
+   "/home/advent/Desktop/RC19/_x/link/int/xclbin_orig.1.xml"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:44:50 2026",
+ "timestampMillis": "1778096690189",
+ "status": {
+  "cmdId": "3a09077c-ea23-41ea-bba4-a8764c675029",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:44:52 2026",
+ "timestampMillis": "1778096692511",
+ "status": {
+  "cmdId": "3a09077c-ea23-41ea-bba4-a8764c675029",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:44:52 2026",
+ "timestampMillis": "1778096692512",
+ "buildStep": {
+  "cmdId": "76cece5e-e58e-4ff2-92a7-4dfe0b0276c2",
+  "name": "rtd2_system_diagram",
+  "logFile": "",
+  "commandLine": "rtd2SystemDiagram",
+  "args": [],
+  "iniFiles": [],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:44:52 2026",
+ "timestampMillis": "1778096692512",
+ "status": {
+  "cmdId": "76cece5e-e58e-4ff2-92a7-4dfe0b0276c2",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Wed May  6 12:44:52 2026",
+ "timestampMillis": "1778096692736",
+ "report": {
+  "path": "/home/advent/Desktop/RC19/_x/link/int/systemDiagramModel.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "SYSTEM_DIAGRAM",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:44:52 2026",
+ "timestampMillis": "1778096692736",
+ "status": {
+  "cmdId": "76cece5e-e58e-4ff2-92a7-4dfe0b0276c2",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:44:52 2026",
+ "timestampMillis": "1778096692737",
+ "buildStep": {
+  "cmdId": "a7bb7fb1-5a49-4ec2-b5c8-c2da9200d305",
+  "name": "vpl",
+  "logFile": "",
+  "commandLine": "vpl -t hw_emu -f /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm -s --remote_ip_cache /home/advent/Desktop/RC19/.ipcache --output_dir /home/advent/Desktop/RC19/_x/link/int --log_dir /home/advent/Desktop/RC19/_x/logs/link --report_dir /home/advent/Desktop/RC19/_x/reports/link --config /home/advent/Desktop/RC19/_x/link/int/vplConfig.ini -k /home/advent/Desktop/RC19/_x/link/int/kernel_info.dat --webtalk_flag Vitis --temp_dir /home/advent/Desktop/RC19/_x/link --emulation_mode debug_waveform --no-info --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_v_weighted_sum_multik_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_softmax_full_row_resident_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_score_mask_scale_resident_u55c_kernel_1_0 --messageDb /home/advent/Desktop/RC19/_x/link/run_link/vpl.pb /home/advent/Desktop/RC19/_x/link/int/dr.bd.tcl",
+  "args": [
+   "-t",
+   "hw_emu",
+   "-f",
+   "/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm",
+   "-s",
+   "--remote_ip_cache",
+   "/home/advent/Desktop/RC19/.ipcache",
+   "--output_dir",
+   "/home/advent/Desktop/RC19/_x/link/int",
+   "--log_dir",
+   "/home/advent/Desktop/RC19/_x/logs/link",
+   "--report_dir",
+   "/home/advent/Desktop/RC19/_x/reports/link",
+   "--config",
+   "/home/advent/Desktop/RC19/_x/link/int/vplConfig.ini",
+   "-k",
+   "/home/advent/Desktop/RC19/_x/link/int/kernel_info.dat",
+   "--webtalk_flag",
+   "Vitis",
+   "--temp_dir",
+   "/home/advent/Desktop/RC19/_x/link",
+   "--emulation_mode",
+   "debug_waveform",
+   "--no-info",
+   "--iprepo",
+   "/home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_v_weighted_sum_multik_u55c_kernel_1_0",
+   "--iprepo",
+   "/home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_softmax_full_row_resident_u55c_kernel_1_0",
+   "--iprepo",
+   "/home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_score_mask_scale_resident_u55c_kernel_1_0",
+   "--messageDb",
+   "/home/advent/Desktop/RC19/_x/link/run_link/vpl.pb",
+   "/home/advent/Desktop/RC19/_x/link/int/dr.bd.tcl"
+  ],
+  "iniFiles": [
+   {
+    "path": "/home/advent/Desktop/RC19/_x/link/int/vplConfig.ini",
+    "content": "[advanced]\nmisc=report=type report_timing_summary name impl_report_timing_summary_route_design_summary steps {route_design} runs {impl_1} options {-max_paths 10}\nmisc=report=type report_timing_summary name impl_report_timing_summary_post_route_phys_opt_design_summary steps {post_route_phys_opt_design} runs {impl_1} options {-max_paths 10}\nparam=compiler.enablePerformanceTrace=1\nparam=compiler.vppCurrentWorkingDir=/home/advent/Desktop/RC19\nmisc=BinaryName=attention_score_chain\n\n[connectivity]\nnk=score_mask_scale_resident_u55c_kernel:1:sms_res_1\nnk=softmax_full_row_resident_u55c_kernel:1:sfr_res_1\nnk=v_weighted_sum_multik_u55c_kernel:1:vws_mk_1\n\n[vivado]\nprop=run.__KERNEL__.{STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS}={-directive sdx_optimization_effort_high}\n\n"
+   }
+  ],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:44:52 2026",
+ "timestampMillis": "1778096692737",
+ "status": {
+  "cmdId": "a7bb7fb1-5a49-4ec2-b5c8-c2da9200d305",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_CmdStep",
+ "dateTimestamp": "Wed May  6 12:44:53 2026",
+ "timestampMillis": "1778096693397",
+ "buildStep": {
+  "cmdId": "f83cc0dd-a99c-4312-b6c0-9f24ee62fbe2",
+  "name": "vpl",
+  "logFile": "/home/advent/Desktop/RC19/_x/link/link.steps.log",
+  "commandLine": "/home/advent/Vivado/Vitis/2022.2/bin/unwrapped/lnx64.o/vpl -t hw_emu -f /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm -s --remote_ip_cache /home/advent/Desktop/RC19/.ipcache --output_dir /home/advent/Desktop/RC19/_x/link/int --log_dir /home/advent/Desktop/RC19/_x/logs/link --report_dir /home/advent/Desktop/RC19/_x/reports/link --config /home/advent/Desktop/RC19/_x/link/int/vplConfig.ini -k /home/advent/Desktop/RC19/_x/link/int/kernel_info.dat --webtalk_flag Vitis --temp_dir /home/advent/Desktop/RC19/_x/link --emulation_mode debug_waveform --no-info --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_v_weighted_sum_multik_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_softmax_full_row_resident_u55c_kernel_1_0 --iprepo /home/advent/Desktop/RC19/_x/link/int/xo/ip_repo/xilinx_com_hls_score_mask_scale_resident_u55c_kernel_1_0 --messageDb /home/advent/Desktop/RC19/_x/link/run_link/vpl.pb /home/advent/Desktop/RC19/_x/link/int/dr.bd.tcl ",
+  "args": [],
+  "iniFiles": [],
+  "cwd": "/home/advent/Desktop/RC19/_x/link/run_link"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:44:53 2026",
+ "timestampMillis": "1778096693397",
+ "status": {
+  "cmdId": "f83cc0dd-a99c-4312-b6c0-9f24ee62fbe2",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_VivadoProject",
+ "dateTimestamp": "Wed May  6 12:44:56 2026",
+ "timestampMillis": "1778096696179",
+ "vivadoProject": {
+  "openDir": "/home/advent/Desktop/RC19/_x/link/vivado/vpl",
+  "openScript": "openprj.tcl",
+  "relativeProject": "prj/prj.xpr"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:44:56 2026",
+ "timestampMillis": "1778096696179",
+ "buildStep": {
+  "cmdId": "cb11142a-4f30-4a9b-94d6-6d4af6207b58",
+  "name": "vivado",
+  "logFile": "/home/advent/Desktop/RC19/_x/link/vivado/vpl/vivado.log",
+  "commandLine": "vivado -log vivado.log -applog -m64 -messageDb vivado.pb -mode batch -source vpl.tcl -notrace",
+  "args": [
+   "-log",
+   "vivado.log",
+   "-applog",
+   " -m64",
+   "-messageDb",
+   "vivado.pb",
+   "-mode",
+   "batch",
+   "-source",
+   "vpl.tcl",
+   "-notrace"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/advent/Desktop/RC19/_x/link/run_link"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:44:56 2026",
+ "timestampMillis": "1778096696179",
+ "status": {
+  "cmdId": "cb11142a-4f30-4a9b-94d6-6d4af6207b58",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Wed May  6 12:45:14 2026",
+ "timestampMillis": "1778096714900",
+ "report": {
+  "path": "/home/advent/Desktop/RC19/_x/link/int/automation_summary_update_bd.txt",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "VITIS_DESIGN_FLOW",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:24 2026",
+ "timestampMillis": "1778096844637",
+ "status": {
+  "cmdId": "cb11142a-4f30-4a9b-94d6-6d4af6207b58",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:24 2026",
+ "timestampMillis": "1778096844800",
+ "status": {
+  "cmdId": "f83cc0dd-a99c-4312-b6c0-9f24ee62fbe2",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:24 2026",
+ "timestampMillis": "1778096844806",
+ "status": {
+  "cmdId": "a7bb7fb1-5a49-4ec2-b5c8-c2da9200d305",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:47:24 2026",
+ "timestampMillis": "1778096844807",
+ "buildStep": {
+  "cmdId": "46157a14-0db0-46f5-9385-e5eb3ae0c0d2",
+  "name": "rtdgen",
+  "logFile": "",
+  "commandLine": "rtdgen",
+  "args": [],
+  "iniFiles": [],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:24 2026",
+ "timestampMillis": "1778096844807",
+ "status": {
+  "cmdId": "46157a14-0db0-46f5-9385-e5eb3ae0c0d2",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Wed May  6 12:47:24 2026",
+ "timestampMillis": "1778096844819",
+ "report": {
+  "path": "/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_xml.rtd",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "XCLBIN_INFO",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:47:24 2026",
+ "timestampMillis": "1778096844820",
+ "buildStep": {
+  "cmdId": "17dae1ef-a7e1-4dbd-90b9-b1031472e7e2",
+  "name": "cf2sw",
+  "logFile": "",
+  "commandLine": "cf2sw -a /home/advent/Desktop/RC19/_x/link/int/address_map.xml -sdsl /home/advent/Desktop/RC19/_x/link/int/sdsl.dat -xclbin /home/advent/Desktop/RC19/_x/link/int/xclbin_orig.xml -rtd /home/advent/Desktop/RC19/_x/link/int/attention_score_chain.rtd -o /home/advent/Desktop/RC19/_x/link/int/attention_score_chain.xml",
+  "args": [
+   "-a",
+   "/home/advent/Desktop/RC19/_x/link/int/address_map.xml",
+   "-sdsl",
+   "/home/advent/Desktop/RC19/_x/link/int/sdsl.dat",
+   "-xclbin",
+   "/home/advent/Desktop/RC19/_x/link/int/xclbin_orig.xml",
+   "-rtd",
+   "/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.rtd",
+   "-o",
+   "/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.xml"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:24 2026",
+ "timestampMillis": "1778096844820",
+ "status": {
+  "cmdId": "17dae1ef-a7e1-4dbd-90b9-b1031472e7e2",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:26 2026",
+ "timestampMillis": "1778096846832",
+ "status": {
+  "cmdId": "17dae1ef-a7e1-4dbd-90b9-b1031472e7e2",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849789",
+ "buildStep": {
+  "cmdId": "f2737464-d85f-42dd-9405-cbc5ee8efd53",
+  "name": "rtdgen",
+  "logFile": "",
+  "commandLine": "writeSystemDiagram",
+  "args": [
+   "/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.rtd",
+   "/home/advent/Desktop/RC19/_x/link/int/systemDiagramModelSlrBaseAddress.json"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849789",
+ "status": {
+  "cmdId": "f2737464-d85f-42dd-9405-cbc5ee8efd53",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849791",
+ "report": {
+  "path": "/home/advent/Desktop/RC19/_x/link/int/systemDiagramModelSlrBaseAddress.json",
+  "name": "",
+  "fileType": "JSON",
+  "reportType": "SYSTEM_DIAGRAM_PLUS",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849791",
+ "status": {
+  "cmdId": "f2737464-d85f-42dd-9405-cbc5ee8efd53",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849792",
+ "buildStep": {
+  "cmdId": "69ff82f3-ae56-4139-9b53-e2efce7ddbac",
+  "name": "rtdgen",
+  "logFile": "",
+  "commandLine": "writeAutomationSummary",
+  "args": [
+   "/home/advent/Desktop/RC19/_x/link/int/automation_summary.txt"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849792",
+ "status": {
+  "cmdId": "69ff82f3-ae56-4139-9b53-e2efce7ddbac",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849792",
+ "report": {
+  "path": "/home/advent/Desktop/RC19/_x/link/int/automation_summary.txt",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "VITIS_DESIGN_FLOW",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849792",
+ "status": {
+  "cmdId": "69ff82f3-ae56-4139-9b53-e2efce7ddbac",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849792",
+ "status": {
+  "cmdId": "46157a14-0db0-46f5-9385-e5eb3ae0c0d2",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849793",
+ "buildStep": {
+  "cmdId": "9934ff12-1030-42a6-8b86-7fbd8409ad76",
+  "name": "xclbinutil",
+  "logFile": "",
+  "commandLine": "xclbinutil --add-section BITSTREAM:RAW:/home/advent/Desktop/RC19/_x/link/int/behav.xse --force --target hw_emu --key-value SYS:dfx_enable:false --add-section :JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.rtd --add-section CLOCK_FREQ_TOPOLOGY:JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_xml.rtd --add-section BUILD_METADATA:JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_build.rtd --add-section EMBEDDED_METADATA:RAW:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.xml --add-section SYSTEM_METADATA:RAW:/home/advent/Desktop/RC19/_x/link/int/systemDiagramModelSlrBaseAddress.json --key-value SYS:PlatformVBNV:xilinx_u55c_gen3x16_xdma_3_202210_1 --output /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin",
+  "args": [
+   "--add-section",
+   "BITSTREAM:RAW:/home/advent/Desktop/RC19/_x/link/int/behav.xse",
+   "--force",
+   "--target",
+   "hw_emu",
+   "--key-value",
+   "SYS:dfx_enable:false",
+   "--add-section",
+   ":JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.rtd",
+   "--add-section",
+   "CLOCK_FREQ_TOPOLOGY:JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_xml.rtd",
+   "--add-section",
+   "BUILD_METADATA:JSON:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain_build.rtd",
+   "--add-section",
+   "EMBEDDED_METADATA:RAW:/home/advent/Desktop/RC19/_x/link/int/attention_score_chain.xml",
+   "--add-section",
+   "SYSTEM_METADATA:RAW:/home/advent/Desktop/RC19/_x/link/int/systemDiagramModelSlrBaseAddress.json",
+   "--key-value",
+   "SYS:PlatformVBNV:xilinx_u55c_gen3x16_xdma_3_202210_1",
+   "--output",
+   "/home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849793",
+ "status": {
+  "cmdId": "9934ff12-1030-42a6-8b86-7fbd8409ad76",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849932",
+ "status": {
+  "cmdId": "9934ff12-1030-42a6-8b86-7fbd8409ad76",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849933",
+ "buildStep": {
+  "cmdId": "807f0746-fa87-49d8-bee9-5c95a5470edf",
+  "name": "xclbinutilinfo",
+  "logFile": "",
+  "commandLine": "xclbinutil --quiet --force --info /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin.info --input /home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin",
+  "args": [
+   "--quiet",
+   "--force",
+   "--info",
+   "/home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin.info",
+   "--input",
+   "/home/advent/Desktop/RC19/attention_score_u55c/build/attention_score_chain.xclbin"
+  ],
+  "iniFiles": [],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:29 2026",
+ "timestampMillis": "1778096849933",
+ "status": {
+  "cmdId": "807f0746-fa87-49d8-bee9-5c95a5470edf",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:30 2026",
+ "timestampMillis": "1778096850261",
+ "status": {
+  "cmdId": "807f0746-fa87-49d8-bee9-5c95a5470edf",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_SubCmdStep",
+ "dateTimestamp": "Wed May  6 12:47:30 2026",
+ "timestampMillis": "1778096850262",
+ "buildStep": {
+  "cmdId": "54f82ae9-5e81-4bcb-a1ff-c8876e7c5aef",
+  "name": "generate_sc_driver",
+  "logFile": "",
+  "commandLine": "",
+  "args": [],
+  "iniFiles": [],
+  "cwd": "/home/advent/Desktop/RC19"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:30 2026",
+ "timestampMillis": "1778096850262",
+ "status": {
+  "cmdId": "54f82ae9-5e81-4bcb-a1ff-c8876e7c5aef",
+  "state": "CS_RUNNING"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:30 2026",
+ "timestampMillis": "1778096850262",
+ "status": {
+  "cmdId": "54f82ae9-5e81-4bcb-a1ff-c8876e7c5aef",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Wed May  6 12:47:30 2026",
+ "timestampMillis": "1778096850326",
+ "report": {
+  "path": "/home/advent/Desktop/RC19/_x/reports/link/system_estimate_attention_score_chain.xtxt",
+  "name": "",
+  "fileType": "TEXT",
+  "reportType": "GLOBAL_SYSTEM_ESTIMATE",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Wed May  6 12:47:30 2026",
+ "timestampMillis": "1778096850328",
+ "report": {
+  "path": "/home/advent/Desktop/RC19/_x/logs/optraceViewer.html",
+  "name": "",
+  "fileType": "HTML",
+  "reportType": "OPERATION_TRACE",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Status",
+ "dateTimestamp": "Wed May  6 12:47:30 2026",
+ "timestampMillis": "1778096850328",
+ "status": {
+  "cmdId": "e99c6a8d-c56b-468a-b6f3-7d7d83ac8dce",
+  "state": "CS_PASSED"
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Wed May  6 12:47:30 2026",
+ "timestampMillis": "1778096850363",
+ "report": {
+  "path": "/home/advent/Desktop/RC19/_x/reports/link/v++_link_attention_score_chain_guidance.html",
+  "name": "",
+  "fileType": "HTML",
+  "reportType": "GLOBAL_RULECHECK_GUIDANCE",
+  "cmdId": ""
+ }
+}
+</ENTRY>
+<ENTRY>
+{
+ "type": "ET_Report",
+ "dateTimestamp": "Wed May  6 12:47:30 2026",
+ "timestampMillis": "1778096850363",
+ "report": {
+  "path": "/home/advent/Desktop/RC19/_x/v++_link_attention_score_chain_guidance.pb3",
+  "name": "",
+  "fileType": "BINARY_PROTOBUF",
+  "reportType": "GLOBAL_RULECHECK_GUIDANCE",
+  "cmdId": ""
+ }
+}
+</ENTRY>

@@ -1,0 +1,60 @@
+===== seq-len 8 =====
+Opening device 0
+Running resident multi-K synthetic sequence, S=8, q_chunks=1, k_chunks=1
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   0.114 ms
+  softmax_full_row_resident   0.200 ms
+  v_weighted_sum_multik       0.155 ms
+  kernel_launch_wait_sum      0.470 ms
+  host_dma_sync_gap           0.280 ms
+  total_chain                 0.750 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED
+===== seq-len 64 =====
+Opening device 0
+Running resident multi-K synthetic sequence, S=64, q_chunks=8, k_chunks=1
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   0.725 ms
+  softmax_full_row_resident   1.436 ms
+  v_weighted_sum_multik       0.762 ms
+  kernel_launch_wait_sum      2.924 ms
+  host_dma_sync_gap           0.400 ms
+  total_chain                 3.324 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED
+===== seq-len 128 =====
+Opening device 0
+Running resident multi-K synthetic sequence, S=128, q_chunks=16, k_chunks=2
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   1.674 ms
+  softmax_full_row_resident   2.517 ms
+  v_weighted_sum_multik       3.042 ms
+  kernel_launch_wait_sum      7.233 ms
+  host_dma_sync_gap           0.273 ms
+  total_chain                 7.506 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED
+===== seq-len 256 =====
+Opening device 0
+Running resident multi-K synthetic sequence, S=256, q_chunks=32, k_chunks=4
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   5.241 ms
+  softmax_full_row_resident   6.065 ms
+  v_weighted_sum_multik       10.036 ms
+  kernel_launch_wait_sum      21.342 ms
+  host_dma_sync_gap           0.266 ms
+  total_chain                 21.608 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED
+===== seq-len 512 =====
+Opening device 0
+Running resident multi-K synthetic sequence, S=512, q_chunks=64, k_chunks=8
+Kernel timing summary (host wall-clock, launch through wait):
+  score_mask_scale_resident   19.097 ms
+  softmax_full_row_resident   16.921 ms
+  v_weighted_sum_multik       38.030 ms
+  kernel_launch_wait_sum      74.048 ms
+  host_dma_sync_gap           0.590 ms
+  total_chain                 74.638 ms
+Resident attention output verification PASSED
+XRT chain verification PASSED

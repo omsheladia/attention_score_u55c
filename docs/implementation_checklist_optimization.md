@@ -341,12 +341,36 @@ one launch per sequence/head
       `place_design` with a CLB packing/pblock capacity error:
       `37424 CLBs` available vs `40471 CLBs` required by unplaced instances,
       plus `7670` control sets.
-- [ ] Reduce O3 V multi-K placement footprint before the next real hardware
-      build. Recommended first pass: factor-32 or factor-16 column parallelism
-      with local/ping-pong accumulation, then re-check HLS II and resources.
-- [ ] Re-run lean `o3_multik` real hardware link after narrowing the datapath.
-- [ ] If lean hardware places, run real U55C verification and timing at
-      `S=8, 64, 128, 256, 512`.
+- [x] Try a narrowed `kMultikColChunk=16` V multi-K datapath.
+      Local bench, Vitis HLS `csim/csynth`, lean `o3_multik` `hw_emu` build,
+      and `hw_emu S=8 --multik` all passed. HLS estimated `342.47 MHz`,
+      `659 DSP`, `166160 FF`, `78126 LUT`, and hot-loop II `1`. Real `hw`
+      passed placement but failed route with global congestion level `7`,
+      `627723` node overlaps, and severe directional congestion.
+- [x] Try a narrower `kMultikColChunk=8` V multi-K datapath.
+      This full 8-row-parallel variant passed local bench, Vitis HLS
+      `csim/csynth`, lean `o3_multik` `hw_emu` build, and
+      `hw_emu S=8 --multik`. HLS estimated `342.47 MHz`, `339 DSP`,
+      `128099 FF`, `55688 LUT`, and hot-loop II `1`. Real `hw` reached route
+      finalization/verifying routed nets, then failed with partially-conflicted
+      nets, `106270` signals failed to route, `308985` node overlaps, and
+      global congestion level `7`.
+- [x] Reduce row parallelism with `kMultikRowChunk=4`.
+      This is the current source state. Local bench, Vitis HLS `csim/csynth`,
+      lean `o3_multik` `hw_emu` build, `hw_emu S=8 --multik`, lean real `hw`
+      build, real U55C synthetic sweep, and real TinyLlama S=16/S=64 vector
+      checks all passed functionally.
+- [x] Re-run lean `o3_multik` real hardware link after the fanout reduction.
+      The real xclbin built successfully with UUID
+      `c17bb877-f252-f7b1-e56c-f9fb19e7f383`. Router congestion improved
+      enough to complete bitstream generation.
+- [x] Run real U55C verification and timing at `S=8, 64, 128, 256, 512`.
+      Results: `S=8 0.750 ms`, `S=64 3.324 ms`, `S=128 7.506 ms`,
+      `S=256 21.608 ms`, `S=512 74.638 ms`.
+- [ ] Close routed timing for the row4 O3 V design. Current routed timing is
+      not clean: WNS `-3.120 ns`, TNS `-39738.168 ns`, failing clock
+      `clk_kernel_00_unbuffered_net`. Treat the current bitstream as a
+      functional smoke-test artifact, not a timing-closed deployment baseline.
 
 ### Host update
 
@@ -361,8 +385,9 @@ one launch per sequence/head
 - Large launch-count reduction.
 - Bigger improvement at larger `S`.
 - Still materializes logits/probabilities unless Track O4 is also done.
-- Current blocker: the O3 V multi-K ping-pong datapath passes HLS and `hw_emu`
-  but is too large or too control-set-heavy to place on the current U55C shell.
+- Current blocker: the row4 O3 V multi-K datapath passes HLS, `hw_emu`, real
+  `hw` build, and real U55C verification, but routed timing is not closed.
+  Functional verification is good; timing closure is still required.
 
 ---
 
@@ -579,9 +604,9 @@ larger real TinyLlama-derived inputs, not only synthetic `--seq-len` data.
 
 - [ ] Track O3 pre-softmax multi-K kernel complete
 - [ ] Track O3 V multi-K accumulation kernel complete
-      HLS, host integration, and `hw_emu S=8` are complete; real hardware link
-      is blocked by placement until the V datapath is narrowed.
-- [ ] `S=512` launch count reduced substantially
+      Functionally complete through real U55C sweep for the current row4
+      source, but not timing-closed.
+- [x] `S=512` launch count reduced substantially for the V stage
 - [ ] FPGA timing improves over current fused Step 5 timing
 
 ## Milestone 3 - FPGA-Native Attention

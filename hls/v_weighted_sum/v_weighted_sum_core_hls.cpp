@@ -7,6 +7,11 @@ using hls_common::kHeadDim;
 using hls_common::kScoreColsPerTile;
 using hls_common::kScoreRowsPerTile;
 
+namespace {
+constexpr int kMultikColChunk = 8;
+constexpr int kMultikRowChunk = 4;
+}
+
 void v_weighted_sum_core_hls(
     const float weights_tile[kScoreRowsPerTile][kScoreColsPerTile],
     const float v_tile[kScoreColsPerTile][kHeadDim],
@@ -181,18 +186,17 @@ void v_weighted_sum_multik_u55c_kernel(
   float acc_next[kScoreRowsPerTile][kHeadDim];
   float weights_local[kScoreRowsPerTile][kScoreColsPerTile];
   float v_local[kScoreColsPerTile][kHeadDim];
-// acc/acc_next: fully partitioned so each element is an independent register.
-#pragma HLS ARRAY_PARTITION variable=acc complete dim=1
+// O3 route-reduction variant: process four query rows at a time instead of
+// all eight, while keeping every head dimension independently addressable.
+#pragma HLS ARRAY_PARTITION variable=acc cyclic factor=kMultikRowChunk dim=1
 #pragma HLS ARRAY_PARTITION variable=acc complete dim=2
-#pragma HLS ARRAY_PARTITION variable=acc_next complete dim=1
+#pragma HLS ARRAY_PARTITION variable=acc_next cyclic factor=kMultikRowChunk dim=1
 #pragma HLS ARRAY_PARTITION variable=acc_next complete dim=2
-// Both arrays fully partitioned: row and col are compile-time constants in
-// the restructured loop (row unrolled, col unrolled, dim pipelined), so
-// HLS addresses every element directly without a runtime mux.
-#pragma HLS ARRAY_PARTITION variable=weights_local complete dim=1
-#pragma HLS ARRAY_PARTITION variable=weights_local complete dim=2
-#pragma HLS ARRAY_PARTITION variable=v_local complete dim=1
-#pragma HLS ARRAY_PARTITION variable=v_local complete dim=2
+// Bank rows and columns so each row/column chunk can be accessed in parallel
+// without recreating the 8-row x 64-column datapath that failed route.
+#pragma HLS ARRAY_PARTITION variable=weights_local cyclic factor=kMultikRowChunk dim=1
+#pragma HLS ARRAY_PARTITION variable=weights_local cyclic factor=kMultikColChunk dim=2
+#pragma HLS ARRAY_PARTITION variable=v_local cyclic factor=kMultikColChunk dim=1
 
   const int seq = static_cast<int>(seq_len);
   const int q_base = static_cast<int>(query_base);
@@ -233,25 +237,33 @@ void v_weighted_sum_multik_u55c_kernel(
       }
     }
 
-    // Compute into acc_next, then copy back after the pipelined loop. This
-    // avoids a same-loop read-modify-write recurrence on acc[row][dim].
-    for (int dim = 0; dim < kHeadDim; ++dim) {
+    // Compute small row/column chunks into acc_next, then copy back after the
+    // pipelined loop. This keeps the accumulator recurrence out of the hot loop
+    // while reducing row-wide routing pressure in the multi-K V kernel.
+    for (int col_base = 0; col_base < kScoreColsPerTile; col_base += kMultikColChunk) {
+      for (int row_base = 0; row_base < kScoreRowsPerTile; row_base += kMultikRowChunk) {
+        for (int dim = 0; dim < kHeadDim; ++dim) {
 #pragma HLS PIPELINE II=1
-      for (int row = 0; row < kScoreRowsPerTile; ++row) {
-#pragma HLS UNROLL
-        float partial = 0.0f;
-        for (int col = 0; col < kScoreColsPerTile; ++col) {
-#pragma HLS UNROLL
-          partial += weights_local[row][col] * v_local[col][dim];
+          for (int row_offset = 0; row_offset < kMultikRowChunk; ++row_offset) {
+#pragma HLS UNROLL factor=kMultikRowChunk
+            const int row = row_base + row_offset;
+            float partial = 0.0f;
+            for (int col_offset = 0; col_offset < kMultikColChunk; ++col_offset) {
+#pragma HLS UNROLL factor=kMultikColChunk
+              const int col = col_base + col_offset;
+              partial += weights_local[row][col] * v_local[col][dim];
+            }
+            acc_next[row][dim] = acc[row][dim] + partial;
+          }
         }
-        acc_next[row][dim] = acc[row][dim] + partial;
-      }
-    }
 
-    for (int row = 0; row < kScoreRowsPerTile; ++row) {
-      for (int dim = 0; dim < kHeadDim; ++dim) {
+        for (int row_offset = 0; row_offset < kMultikRowChunk; ++row_offset) {
+          const int row = row_base + row_offset;
+          for (int dim = 0; dim < kHeadDim; ++dim) {
 #pragma HLS PIPELINE II=1
-        acc[row][dim] = acc_next[row][dim];
+            acc[row][dim] = acc_next[row][dim];
+          }
+        }
       }
     }
   }
