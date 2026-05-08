@@ -198,7 +198,8 @@ void compare_float(
     const std::vector<float>& got,
     const std::vector<float>& expected,
     const std::string& name,
-    float tol) {
+    float abs_tol,
+    float rel_tol = 0.0f) {
   if (got.size() != expected.size()) {
     throw std::runtime_error(name + " size mismatch");
   }
@@ -206,14 +207,17 @@ void compare_float(
   std::size_t mismatches = 0;
   for (std::size_t idx = 0; idx < got.size(); ++idx) {
     const float diff = std::fabs(got[idx] - expected[idx]);
-    if (diff > tol) {
+    const float scale = std::max(std::fabs(got[idx]), std::fabs(expected[idx]));
+    const float allowed = abs_tol + (rel_tol * scale);
+    if (diff > allowed) {
       ++mismatches;
       if (mismatches <= 8) {
         std::cerr << std::fixed << std::setprecision(8)
                   << name << " mismatch at " << idx
                   << ": got " << got[idx]
                   << ", expected " << expected[idx]
-                  << ", diff " << diff << "\n";
+                  << ", diff " << diff
+                  << ", allowed " << allowed << "\n";
       }
     }
   }
@@ -542,7 +546,7 @@ int run_single_tile(const Args& args, xrt::device& device, const xrt::uuid& uuid
   const auto score_scaled_got = read_float_bo(scaled_score_bo, score_scaled_expected.size());
   const auto score_softmax_got = read_float_bo(softmax_prob_bo, score_softmax_expected.size());
 
-  compare_float(score_scaled_got, score_scaled_expected, "score_scaled", 1.0e-4f);
+  compare_float(score_scaled_got, score_scaled_expected, "score_scaled", 1.0e-4f, 1.0e-6f);
   compare_float(score_softmax_got, score_softmax_expected, "score_softmax", 1.0e-4f);
   if (run_v_stage) {
     const auto attn_out_padded = read_float_bo(*attn_out_bo, kAttnOutTileElems);
@@ -821,7 +825,7 @@ int run_tiled_inputs(
   const double total_chain_ms =
       std::chrono::duration<double, std::milli>(chain_stop - chain_start).count();
 
-  compare_float(logits_got, logits_expected, "full_score_scaled", 1.0e-4f);
+  compare_float(logits_got, logits_expected, "full_score_scaled", 1.0e-4f, 1.0e-6f);
   compare_float(softmax_got, softmax_expected, "full_score_softmax", 1.0e-4f);
   compare_float(attn_out_got, attn_out_expected, "full_attn_out", attn_out_tolerance);
 

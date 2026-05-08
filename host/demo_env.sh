@@ -16,6 +16,7 @@ export ATTENTION_SCORE_U55C_ROOT="${ATTENTION_SCORE_U55C_ROOT:-/home/advent/Desk
 export ATTENTION_SCORE_U55C_PLATFORM="${ATTENTION_SCORE_U55C_PLATFORM:-/opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm}"
 export ATTENTION_SCORE_U55C_DEVICE="${ATTENTION_SCORE_U55C_DEVICE:-0}"
 export ATTENTION_SCORE_U55C_XCLBIN="${ATTENTION_SCORE_U55C_XCLBIN:-${ATTENTION_SCORE_U55C_ROOT}/build/attention_score_chain.xclbin}"
+export ATTENTION_SCORE_U55C_HW_EMU_XCLBIN="${ATTENTION_SCORE_U55C_HW_EMU_XCLBIN:-${ATTENTION_SCORE_U55C_ROOT}/build/attention_score_chain_hw_emu.xclbin}"
 export ATTENTION_SCORE_U55C_HOST="${ATTENTION_SCORE_U55C_HOST:-${ATTENTION_SCORE_U55C_ROOT}/build/host_attention_score_chain}"
 export ATTENTION_SCORE_U55C_LOG_DIR="${ATTENTION_SCORE_U55C_LOG_DIR:-${ATTENTION_SCORE_U55C_ROOT}/demo_logs}"
 
@@ -53,6 +54,7 @@ Useful variables:
   ATTENTION_SCORE_U55C_PLATFORM
   ATTENTION_SCORE_U55C_DEVICE
   ATTENTION_SCORE_U55C_XCLBIN
+  ATTENTION_SCORE_U55C_HW_EMU_XCLBIN
   ATTENTION_SCORE_U55C_LOG_DIR
 EOF
 }
@@ -62,6 +64,7 @@ demo_status() {
   echo "Platform:  ${ATTENTION_SCORE_U55C_PLATFORM}"
   echo "Device:    ${ATTENTION_SCORE_U55C_DEVICE}"
   echo "XCLBIN:    ${ATTENTION_SCORE_U55C_XCLBIN}"
+  echo "HW_EMU:    ${ATTENTION_SCORE_U55C_HW_EMU_XCLBIN}"
   echo "Host:      ${ATTENTION_SCORE_U55C_HOST}"
   echo "Log dir:   ${ATTENTION_SCORE_U55C_LOG_DIR}"
   echo
@@ -72,6 +75,7 @@ demo_status() {
   echo
   test -f "${ATTENTION_SCORE_U55C_PLATFORM}" && echo "Platform found" || echo "Platform missing"
   test -f "${ATTENTION_SCORE_U55C_XCLBIN}" && echo "XCLBIN found" || echo "XCLBIN missing"
+  test -f "${ATTENTION_SCORE_U55C_HW_EMU_XCLBIN}" && echo "HW_EMU XCLBIN found" || echo "HW_EMU XCLBIN missing"
 }
 
 demo_card() {
@@ -96,7 +100,10 @@ demo_build_hw_emu() {
   (
     cd "$(dirname "${ATTENTION_SCORE_U55C_ROOT}")"
     bash attention_score_u55c/host/build_xclbin.sh hw_emu "${ATTENTION_SCORE_U55C_PLATFORM}"
+    cp attention_score_u55c/build/attention_score_chain.xclbin \
+      "${ATTENTION_SCORE_U55C_HW_EMU_XCLBIN}"
   ) 2>&1 | tee "${ATTENTION_SCORE_U55C_LOG_DIR}/build_hw_emu.log"
+  echo "Saved hardware-emulation xclbin to ${ATTENTION_SCORE_U55C_HW_EMU_XCLBIN}"
 }
 
 demo_build_hw() {
@@ -110,12 +117,19 @@ demo_build_hw() {
 
 demo_run_hw_emu() {
   mkdir -p "${ATTENTION_SCORE_U55C_LOG_DIR}"
+  if [[ ! -f "${ATTENTION_SCORE_U55C_HW_EMU_XCLBIN}" ]]; then
+    echo "Missing hardware-emulation xclbin: ${ATTENTION_SCORE_U55C_HW_EMU_XCLBIN}"
+    echo "Run demo_build_hw_emu first. Do not use the real hardware bitstream for hw_emu."
+    return 1
+  fi
   export XCL_EMULATION_MODE=hw_emu
-  "${ATTENTION_SCORE_U55C_HOST}" \
-    --xclbin "${ATTENTION_SCORE_U55C_XCLBIN}" \
-    --seq-len 8 \
-    --device "${ATTENTION_SCORE_U55C_DEVICE}" \
-    2>&1 | tee "${ATTENTION_SCORE_U55C_LOG_DIR}/run_hw_emu_s8.log"
+  (
+    cd "$(dirname "${ATTENTION_SCORE_U55C_ROOT}")"
+    "${ATTENTION_SCORE_U55C_HOST}" \
+      --xclbin "${ATTENTION_SCORE_U55C_HW_EMU_XCLBIN}" \
+      --seq-len 8 \
+      --device "${ATTENTION_SCORE_U55C_DEVICE}"
+  ) 2>&1 | tee "${ATTENTION_SCORE_U55C_LOG_DIR}/run_hw_emu_s8.log"
   unset XCL_EMULATION_MODE
 }
 

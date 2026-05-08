@@ -440,13 +440,28 @@ larger real TinyLlama-derived inputs, not only synthetic `--seq-len` data.
   - `sim/real_tinyllama_s512`
 - [x] Verify exported Q/K/V shapes, scales, and metadata.
 - [ ] Run CPU/GPU baselines for those directories.
-- [ ] Run FPGA optimized path for those directories.
-- [ ] Compare final `attn_out` against quantized-pipeline reference and
-      PyTorch full-float reference.
+- [x] Run FPGA optimized path for those directories.
+- [x] Compare final `attn_out` against the exported quantized-pipeline
+      reference on the U55C.
+- [ ] Compare final `attn_out` against PyTorch full-float reference.
 - [ ] Update:
   - `docs/track_d_results.md`
   - project presentation notes
   - `AGENTS.md`
+
+## U55C result
+
+On 2026-05-07, `demo_real_vectors` passed on the real U55C for the larger real
+TinyLlama vector directories:
+
+| vector dir | S | fused FPGA total ms |
+|---|---:|---:|
+| `sim/real_tinyllama_s128` | 128 | 6.816 |
+| `sim/real_tinyllama_s256` | 256 | 17.192 |
+| `sim/real_tinyllama_s512` | 512 | 55.329 |
+
+All three printed `Tiled sequence verification PASSED`,
+`Attention output verification PASSED`, and `XRT chain verification PASSED`.
 
 ## Expected result
 
@@ -500,4 +515,3 @@ An optimization should not be considered complete until:
 - [ ] timing is compared against the current fused Step 5 baseline
 - [ ] resource and timing reports are copied under `docs/`
 - [ ] `docs/track_d_results.md` and `AGENTS.md` are updated
-

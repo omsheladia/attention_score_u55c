@@ -97,12 +97,12 @@ XRT chain verification PASSED
 ## Real TinyLlama Vector Results
 
 The real TinyLlama full-sequence vector directories currently verified on the
-real U55C are `S = 16` and `S = 64`, plus the legacy single-tile directories.
-Larger real TinyLlama vector directories `real_tinyllama_s128`,
-`real_tinyllama_s256`, and `real_tinyllama_s512` have now been generated and
-CPU-validated locally, but they have not yet been run on the real U55C. That is
-separate from the synthetic `--seq-len` sweep above, which already covers
-`S = 128, 256, 512`.
+real U55C now cover `S = 16`, `S = 64`, `S = 128`, `S = 256`, and `S = 512`,
+plus the legacy single-tile directory. The larger `real_tinyllama_s128`,
+`real_tinyllama_s256`, and `real_tinyllama_s512` directories were generated
+with CUDA/FP16 from the cached TinyLlama model, CPU-sanity checked locally, and
+then timed/verified on the real U55C. This is separate from the synthetic
+`--seq-len` sweep, which also covers `S = 128, 256, 512`.
 
 | vector dir | S | CPU full attn ms | GPU full attn ms | staged FPGA total ms | fused FPGA total ms | fused vs staged |
 |---|---:|---:|---:|---:|---:|---:|
@@ -110,11 +110,21 @@ separate from the synthetic `--seq-len` sweep above, which already covers
 | `sim/real_tinyllama_tile` | single tile | n/a | n/a | 0.258 | 0.635 | 0.41x |
 | `sim/real_tinyllama_s16` | 16 | 0.0426 | 0.3278 | 1.488 | 0.569 | 2.62x |
 | `sim/real_tinyllama_s64` | 64 | 0.1523 | 0.3778 | 3.094 | 2.004 | 1.54x |
+| `sim/real_tinyllama_s128` | 128 | n/a | n/a | n/a | 6.816 | n/a |
+| `sim/real_tinyllama_s256` | 256 | n/a | n/a | n/a | 17.192 | n/a |
+| `sim/real_tinyllama_s512` | 512 | n/a | n/a | n/a | 55.329 | n/a |
 
 Local CPU sanity checks for the newly generated larger real-vector directories
 reported zero tiled-vs-brute differences for both softmax probabilities and
 `attn_out`, with exported softmax-file max difference `2.98023224e-08` for
 `S = 128`, `S = 256`, and `S = 512`.
+
+During the first U55C run, `real_tinyllama_s128` exposed a verifier-only issue:
+masked scaled logits around `-114388` differed by `0.0078125`, which exceeded
+the old fixed `1e-4` absolute tolerance but was only about `6.8e-8` relative
+error. The host verifier now allows a conservative `1e-6` relative tolerance for
+scaled-logit comparisons while keeping softmax and attention-output checks on
+their existing absolute tolerances.
 
 All fused real-vector FPGA runs printed:
 

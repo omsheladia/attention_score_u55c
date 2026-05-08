@@ -1011,11 +1011,17 @@ host-side tiled scheduling bug was found and fixed:
 - After rebuilding only the host, real U55C `demo_sweep` passed:
   `S=8 0.322 ms`, `S=64 2.841 ms`, `S=128 5.119 ms`,
   `S=256 17.261 ms`, `S=512 53.920 ms`.
-- Current real-vector coverage verified on the U55C remains limited to
-  `real_tinyllama_tile`, `real_tinyllama_s16`, and `real_tinyllama_s64`.
-  Larger directories `real_tinyllama_s128`, `real_tinyllama_s256`, and
-  `real_tinyllama_s512` are now generated and CPU-validated locally, but still
-  need real U55C vector-mode timing/verification.
+- Larger real TinyLlama vector directories `real_tinyllama_s128`,
+  `real_tinyllama_s256`, and `real_tinyllama_s512` were then run through
+  `demo_real_vectors` on the real U55C. All real-vector directories passed,
+  including the larger cases:
+  `S=128 6.816 ms`, `S=256 17.192 ms`, `S=512 55.329 ms`.
+- `real_tinyllama_s128` initially exposed a verifier-only tolerance issue on
+  masked scaled logits: values near `-114388` differed by `0.0078125`, about
+  `6.8e-8` relative error. `host/attention_score_chain_xrt.cpp` now supports an
+  optional relative tolerance and uses `1e-6` relative tolerance for
+  scaled-logit comparisons only. Softmax and attention-output checks retain
+  their existing absolute tolerances.
 
 ## Best Next Step
 
@@ -1028,8 +1034,8 @@ Track A Step 5 is hardware-verified on the current
    making the FPGA path faster than CPU
 3. prioritize device-resident buffers, lower kernel launch count, and online
    softmax fused with V accumulation before minor HLS/clock tuning
-4. run the larger real TinyLlama vector directories `S=128`, `S=256`, and
-   `S=512` on the real U55C if broader real-input coverage is needed
+4. run CPU/GPU baseline timing for the larger real TinyLlama vector directories
+   `S=128`, `S=256`, and `S=512` if broader speedup tables are needed
 
 ## After That
 
@@ -1040,8 +1046,8 @@ steps are:
    reduction tracks
 2. implement online softmax fused with V accumulation if performance needs to
    beat CPU
-3. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
-   `S=512` if the demo needs a broader real-input sweep
+3. run CPU/GPU baseline timing for larger real TinyLlama vector directories if
+   the demo/report needs broader speedup comparisons
 4. connect to a real TinyLlama attention subgraph
 5. add KV-cache-aware decode flow
 6. eventually integrate into a decoder-layer path
@@ -1073,7 +1079,7 @@ At the time of writing:
   `sim/real_tinyllama_s512` using CUDA/FP16 from the cached TinyLlama model.
   CPU reference sanity checks passed for all three with zero tiled-vs-brute
   differences and exported softmax max difference `2.98023224e-08`; real U55C
-  vector-mode timing for these larger directories is still pending.
+  vector-mode verification also passed for all three.
 
 Agents should avoid redoing exploration that this file already captures unless
 something materially changed.
