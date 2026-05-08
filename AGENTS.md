@@ -994,6 +994,28 @@ On 2026-05-04, Track A Step 5 was started on branch
     `attention_score_chain_xclbin_info.txt` /
     `attention_score_chain_xclbin_link_summary.txt` mirrors
 
+On 2026-05-07, while preparing the `master` branch for a project demo video, a
+host-side tiled scheduling bug was found and fixed:
+
+- `demo_sweep` initially passed `S=8`, `S=64`, and `S=128`, but failed
+  `S=256` and `S=512` at `full_score_scaled` verification.
+- Root cause: the XRT host double-buffered K tiles but could preload into the
+  next buffer set before the previous `score_mask_scale_u55c_kernel` using that
+  set had finished.
+- Fix: `host/attention_score_chain_xrt.cpp` now waits before reusing the next
+  K-tile buffer slot. This is host-only; the existing fused `.xclbin` does not
+  need to be rebuilt for this fix.
+- `host/demo_env.sh` was added as a sourceable demo helper with commands for
+  status, card visibility, host/xclbin builds, tile runs, synthetic sweeps, real
+  vector runs, and log capture under `demo_logs/`.
+- After rebuilding only the host, real U55C `demo_sweep` passed:
+  `S=8 0.322 ms`, `S=64 2.841 ms`, `S=128 5.119 ms`,
+  `S=256 17.261 ms`, `S=512 53.920 ms`.
+- Current real-vector coverage remains limited to the saved directories present
+  in `sim/`: `real_tinyllama_tile`, `real_tinyllama_s16`, and
+  `real_tinyllama_s64`. The `S=512` demo sweep is synthetic unless a
+  `sim/real_tinyllama_s512/` directory is exported and verified.
+
 ## Best Next Step
 
 Track A Step 5 is hardware-verified on the current

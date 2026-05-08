@@ -744,6 +744,7 @@ int run_tiled_inputs(
       if (next_key_tile_idx < k_chunks) {
         const std::uint32_t next_key_base =
             next_key_tile_idx * static_cast<std::uint32_t>(kScoreColsPerTile);
+        finish_pending_tile(next_key_tile_idx % 2U);
         preload_k_tile(next_key_tile_idx % 2U, next_key_base);
       }
     }
