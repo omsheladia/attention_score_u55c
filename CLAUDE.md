@@ -100,14 +100,14 @@ XRT deployment status for the current five-kernel Track B chain:
 > utilization.
 
 Post-route routed reports for the current five-kernel xclbin are checked in
-under `docs/`:
+under `docs/artifacts/u55c_fused/reports/`:
 
 | Report | Purpose |
 |---|---|
-| `docs/PostRouteKernelUtilization.rpt` | Per-kernel routed utilization |
-| `docs/PostRouteFullUtilization.rpt` | Full routed design utilization including platform |
-| `docs/PostRouteSLRUtilization.rpt` | SLR spread and SLL usage |
-| `docs/PostRouteTimingSummary.rpt` | Post-route timing closure |
+| `docs/artifacts/u55c_fused/reports/PostRouteKernelUtilization.rpt` | Per-kernel routed utilization |
+| `docs/artifacts/u55c_fused/reports/PostRouteFullUtilization.rpt` | Full routed design utilization including platform |
+| `docs/artifacts/u55c_fused/reports/PostRouteSLRUtilization.rpt` | SLR spread and SLL usage |
+| `docs/artifacts/u55c_fused/reports/PostRouteTimingSummary.rpt` | Post-route timing closure |
 
 Routed report highlights:
 

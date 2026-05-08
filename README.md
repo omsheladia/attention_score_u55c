@@ -1,268 +1,126 @@
-# Attention Score U55C Workspace
+# Attention Score Acceleration on U55C
 
-This folder is a focused U55C mini-workspace for the attention-score block:
+This repo implements and verifies an isolated one-head transformer attention
+pipeline on an AMD/Xilinx Alveo U55C FPGA.
 
 ```text
-Q_rot_int8, K_rot_int8
--> score_raw_int32
--> score_scaled_fp32
--> score_softmax_fp32
--> attn_out_fp32 (`--seq-len` synthetic Track B path in hw_emu and real hw)
+Q_rot_int8, K_rot_int8, V_fp32
+-> QK^T score
+-> causal mask + scale
+-> full-row softmax
+-> softmax @ V
+-> attn_out_fp32 for one head
 ```
 
-It mirrors the main repo layout on purpose, but keeps only the pieces needed to
-understand, build, and verify an isolated attention-score offload on a Xilinx
-Alveo U55C.
+The design is verified with synthetic vectors and TinyLlama-derived saved
+vectors. It is **not** a full TinyLlama runtime, decoder integration, or
+model-level tokens/sec benchmark.
 
-The current state is a verified tiled FPGA attention-score/softmax demo: local
-C++ tests, HLS `csim`/`csynth`, hardware emulation, and real U55C hardware runs
-have passed. Track A Steps 1-4 are complete for the staged design. Track B
-Steps 1-3 are complete for synthetic `--seq-len` hardware emulation and real
-U55C hardware: Python `softmax @ V` reference/export, standalone
-`hls/v_weighted_sum/`, five-kernel xclbin integration, and final `attn_out`
-verification all pass. Track C real TinyLlama vectors now run in both the legacy
-single-tile path and the tiled full-sequence vector path at `S=16` and `S=64`.
-This is still not a full TinyLlama runtime or model-level tokens/sec benchmark.
+## Current Status
 
-Branch note: `track-a-step5-fused-score-mask-scale` adds the Track A Step 5
-fused pre-softmax kernel and wires the host/build flow to use it. Local C++
-verification, Vitis HLS, `hw_emu`, and real U55C verification now pass on this
-branch. The fused real-card xclbin passed synthetic `S=8,64,128,256,512` and
-real TinyLlama `S=16`/`S=64` vector runs on May 4, 2026.
+- Required implementation tracks are complete for the frozen one-head design.
+- Fused score/mask/scale path builds and runs on the real U55C.
+- Synthetic sequence lengths `S = 8, 64, 128, 256, 512` pass FPGA verification.
+- TinyLlama-derived vector directories `S = 16, 64, 128, 256, 512` pass FPGA
+  verification.
+- The FPGA path is functionally correct, but still slower than the CPU/GPU
+  baselines for this small isolated workload.
 
-## What Is In Scope
+Expected FPGA pass signal:
 
-- Python reference math for one attention-score tile
-- Python full-sequence tiled score/softmax reference checks
-- deterministic vector export for simulation and HLS C-sim
-- TinyLlama setup, Q/K/V extraction, quantization, and real-vector export
-- U55C-oriented HLS kernels for:
-  - INT8 score GEMM
-  - merged causal mask + score scaling
-  - fused score + mask/scale for Track A Step 5
-  - row-wise softmax
-  - full-row softmax up to `S = 512`
-  - Track B partial `softmax @ V` weighted-sum kernel
-- native XRT host app for the verified score/softmax chain
-- tiled XRT `hw_emu` path using full-row softmax and V weighted sum for
-  synthetic sequence lengths
-- Linux helpers for local C++ checks, HLS/Vitis builds, hardware emulation, and
-  real-card execution
-- HBM bank mapping for the chain buffers
+```text
+Tiled sequence verification PASSED
+Attention output verification PASSED
+XRT chain verification PASSED
+```
 
-## What Is Out Of Scope
+## Architecture
 
-- Q/K/V projection GEMMs
-- RoPE generation
-- runtime controller integration
-- full TinyLlama model execution
-- model-level tokens/sec metrics
+![One-head FPGA attention architecture](docs/report_assets/attention_architecture.png)
 
-## Offload Boundary
+The frozen design keeps orchestration in the XRT host and uses HBM-backed
+buffers between kernels. The fused pre-softmax kernel removes the old raw-score
+HBM round trip by computing score, mask, and scale in one stage.
 
-The clean hardware boundary is:
+HBM mapping for the fused path:
 
-1. Host or an upstream kernel produces RoPE-applied `Q` and `K`.
-2. One U55C kernel consumes:
-   - `q_tile`: shape `(query_rows, 64)` as `int8`
-   - `k_tile`: shape `(key_cols, 64)` as `int8`
-3. The kernel computes:
-   - `score_raw_int32[row, col] = sum_d q_tile[row, d] * k_tile[col, d]`
-4. Follow-on U55C kernels apply:
-   - merged causal mask and scaling by `q_scale * k_scale * 1/sqrt(head_dim)`
-   - softmax
-   - `softmax @ V` weighted-sum accumulation for one attention head
+| Data | HBM bank |
+|---|---:|
+| Q tile | HBM[0] |
+| K tile | HBM[1] |
+| fused scaled logits | HBM[3] |
+| tile probabilities / full-row logits | HBM[4] |
+| full-row probabilities / V weights | HBM[5] |
+| V chunk | HBM[6] |
+| V partial output | HBM[7] |
 
-That is the same split already suggested by the main repo's Python exporters:
-raw score accumulation is a clean INT8 x INT8 -> INT32 block, while the current
-runtime keeps mask+scale, softmax, and V weighted sum as staged kernels.
+`HBM[2]` was used by the older staged raw-score path and is not part of the
+main fused pre-softmax path.
 
-## Layout
+## Repo Layout
 
-- `docs/`: offload notes, mapping explanation, and exact FPGA run commands
-- `model/`: isolated Python reference, vector exporter, and TinyLlama setup checker
-- `hls/attention_score/`: INT8 score GEMM kernel and testbench
-- `hls/mask_and_scale/`: current merged mask+scale kernel
-- `hls/score_and_mask_scale/`: fused Track A Step 5 pre-softmax kernel
-- `hls/causal_mask/`: legacy standalone mask kernel
-- `hls/score_scale/`: legacy standalone scale kernel
-- `hls/softmax/`: current tile softmax kernel
-- `hls/softmax_full_row/`: full-row softmax kernel for tiled `S <= 512`
-- `hls/v_weighted_sum/`: Track B partial `softmax @ V` kernel
-- `host/`: native XRT host app and Linux build helpers
-- `sim/`: generated synthetic and real-vector cases for the staged attention path
-- `rtl/`: notes for later RTL lowering
-- `backups/`: local preservation backups for known-good hardware runs
+| Path | Purpose |
+|---|---|
+| `hls/` | HLS kernels and C++ testbenches |
+| `host/` | XRT host app, build scripts, demo helpers |
+| `model/` | Python reference, TinyLlama extraction/export, CPU/GPU baselines |
+| `sim/` | Synthetic and TinyLlama-derived verification vectors |
+| `docs/` | Checklists, concepts, results, runbook, report source |
+| `docs/report_assets/` | Report/presentation images and editable architecture diagram |
+| `docs/artifacts/u55c_fused/` | Final routed U55C reports, Vitis summaries, guidance HTML |
+| `docs/presentations/` | Final presentation files |
 
-## Current Verification
+## Quick Run
 
-The verified synthetic-vector real-card command is:
+On the Linux machine attached to the U55C:
 
 ```bash
+cd /path/to/attention-score-acceleration
 source host/setup_2022_2_env.sh
 unset XCL_EMULATION_MODE
+```
 
+Run one synthetic sequence length:
+
+```bash
 ./build/host_attention_score_chain \
   --xclbin build/attention_score_chain.xclbin \
-  --vectors sim/attention_score_tile \
+  --seq-len 512 \
   --device 0
 ```
 
-Or use the helper:
+Run real TinyLlama-derived vectors:
 
 ```bash
-bash host/run_hw.sh 0
-```
-
-The host app verifies FPGA outputs against the exported reference vectors:
-
-- `score_raw.txt`: exact integer compare
-- `score_scaled.txt`: float compare with `1.0e-4` tolerance
-- `score_softmax.txt`: float compare with `1.0e-4` tolerance
-- `attn_out.txt` or `attn_ref_float.txt` when `v_full.txt` is present
-
-In the fused Step 5 branch, `score_raw.txt` remains a reference/export artifact,
-but raw scores are no longer written back by the FPGA host path.
-
-Expected pass signal:
-
-```text
-Attention output verification PASSED
-XRT chain verification PASSED
-```
-
-The current verified synthetic-vector helper run for the five-kernel chain
-printed:
-
-```text
-attention_score_u55c_kernel 0.066 ms
-mask_scale_u55c_kernel      0.081 ms
-softmax_u55c_kernel         0.117 ms
-v_weighted_sum_u55c_kernel  0.041 ms
-total_chain                 0.345 ms
-Attention output verification PASSED
-XRT chain verification PASSED
-```
-
-The real TinyLlama-derived single-tile vector directory has also been verified
-on the real U55C:
-
-```bash
-bash host/run_hw.sh \
-  0 \
-  build/attention_score_chain.xclbin \
-  sim/real_tinyllama_tile
-```
-
-That helper run printed:
-
-```text
-attention_score_u55c_kernel 0.053 ms
-mask_scale_u55c_kernel      0.094 ms
-softmax_u55c_kernel         0.029 ms
-v_weighted_sum_u55c_kernel  0.041 ms
-total_chain                 0.258 ms
-Attention output verification PASSED
-XRT chain verification PASSED
-```
-
-Real TinyLlama full-sequence vector directories have also been exported and
-verified on the real U55C through the tiled five-kernel path:
-
-| directory | S | q_chunks | k_chunks | total_chain ms | pass signal |
-|---|---:|---:|---:|---:|---|
-| `sim/real_tinyllama_s16` | 16 | 2 | 1 | 0.985 | `Attention output verification PASSED` |
-| `sim/real_tinyllama_s64` | 64 | 8 | 1 | 2.510 | `Attention output verification PASSED` |
-
-The preservation backup for the known-good hardware run is:
-
-```text
-backups/run_20260429_201240/
-```
-
-## Quick Start
-
-From the repo root, generate vectors and run the local C++ checks:
-
-```bash
-bash host/run_local_csim.sh
-```
-
-Run the full-sequence Python tiling check:
-
-```bash
-python model/attention_score_ref.py --check-full-tiling
-```
-
-Run the full-row softmax local C++ bench:
-
-```bash
-g++ -O2 -std=c++17 \
-  hls/softmax_full_row/softmax_full_row_hls.cpp \
-  hls/softmax_full_row/tb_softmax_full_row.cpp \
-  -Ihls/common \
-  -o sim/tb_softmax_full_row
-sim/tb_softmax_full_row
-```
-
-Run the tiled synthetic hardware-emulation path:
-
-```bash
-source attention_score_u55c/host/setup_2022_2_env.sh
-export XCL_EMULATION_MODE=hw_emu
-
-./attention_score_u55c/build/host_attention_score_chain \
-  --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
-  --seq-len 128 \
-  --device 0
-```
-
-Latest Track B Step 3 `hw_emu` verification on 2026-05-03 used a five-kernel
-xclbin containing `attention_score_u55c_kernel`, `mask_scale_u55c_kernel`,
-`softmax_u55c_kernel`, `softmax_full_row_u55c_kernel`, and
-`v_weighted_sum_u55c_kernel`. It passed final `attn_out` verification:
-
-| S | q_chunks | k_chunks | total_chain ms | pass signal |
-|---|----------|----------|----------------|-------------|
-| 8 | 1 | 1 | 65,214.673 | `Attention output verification PASSED` |
-| 64 | 8 | 1 | 580,737.286 | `Attention output verification PASSED` |
-| 128 | 16 | 2 | 1,657,498.336 | `Attention output verification PASSED` |
-
-These are simulator-dominated hardware-emulation timings, not hardware
-performance numbers.
-
-Run the real-card synthetic sequence sweep:
-
-```bash
-source attention_score_u55c/host/setup_2022_2_env.sh
-unset XCL_EMULATION_MODE
-
-for s in 8 64 128 256 512; do
-  ./attention_score_u55c/build/host_attention_score_chain \
-    --xclbin attention_score_u55c/build/attention_score_chain.xclbin \
-    --seq-len "$s" \
+for d in \
+  sim/real_tinyllama_s16 \
+  sim/real_tinyllama_s64 \
+  sim/real_tinyllama_s128 \
+  sim/real_tinyllama_s256 \
+  sim/real_tinyllama_s512
+do
+  ./build/host_attention_score_chain \
+    --xclbin build/attention_score_chain.xclbin \
+    --vectors "$d" \
     --device 0
 done
 ```
 
-Latest real-card sweep after the Track A Step 4 double-buffered host pass:
+The demo helper wraps the common commands:
 
-| S | total ms | pass signal |
-|---|----------|-------------|
-| 8 | 0.868 | `Attention output verification PASSED` |
-| 64 | 2.328 | `Attention output verification PASSED` |
-| 128 | 7.226 | `Attention output verification PASSED` |
-| 256 | 21.269 | `Attention output verification PASSED` |
-| 512 | 84.190 | `Attention output verification PASSED` |
+```bash
+source host/demo_env.sh
+demo_help
+demo_card
+demo_sweep
+demo_real_vectors
+```
 
-This five-kernel run produces one-head `attn_out` for synthetic Q/K/V inputs.
-It is still not model tokens/sec; tokens/sec requires real Q/K/V sequence
-coverage and decoder-loop integration.
+## Build Commands
 
 Build the XRT host:
 
 ```bash
-source host/setup_2022_2_env.sh
 bash host/build_host.sh
 ```
 
@@ -282,75 +140,99 @@ bash host/build_xclbin.sh \
   /opt/xilinx/platforms/xilinx_u55c_gen3x16_xdma_3_202210_1/xilinx_u55c_gen3x16_xdma_3_202210_1.xpfm
 ```
 
-Check TinyLlama Python setup for Track C real-vector work:
+Full hardware linking is slow, so demos should use the already-built `.xclbin`
+when available.
+
+## Local Verification
+
+Run local C++ checks:
+
+```bash
+bash host/run_local_csim.sh
+```
+
+Run the Python full-sequence tiling check:
+
+```bash
+python model/attention_score_ref.py --check-full-tiling
+```
+
+Check TinyLlama setup:
 
 ```bash
 python model/check_tinyllama_setup.py
 ```
 
-Expected pass signal:
-
-```text
-TinyLlama forward pass OK
-```
-
-Export a real TinyLlama single-tile vector case for the legacy vector flow:
+Export real TinyLlama vectors:
 
 ```bash
-python model/export_real_vectors.py --local-files-only
+python model/export_real_vectors.py --seq-len 128 --output-dir sim/real_tinyllama_s128
 ```
 
-This writes `sim/real_tinyllama_tile/`, which has been verified on the real U55C
-with `--vectors sim/real_tinyllama_tile`.
+## Results Summary
 
-Export real TinyLlama full-sequence vector cases for the tiled vector flow:
+Synthetic fused FPGA runs:
 
-```bash
-python model/export_real_vectors.py \
-  --seq-len 16 \
-  --output-dir sim/real_tinyllama_s16 \
-  --text "In a small laboratory, engineers compare attention kernels across hardware targets. The experiment records tokens, latency, and numerical accuracy for each sequence length before the final report is written."
+| S | tiles | CPU ms | GPU ms | fused FPGA ms | FPGA speedup vs CPU |
+|---:|---:|---:|---:|---:|---:|
+| 8 | 1 | 0.0322 | 0.3349 | 0.296 | 0.11x |
+| 64 | 8 | 0.2920 | 0.2507 | 2.364 | 0.12x |
+| 128 | 32 | 2.5009 | 0.2998 | 5.484 | 0.46x |
+| 256 | 128 | 3.9523 | 0.2726 | 17.307 | 0.23x |
+| 512 | 512 | 12.3290 | 0.2461 | 60.328 | 0.20x |
 
-python model/export_real_vectors.py \
-  --seq-len 64 \
-  --output-dir sim/real_tinyllama_s64 \
-  --text "In a small laboratory, engineers compare attention kernels across hardware targets. The experiment records tokens, latency, and numerical accuracy for each sequence length before the final report is written. A second paragraph adds enough context for a longer TinyLlama prompt, describing how query, key, and value tensors move through the FPGA pipeline while software baselines measure the same attention head for validation."
-```
+Real TinyLlama-derived fused FPGA runs:
 
-For the full command runbook, see:
+| vector dir | S | fused FPGA ms |
+|---|---:|---:|
+| `sim/real_tinyllama_s16` | 16 | 0.569 |
+| `sim/real_tinyllama_s64` | 64 | 2.004 |
+| `sim/real_tinyllama_s128` | 128 | 6.816 |
+| `sim/real_tinyllama_s256` | 256 | 17.192 |
+| `sim/real_tinyllama_s512` | 512 | 55.329 |
 
-```text
-docs/fpga_run_commands.md
-```
+Full details are in `docs/track_d_results.md`.
 
-## Routed Reports
+## Routed Utilization And Timing
 
-Final post-route reports for the current five-kernel xclbin are checked in
-under `docs/`:
+![Post-route utilization](docs/report_assets/post_route_utilization.png)
 
-- `PostRouteKernelUtilization.rpt`: per-kernel routed utilization
-- `PostRouteFullUtilization.rpt`: full routed design utilization including
-  platform
-- `PostRouteSLRUtilization.rpt`: SLR spread and SLL usage
-- `PostRouteTimingSummary.rpt`: post-route timing closure
-- `PostRouteUtilization.xlsx`: spreadsheet copy for reporting/presentation work
+Final routed report highlights for the fused xclbin:
 
-Use these routed reports for final FPGA utilization numbers. The HLS DSP/BRAM
-numbers elsewhere in the repo are useful synthesis estimates, but they are not
-the final routed xclbin utilization.
+| Scope | LUT | REG | BRAM | URAM | DSP |
+|---|---:|---:|---:|---:|---:|
+| User kernels | 60,983 | 70,401 | 110 | 2 | 405 |
+| Full routed design | 191,648 CLB LUTs | 253,388 CLB registers | 309.5 Block RAM tiles | 2 | 409 |
 
-## Why This Is A Good First U55C Cut
+The final timing report meets routed timing with `WNS 0.003 ns`, `TNS 0`, and
+`WHS 0.009 ns`.
 
-This block is easy to offload because:
+![Vitis timing summary](docs/artifacts/u55c_fused/vitis/timing_summary.png)
 
-- the interface is fixed-size and stream-friendly
-- the math is dense MAC-heavy work
-- accumulation is integer and deterministic
-- mask+scale and softmax are clean separate stages
-- it matches the way the existing repo already exports score tiles
-- the chain already maps buffers across multiple HBM banks
+Primary artifacts:
 
-## Next Work
+- `docs/artifacts/u55c_fused/reports/PostRouteKernelUtilization.rpt`
+- `docs/artifacts/u55c_fused/reports/PostRouteFullUtilization.rpt`
+- `docs/artifacts/u55c_fused/reports/PostRouteSLRUtilization.rpt`
+- `docs/artifacts/u55c_fused/reports/PostRouteTimingSummary.rpt`
+- `docs/artifacts/u55c_fused/reports/PostRouteUtilization.xlsx`
+- `docs/artifacts/u55c_fused/vitis/attention_score_chain_xclbin_info.txt`
+- `docs/artifacts/u55c_fused/vitis/attention_score_chain_xclbin_link_summary.txt`
+- `docs/artifacts/u55c_fused/vitis/SystemDiagram.pdf`
+- `docs/artifacts/u55c_fused/vitis/PlatformDiagram.pdf`
+- `docs/artifacts/u55c_fused/guidance/`
 
-- Use `docs/track_d_results.md` for the current CPU/GPU/FPGA comparison
-- Integrate toward a real TinyLlama attention subgraph
+## Key Limitations
+
+- Q/K/V projection and RoPE are prepared before this FPGA boundary.
+- The host still launches many tile-level kernel operations.
+- Intermediate tensors still pass through HBM-visible buffers.
+- Only one attention head is computed.
+- The current design is a verified accelerator block, not an end-to-end LLM.
+
+## Next Optimization Direction
+
+The next work is captured in `docs/implementation_checklist_optimization.md`.
+The main performance targets are fewer host launches, deeper on-card dataflow,
+better reuse of HBM-resident tiles, and a narrower deployable multi-K
+`softmax @ V` datapath.

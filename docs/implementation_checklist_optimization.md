@@ -355,7 +355,8 @@ fraction of available DSP/LUT resources.
 
 ### Replicate compute units
 
-- [ ] Check current routed utilization from `docs/PostRouteKernelUtilization.rpt`.
+- [ ] Check current routed utilization from
+      `docs/artifacts/u55c_fused/reports/PostRouteKernelUtilization.rpt`.
 - [ ] Decide whether to replicate:
   - online attention compute unit
   - score/mask/scale compute unit

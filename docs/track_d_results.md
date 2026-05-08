@@ -161,7 +161,7 @@ trip.
 ## FPGA Utilization And Timing Closure
 
 The final routed implementation reports for the fused Step 5 xclbin are checked
-in under `docs/`:
+in under `docs/artifacts/u55c_fused/reports/`:
 
 - `PostRouteKernelUtilization.rpt`: per-kernel routed resource usage
 - `PostRouteFullUtilization.rpt`: full routed design usage including platform
@@ -199,9 +199,10 @@ hold endpoints.
 ## Interpretation
 
 - The fused FPGA pipeline is correct for synthetic `S = 8, 64, 128, 256, 512`
-  and real TinyLlama vector directories `S = 16, 64`.
-- Synthetic `S = 128, 256, 512` has been run. Larger real TinyLlama vector
-  directories for those same sequence lengths have not been run yet.
+  and real TinyLlama vector directories `S = 16, 64, 128, 256, 512`.
+- Synthetic and real-vector `S = 128, 256, 512` runs have both passed on the
+  real U55C. The larger real-vector cases do not yet have CPU/GPU/staged FPGA
+  baseline timings in the table.
 - The GPU baseline was completed on a separate Windows RTX 3050 Laptop GPU
   environment. Treat it as a useful PyTorch GPU reference, not a same-host
   measurement alongside the Linux/U55C FPGA runs.

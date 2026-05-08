@@ -1002,7 +1002,8 @@ that environment caveat.
   | 256 | 20.570 | 18.601 | 1.969 |
   | 512 | 72.941 | 69.792 | 3.149 |
 
-- [x] Capture final routed xclbin utilization/timing reports under `docs/`:
+- [x] Capture final routed xclbin utilization/timing reports under
+      `docs/artifacts/u55c_fused/reports/`:
   - `PostRouteKernelUtilization.rpt`
   - `PostRouteFullUtilization.rpt`
   - `PostRouteSLRUtilization.rpt`

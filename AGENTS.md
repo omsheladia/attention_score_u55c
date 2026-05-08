@@ -893,7 +893,7 @@ On 2026-05-03, the live README files were refreshed to remove stale
 three-kernel/pre-Track-B wording and reflect the current staged five-kernel
 flow, real TinyLlama `S=16`/`S=64` vector results, and Track D GPU timing note.
 
-The architecture diagram at `docs/attention_architecture.drawio` was also
+The architecture diagram at `docs/report_assets/attention_architecture.drawio` was also
 refreshed from the older score-only sketch to the current one-head staged
 pipeline: host/XRT, HBM banks `[0]` through `[7]`, `attention_score`,
 `mask_scale`, `softmax_full_row`, `v_weighted_sum`, final `attn_out`, tiling
@@ -901,18 +901,23 @@ model, verification tolerances, and scope boundary.
 
 On 2026-05-04, Vitis report/diagram artifacts were added under `docs/` for the
 current five-kernel xclbin. New report-facing artifacts include
-`docs/PlatformDiagram.pdf`, `docs/SystemDiagram.pdf`,
-`docs/PostRouteUtilization.xlsx`, `docs/system_estimate_attention_score_chain.xtxt`,
-and copied routed report files such as `docs/PostRouteFullUtilization.rpt`,
-`docs/PostRouteKernelUtilization.rpt`, `docs/PostRouteSLRUtilization.rpt`, and
-`docs/PostRouteTimingSummary.rpt`. `host/build_xclbin.sh` now passes
+`docs/artifacts/u55c_fused/vitis/PlatformDiagram.pdf`,
+`docs/artifacts/u55c_fused/vitis/SystemDiagram.pdf`,
+`docs/artifacts/u55c_fused/reports/PostRouteUtilization.xlsx`,
+`docs/artifacts/u55c_fused/vitis/system_estimate_attention_score_chain.xtxt`,
+and copied routed report files such as
+`docs/artifacts/u55c_fused/reports/PostRouteFullUtilization.rpt`,
+`docs/artifacts/u55c_fused/reports/PostRouteKernelUtilization.rpt`,
+`docs/artifacts/u55c_fused/reports/PostRouteSLRUtilization.rpt`, and
+`docs/artifacts/u55c_fused/reports/PostRouteTimingSummary.rpt`.
+`host/build_xclbin.sh` now passes
 `--save-temps` to all `v++` compile and link steps so future builds preserve
 Vitis Analyzer intermediate files, including `_x/link/int/...` system-diagram
 JSON files. The authoritative generated routed implementation reports for the
 latest local build live under `/home/advent/Desktop/RC19/_x/reports/link/imp/`.
 Post-route report highlights for the current routed five-kernel design:
 
-- `docs/PostRouteKernelUtilization.rpt` reports user-kernel usage of
+- `docs/artifacts/u55c_fused/reports/PostRouteKernelUtilization.rpt` reports user-kernel usage of
   `63875 LUT`, `25824 LUTAsMem`, `74011 REG`, `127 BRAM`, `2 URAM`, and
   `405 DSP` out of the user budget.
 - per-kernel routed usage is dominated by `v_weighted_sum_u55c_kernel`:
@@ -922,14 +927,14 @@ Post-route report highlights for the current routed five-kernel design:
   - `mask_scale_u55c_kernel`: `3694 LUT`, `16 BRAM`, `3 DSP`
   - `softmax_full_row_u55c_kernel`: `5738 LUT`, `16 BRAM`, `2 URAM`, `9 DSP`
   - legacy `softmax_u55c_kernel`: `5683 LUT`, `16 BRAM`, `9 DSP`
-- `docs/PostRouteFullUtilization.rpt` reports whole routed design usage
+- `docs/artifacts/u55c_fused/reports/PostRouteFullUtilization.rpt` reports whole routed design usage
   including platform as `196502 CLB LUTs` (`15.07%`), `260859 CLB Registers`
   (`10.00%`), `326.5 Block RAM Tile` (`16.20%`), `2 URAM` (`0.21%`), and
   `409 DSP` (`4.53%`).
-- `docs/PostRouteSLRUtilization.rpt` shows SLR0 carries most user logic:
+- `docs/artifacts/u55c_fused/reports/PostRouteSLRUtilization.rpt` shows SLR0 carries most user logic:
   `24.78%` CLB LUTs, `27.75%` Block RAM Tile, `405 DSP`; total SLLs used:
   `10483`.
-- `docs/PostRouteTimingSummary.rpt` reports all user timing constraints met
+- `docs/artifacts/u55c_fused/reports/PostRouteTimingSummary.rpt` reports all user timing constraints met
   with design-summary `WNS 0.003 ns`, `TNS 0`, `WHS 0.009 ns`, and no failing
   setup/hold endpoints.
 
@@ -986,13 +991,14 @@ On 2026-05-04, Track A Step 5 was started on branch
   - real U55C TinyLlama vector runs passed:
     `sim/real_tinyllama_tile 0.635 ms`, `sim/real_tinyllama_s16 0.569 ms`,
     `sim/real_tinyllama_s64 2.004 ms`
-  - latest fused build reports were copied into `docs/`, including refreshed
-    `PostRouteFullUtilization.rpt`, `PostRouteKernelUtilization.rpt`,
-    `PostRouteSLRUtilization.rpt`, `PostRouteTimingSummary.rpt/.rpv/.rpx`,
-    `system_estimate_attention_score_chain.xtxt`, per-kernel system estimates,
-    Vitis guidance HTML files, `system_diagram_fused.json`, and non-ignored
-    `attention_score_chain_xclbin_info.txt` /
-    `attention_score_chain_xclbin_link_summary.txt` mirrors
+  - latest fused build reports were copied into `docs/artifacts/u55c_fused/`,
+    including refreshed `reports/PostRouteFullUtilization.rpt`,
+    `reports/PostRouteKernelUtilization.rpt`,
+    `reports/PostRouteSLRUtilization.rpt`,
+    `reports/PostRouteTimingSummary.rpt/.rpv/.rpx`,
+    `vitis/system_estimate_attention_score_chain.xtxt`, per-kernel system
+    estimates, Vitis guidance HTML files under `guidance/`,
+    `vitis/system_diagram_fused.json`, and xclbin info/link-summary mirrors
 
 On 2026-05-07, while preparing the `master` branch for a project demo video, a
 host-side tiled scheduling bug was found and fixed:
@@ -1074,12 +1080,49 @@ At the time of writing:
   draft. It now includes the actual team names, compact tile-count and
   platform/tools tables, routed-utilization percentages, and a final Student
   Contributions section adapted from `docs/friends_edits/`.
+- The IEEE report was refreshed after the larger real TinyLlama vector U55C
+  runs. It now states real-vector verification through `S=512`, includes the
+  `real_tinyllama_s128/s256/s512` fused timings, documents the scaled-logit
+  relative-tolerance verifier note, and updates Track C/D contributions
+  accordingly.
+- The IEEE report synthetic timing table was then clarified for review:
+  it now includes a fused-vs-staged speedup column, labels the CPU/FPGA ratio
+  as FPGA speedup vs CPU, cites FlashAttention for online-softmax/IO-aware
+  attention context, and notes that synthetic vs real-vector timing differences
+  come from separate hardware runs rather than data-content effects.
+- The IEEE report bibliography was later narrowed to the three sources the team
+  explicitly used: Nielsen's neural-networks book, Jay Alammar's illustrated
+  transformer guide, and the Medium transformer math article. The earlier
+  primary/official technical citations were removed from the paper.
+- The IEEE report architecture figure was changed from a single-column figure
+  to a two-column `figure*` at 92% text width so the FPGA one-head architecture
+  diagram is readable in the generated PDF.
+- Final IEEE report cleanup added full names for Om Girish Sheladia and
+  Satyarth Guna Motupalli, changed abstract wording to RoPE-rotated Q/K, fixed
+  the implementation masked-logit formula to show the scaled `-1e9` sentinel,
+  replaced `softmax@V` notation with `PV`, added in-text references to the
+  tile-count/platform/architecture/utilization floats, and added a note about
+  the non-monotonic `S=128` CPU/FPGA ratio.
+- The contribution labels were made consistent with the author block by using
+  full names for all four students, and the `S=128` timing note was moved before
+  the `S=512` 5x-improvement sentence so the paragraph reads cleanly.
+- Submission-safe repo cleanup moved report images to `docs/report_assets/`,
+  presentation files to `docs/presentations/`, and bulky U55C/Vitis evidence to
+  `docs/artifacts/u55c_fused/{reports,vitis,guidance}/`. Active `sim/` vector
+  directories were intentionally left in place. LaTeX transient files are now
+  ignored, and `docs/attention_score_fpga_ieee_report.aux` was removed from the
+  tracked tree.
 - Larger real TinyLlama vector directories were generated locally for
   `sim/real_tinyllama_s128`, `sim/real_tinyllama_s256`, and
   `sim/real_tinyllama_s512` using CUDA/FP16 from the cached TinyLlama model.
   CPU reference sanity checks passed for all three with zero tiled-vs-brute
   differences and exported softmax max difference `2.98023224e-08`; real U55C
   vector-mode verification also passed for all three.
+- The top-level `README.md` was rewritten into a direct submission/demo README.
+  It now embeds `docs/report_assets/attention_architecture.png`,
+  `docs/report_assets/post_route_utilization.png`, and
+  `docs/artifacts/u55c_fused/vitis/timing_summary.png`, removes stale branch and
+  nested-path wording, and points readers to the cleaned artifact folders.
 
 Agents should avoid redoing exploration that this file already captures unless
 something materially changed.

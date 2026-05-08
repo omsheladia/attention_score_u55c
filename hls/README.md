@@ -15,8 +15,9 @@ path uses `softmax_full_row_u55c_kernel` for S-wide row normalization.
 On the `track-a-step5-fused-score-mask-scale` branch, the xclbin build is wired
 for the fused Track A Step 5 pre-softmax kernel. This branch has local C++
 verification, but Vitis HLS, `hw_emu`, and real U55C verification are still
-pending. The last fully routed/real-card reports in `docs/PostRoute*.rpt`
-belong to the previous staged design.
+pending. The last fully routed/real-card reports in
+`docs/artifacts/u55c_fused/reports/PostRoute*.rpt` belong to the previous
+staged design.
 
 The runtime path uses:
 

@@ -12,7 +12,8 @@
 
 \title{Acceleration of One-Head Transformer Attention on a Xilinx Alveo U55C FPGA}
 
-\author{Samarth Bangalore Sudharshan, Rijul Wankhade, Om, and Satyarth\\
+\author{Samarth Bangalore Sudharshan, Rijul Wankhade, Om Girish Sheladia, and
+Satyarth Guna Motupalli\\
 CEN571: Reconfigurable Computing\\
 Arizona State University}
 
@@ -23,10 +24,10 @@ Arizona State University}
 \begin{abstract}
 Transformer inference is increasingly important for edge and local deployment,
 but attention layers remain expensive because their score matrix grows
-quadratically with sequence length. This project investigates whether a
-specialized FPGA data path can accelerate the core attention computation used
+quadratically with sequence length. This work implements and evaluates a
+specialized FPGA data path for accelerating the core attention computation used
 by a TinyLlama-derived model. The implemented system targets a Xilinx Alveo
-U55C and offloads one attention head, beginning from RoPE-applied
+U55C and offloads one attention head, beginning from RoPE-rotated
 integer-quantized query and key tensors and a floating-point value tensor. The
 verified hardware path computes INT8 query-key scores, applies causal masking
 and dequantization scaling, performs full-row softmax, and computes
@@ -36,16 +37,17 @@ does not implement Q/K/V projection, RoPE generation, decoder integration, or
 model-level token generation. The final fused design passes local C++ checks,
 Vitis HLS C simulation and synthesis, XRT hardware emulation, and real U55C
 execution for synthetic sequence lengths \(S=8,64,128,256,512\) and
-TinyLlama-derived vector directories at \(S=16\) and \(S=64\). On real
+TinyLlama-derived vector directories at \(S=16,64,128,256,512\). On real
 hardware, the fused FPGA path runs the synthetic \(S=512\) one-head attention
-case in 60.328 ms, compared with a 12.329 ms CPU NumPy baseline and a 0.246 ms
-RTX 3050 Laptop GPU PyTorch baseline. These results show a correct and
-presentable FPGA attention block with clean post-route timing closure, but also
+case in 60.328 ms and the real TinyLlama-derived \(S=512\) vector case in
+55.329 ms. The synthetic \(S=512\) CPU NumPy baseline is 12.329 ms, and the RTX
+3050 Laptop GPU PyTorch baseline is 0.246 ms. These results show a correct and
+verified FPGA attention block with clean post-route timing closure, but also
 show that the current staged architecture is dominated by repeated kernel
 launches and host-visible HBM staging. The work establishes a validated
-baseline and identifies the next required optimizations: device-resident data
-flow, reduced launch count, online softmax fused with value accumulation, and
-parallel execution across query blocks or heads.
+baseline and identifies the next architectural improvements: device-resident
+data flow, reduced launch count, online softmax fused with value accumulation,
+and parallel execution across query blocks or heads.
 \end{abstract}
 
 \noindent\textbf{Keywords---}FPGA, transformer attention, TinyLlama, Xilinx
@@ -72,12 +74,12 @@ attention heads. This regular structure makes attention a natural candidate for
 FPGA acceleration, especially when combined with low-precision arithmetic,
 tiling, on-chip buffering, and high-bandwidth memory.
 
-This project studies the FPGA offload of a focused attention block rather than
+This work studies the FPGA offload of a focused attention block rather than
 a full language model. The goal is to understand what is required to map
 TinyLlama-style attention onto the Xilinx Alveo U55C, verify the result on real
 hardware, and measure where the first implementation succeeds or falls short.
-The selected hardware boundary begins after the model has already generated
-RoPE-applied query and key tensors and a value tensor. Query and key are
+The selected hardware boundary begins after the model has computed
+RoPE-rotated query and key tensors and a value tensor. Query and key are
 quantized to INT8 with per-tensor scale factors, while value and final
 attention output remain FP32. The FPGA computes the one-head attention result:
 \[
@@ -86,7 +88,7 @@ attention output remain FP32. The FPGA computes the one-head attention result:
 \]
 where \(d_h=64\) is the head dimension and \(M\) is the causal mask.
 
-The project evolved through four required tracks. Track A made the attention
+The work evolved through four tracks. Track A made the attention
 score pipeline work across real sequence lengths using tiling, full-row
 softmax, double buffering for the pre-softmax pass, and finally a fused
 score-mask-scale kernel. Track B added the value weighted-sum stage so the FPGA
@@ -98,7 +100,7 @@ accelerator, not a complete TinyLlama runtime. This distinction matters because
 the reported times are attention-block latencies, not generated-token
 throughput.
 
-The main contribution of the project is therefore twofold. First, it provides a
+The main contribution is therefore twofold. First, it provides a
 complete verified U55C implementation of a tiled one-head attention path,
 including Python reference generation, HLS kernels, XRT host orchestration, HBM
 bank placement, hardware emulation, real-card validation, and post-route
@@ -123,20 +125,20 @@ thermal and cost assumptions of a large server GPU.
 FPGAs are attractive in this setting because they can be specialized after
 deployment. If a model uses fixed head dimensions, fixed quantization formats,
 or a known maximum sequence length, an FPGA design can harden those choices
-into the data path. Unlike a CPU, it can expose many operations in parallel.
-Unlike a GPU, it can avoid some general-purpose scheduling overhead and can use
-custom memory layouts. However, these benefits only appear when the design is
-architecturally matched to the workload. A naive staged FPGA implementation can
+into a dedicated datapath with custom arithmetic width, explicit memory banking,
+and fine-grained loop parallelism that general-purpose processors cannot expose.
+However, these benefits only appear when the design is architecturally matched
+to the workload. A naive staged FPGA implementation can
 easily lose to software if the host must launch hundreds or thousands of small
 kernels and move intermediate matrices through external memory after every
-stage. This project demonstrates both sides of that tradeoff: a correct FPGA
-attention block was built and verified, but the first staged implementation is
-not yet the performance point needed for an edge LLM accelerator.
+stage. This work demonstrates both sides of that tradeoff: a correct FPGA attention
+block was built and verified, but the first staged implementation is not yet
+competitive with software for this isolated workload.
 
 \subsection{Transformer Attention}
 
 The transformer architecture introduced self-attention as a replacement for
-recurrent sequence processing \cite{vaswani2017attention}. In a causal decoder
+recurrent sequence processing \cite{alammar2018illustrated,leo2024math}. In a causal decoder
 model, each token is allowed to attend only to itself and previous tokens. For
 one attention head, the input representation is projected into query, key, and
 value matrices:
@@ -166,13 +168,14 @@ Finally, attention output is:
 \[
     O = PV.
 \]
-The subtraction of \(m_i\) is the standard numerically stable softmax form.
+The subtraction of \(m_i\) is the standard numerically stable softmax form
+\cite{nielsen2015neural,alammar2018illustrated,leo2024math}.
 
-TinyLlama uses hidden dimension 2048 and 32 query heads, which gives a head
-dimension of 64 \cite{zhang2024tinyllama}. The project focuses on one selected
-head. TinyLlama also uses grouped-query attention with fewer key/value heads
-than query heads; the export scripts map the selected query head to the
-corresponding key/value head before producing vectors for FPGA verification.
+TinyLlama uses hidden dimension 2048 and 32 query heads, giving a head
+dimension of 64. This work focuses on one selected head. TinyLlama also uses
+grouped-query attention with fewer key/value heads than query heads; the
+extraction flow maps the selected query head to the corresponding key/value
+group before exporting vectors for FPGA verification.
 
 \subsection{FPGA Suitability}
 
@@ -184,8 +187,8 @@ product over the sequence axis. Both operations can be tiled to fit local
 buffers and mapped to DSP-heavy datapaths.
 
 The Alveo U55C provides HBM, multiple SLRs, and a Vitis/XRT software stack for
-kernel compilation and host control \cite{xilinxu55c,hbm,vitishls,xrt}. In this
-project, XRT is responsible for loading the xclbin, allocating buffer objects,
+kernel compilation and host control. In this design,
+XRT is responsible for loading the xclbin, allocating buffer objects,
 syncing data between host and device, launching kernels, and reading back
 results. Vitis HLS is used to compile C++ HLS top functions into FPGA kernels.
 
@@ -197,18 +200,17 @@ Transformer accelerators additionally try to avoid materializing the full
 attention probability matrix, because it requires \(O(S^2)\) storage. Online
 softmax algorithms address this by streaming over key/value blocks while
 maintaining a row maximum, normalization sum, and value accumulator. This
-project's verified baseline does not yet implement online softmax, but the
-optimization checklist identifies it as the most important future step after
-device-resident buffers and launch-count reduction.
+work's verified baseline does not yet implement online softmax, but it is
+identified as the most important future optimization after device-resident
+buffers and launch-count reduction.
 
-The project therefore follows a staged design methodology rather than jumping
-directly to a monolithic online-attention kernel. Each stage is verified first:
-score generation, mask and scale, full-row softmax, and value accumulation. The
-benefit of this approach is observability. Intermediate tensors can be compared
-against Python references, which makes debugging much easier. The drawback is
-that a staged design materializes intermediate data and exposes more control
-work to the host. The final report results should be interpreted with that
-tradeoff in mind.
+The design therefore uses a staged methodology rather than jumping directly to
+a monolithic online-attention kernel. Each stage is verified first: score
+generation, mask and scale, full-row softmax, and value accumulation. The
+benefit of this approach is observability---intermediate tensors can be compared
+against Python references at each stage. The drawback is that a staged design
+materializes intermediate data and exposes more control work to the host. These
+results should be interpreted with that tradeoff in mind.
 
 \section{Project Description}
 
@@ -229,9 +231,9 @@ over the vocabulary, or a complete transformer-layer output.
 
 The out-of-scope components are Q/K/V projection GEMMs, RoPE generation, layer
 normalization, feed-forward layers, key/value cache management, decoder-layer
-integration, and full TinyLlama token generation. Keeping these components out
-of scope made the project measurable within a semester-scale hardware design
-effort while still preserving the mathematically important part of attention.
+integration, and full TinyLlama token generation. Keeping these components out of scope allowed the core matrix operations to be
+verified end-to-end while preserving the mathematically important part of
+attention.
 
 The design also focuses on prefill-style full-sequence attention rather than
 incremental decode with a key/value cache. In a decode workload, each new token
@@ -261,13 +263,13 @@ The fused score-mask-scale kernel then computes:
     \hat{L}_{ij} =
     \begin{cases}
     R_{ij}q_s k_s / 8, & j \leq i,\\
-    -10^9, & j > i,
+    -10^9 q_s k_s / 8, & j > i,
     \end{cases}
 \]
-where \(1/\sqrt{64}=1/8\). The implementation uses a large negative finite
-mask value rather than literal negative infinity to keep the kernel simple and
-deterministic. Softmax, value, and attention output use FP32 in the verified
-design.
+where \(1/\sqrt{64}=1/8\). The implementation uses \(-10^9\) as the raw
+finite mask sentinel before scaling rather than literal negative infinity to
+keep the kernel simple and deterministic. Softmax, value, and attention output
+use FP32 in the verified design.
 
 \subsection{Tiling}
 
@@ -287,6 +289,8 @@ For sequence length \(S\), the number of score tiles per head is:
 \]
 The implementation handles non-full tiles through active row and column counts.
 Inactive rows or columns are padded and ignored rather than discarded.
+Table~\ref{tab:tilecounts} lists the resulting tile counts for the synthetic
+sequence lengths used in the evaluation.
 
 \begin{table}[t]
 \centering
@@ -315,22 +319,23 @@ For example, at \(S=512\), the FPGA processes 64 Q chunks and 8 K chunks per
 head. The score stage therefore launches 512 tile computations. Full-row
 softmax launches once per Q chunk, for 64 more launches. The V weighted-sum
 stage launches once per Q/K chunk, adding another 512 launches. This yields
-1088 kernel launches for one head. That launch count is the central performance
-problem observed in the final results.
+1088 kernel launches for one head. That launch count is the dominant performance bottleneck.
+Figure~\ref{fig:architecture} summarizes the final fused one-head datapath and
+the host-visible HBM buffers.
 
-\begin{figure}[t]
+\begin{figure*}[t]
     \centering
-    \includegraphics[width=\linewidth]{attention_architecture.png}
-    \caption{Frozen one-head attention architecture. The verified master
-    design uses host/XRT orchestration, HBM banked buffers, fused
-    score-mask-scale, full-row softmax, and a value weighted-sum stage.}
+    \includegraphics[width=0.92\textwidth]{report_assets/attention_architecture.png}
+    \caption{Final one-head attention architecture. The verified design uses
+    host/XRT orchestration, HBM banked buffers, fused score-mask-scale,
+    full-row softmax, and a value weighted-sum stage.}
     \label{fig:architecture}
-\end{figure}
+\end{figure*}
 
-\subsection{Design Evolution Across Project Tracks}
+\subsection{Design Evolution}
 
-The project was organized around four required tracks. This structure helped
-separate correctness, data sourcing, and measurement work.
+Development proceeded through four phases, separating correctness, data
+sourcing, and measurement work.
 
 Track A focused on making the score path usable at realistic sequence lengths.
 The initial implementation demonstrated a single attention-score tile. That was
@@ -345,7 +350,7 @@ first pass and eventually fused score, causal mask, and scale into one kernel.
 Track B extended the output contract. Before Track B, the FPGA could verify
 attention weights, but the attention block in a transformer does not stop at
 weights. It multiplies those weights by V to produce the attended output. Track
-B added the Python reference for \(\mathrm{softmax}@V\), implemented the HLS
+B added the Python reference for \(PV\), implemented the HLS
 value weighted-sum kernel, updated host integration, and changed verification
 so that final \(S\times64\) attention output is checked. This made the FPGA
 demo much closer to a real transformer attention sub-block.
@@ -354,25 +359,22 @@ Track C replaced purely synthetic data with TinyLlama-derived vectors. This
 track first verified that the local Python environment could load TinyLlama,
 then extracted Q, K, and V tensors from one attention layer, applied the
 head-mapping needed for grouped-query attention, quantized Q and K, and exported
-saved-vector directories. Track C is the reason the project can claim
+saved-vector directories. Track C is the reason this work can claim
 TinyLlama-derived input validation rather than only deterministic toy data.
 
 Track D created the measurement story. It added CPU and GPU baselines, real U55C
 timing sweeps, utilization reports, and a discussion of what the results do and
-do not mean. Track D is especially important because it prevents an overly
-optimistic conclusion. The FPGA is functionally correct, but the first staged
-architecture is not yet faster than the one-head CPU baseline. That result
-drives the optimization checklist and the future-work direction.
+do not mean. Track D provides the measurements needed to assess the design against measured software baselines. The FPGA is functionally correct, but the first staged
+architecture is not yet faster than the one-head CPU baseline, which motivates the architectural improvements described in the results.
 
 \section{Methodology}
 
 \subsection{Reference Model and Vector Export}
 
-The software reference is written in Python and serves three purposes. First,
-it defines the expected numerical result for each stage of the attention
-pipeline. Second, it exports deterministic synthetic vectors for repeatable
-unit tests and hardware tests. Third, it extracts TinyLlama-derived Q/K/V
-vectors from a real model path for saved-vector verification.
+The software reference is written in Python and serves three purposes: it
+defines the expected numerical result for each pipeline stage, exports
+deterministic synthetic vectors for repeatable unit tests and hardware runs,
+and extracts TinyLlama-derived Q/K/V vectors for saved-vector verification.
 
 The synthetic path generates deterministic Q, K, and V tensors for sequence
 lengths \(S=8,64,128,256,512\). The Python reference computes raw INT32 scores,
@@ -382,7 +384,7 @@ output. The TinyLlama path loads
 attention layer, applies the same grouped-query head mapping used by the model,
 quantizes Q and K, and writes vector directories under \texttt{sim/}. The
 verified real-vector directories include a legacy single-tile case and
-full-sequence \(S=16\) and \(S=64\) cases.
+full-sequence \(S=16,64,128,256,512\) cases.
 
 The reference scripts intentionally produce simple text files rather than a
 binary-only format. This made the files usable by Python, local C++ testbenches,
@@ -445,7 +447,7 @@ needed two separate post-score kernels. Finally, score generation, masking, and
 scaling were fused into \texttt{score\_mask\_scale\_u55c\_kernel}, which writes
 FP32 logits directly.
 
-The full-row softmax kernel was added after the project moved beyond
+The full-row softmax kernel was added after the design moved beyond
 single-tile sequence lengths. A tile-local softmax is correct only when all
 valid keys fit inside one \(8\times64\) tile. For \(S>64\), normalizing each
 tile independently would make each tile row sum to one and would over-count
@@ -460,11 +462,9 @@ parallel multipliers, local arrays are partitioned so the pipeline has enough
 read ports, and memory interfaces are mapped to HBM banks through the Vitis
 link configuration.
 
-This means the design should not be described as a systolic array. A systolic
-array would pass data rhythmically through a grid of processing elements. The
-implemented kernels instead rely on HLS scheduling: data is loaded into local
+The implemented kernels rely on HLS scheduling: data is loaded into local
 arrays, loops are pipelined, and selected inner loops are unrolled so multiple
-multiply-accumulate operations occur in parallel. This approach is easier to
+multiply-accumulate operations occur in parallel. This approach is practical to
 iterate in C++ HLS and sufficient for the first verified design, but it leaves
 room for future hand-optimized or more deeply streaming architectures.
 
@@ -520,7 +520,7 @@ validated the compiled xclbin and host application before running on the real
 card. Finally, the hardware bitstream was executed on a U55C and compared
 against software references.
 
-The project did not use Vitis HLS C/RTL co-simulation. Instead, the verification
+This work did not use Vitis HLS C/RTL co-simulation. Instead, the verification
 chain combined Python references, local C++ tests, HLS \texttt{csim},
 \texttt{csynth}, XRT \texttt{hw\_emu}, and real-card XRT execution. The
 expected pass signal for full attention runs is:
@@ -549,7 +549,8 @@ The FPGA experiments used Vitis/Vivado 2022.2, XRT 2022.2, and the U55C
 platform \texttt{xilinx\_u55c\_gen3x16\_xdma\_3\_202210\_1}. The card shell
 reported \texttt{xilinx\_u55c\_gen3x16\_xdma\_base\_3}. The real-card runs used
 device index 0. Hardware builds produced an xclbin bitstream, which the host
-loaded through XRT.
+loaded through XRT. Table~\ref{tab:platform} summarizes the platform and
+software environment.
 
 \begin{table}[t]
 \centering
@@ -578,14 +579,11 @@ GPU baseline is useful as a PyTorch comparison point, but it is not a
 same-host measurement with the Linux/U55C system. This distinction is important
 when interpreting speedup tables.
 
-The FPGA hardware build produces more than a single executable artifact. The
-checked-in report set includes xclbin information, link summaries, system
+The FPGA hardware build produces multiple artifacts beyond the host executable.
+The checked-in report set includes xclbin information, link summaries, system
 diagrams, routed timing summaries, full-design utilization, per-kernel
-utilization, and SLR utilization. These artifacts are used in the Results
-section to support timing-closure and resource claims. The paper intentionally
-uses summarized tables and diagrams rather than large tool screenshots, because
-the assignment asks for an IEEE-style report rather than a collection of build
-logs.
+utilization, and SLR utilization. These artifacts support the timing-closure
+and resource claims in the Results section.
 
 \section{Results and Discussion}
 
@@ -595,7 +593,7 @@ Table~\ref{tab:verification} summarizes the main verification outcomes. The
 final fused design was validated with both synthetic inputs and saved
 TinyLlama-derived vectors. Synthetic sequence lengths cover multiple tile
 shapes, including multi-K-chunk cases. Real TinyLlama saved-vector directories
-currently cover \(S=16\) and \(S=64\), plus the legacy single-tile case.
+currently cover \(S=16,64,128,256,512\), plus the legacy single-tile case.
 
 \begin{table}[t]
 \centering
@@ -610,16 +608,16 @@ Local C++ benches & Score, fused score-mask-scale, softmax, full-row softmax,
 and V weighted sum passed. \\
 Vitis HLS & Relevant kernels passed \texttt{csim} and \texttt{csynth}. \\
 XRT \texttt{hw\_emu} & Fused vector and sequence tests passed. \\
-Real U55C & Synthetic \(S=8,64,128,256,512\) and real-vector \(S=16,64\)
-passed through final attention output. \\
+Real U55C & Synthetic \(S=8,64,128,256,512\) and real-vector
+\(S=16,64,128,256,512\) passed through final attention output. \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 The most important functional result is that the FPGA output is verified at the
 final attention-output tensor, not only at intermediate scores. Earlier stages
-of the project verified attention weights, but Track B extended the design so
-that \(\mathrm{softmax}@V\) is also computed and checked. This makes the result
+of this work verified attention weights, but Track B extended the design so
+that \(PV\) is also computed and checked. This makes the result
 more representative of the actual attention block used by a transformer layer.
 At the same time, the output remains one-head \(S\times64\) data, not generated
 text or model logits over the vocabulary.
@@ -635,17 +633,19 @@ for this isolated one-head workload.
 
 \begin{table*}[t]
 \centering
-\caption{Synthetic one-head attention latency. Lower is better.}
+\caption{Synthetic one-head attention latency. Lower is better. The final
+column is CPU time divided by fused FPGA time; values below 1 mean the FPGA is
+slower than CPU.}
 \label{tab:synthetic}
-\begin{tabular}{rrrrrrr}
+\begin{tabular}{rrrrrrrr}
 \toprule
-\(S\) & Tiles & CPU ms & GPU ms & Staged FPGA ms & Fused FPGA ms & CPU/Fused FPGA \\
+\(S\) & Tiles & CPU ms & GPU ms & Staged FPGA ms & Fused FPGA ms & Fused/Staged & FPGA speedup vs CPU \\
 \midrule
-8   & 1   & 0.0322 & 0.3349 & 0.803  & 0.296  & 0.11x \\
-64  & 8   & 0.2920 & 0.2507 & 2.864  & 2.364  & 0.12x \\
-128 & 32  & 2.5009 & 0.2998 & 6.992  & 5.484  & 0.46x \\
-256 & 128 & 3.9523 & 0.2726 & 20.570 & 17.307 & 0.23x \\
-512 & 512 & 12.3290 & 0.2461 & 72.941 & 60.328 & 0.20x \\
+8   & 1   & 0.0322 & 0.3349 & 0.803  & 0.296  & 2.71x & 0.11x \\
+64  & 8   & 0.2920 & 0.2507 & 2.864  & 2.364  & 1.21x & 0.12x \\
+128 & 32  & 2.5009 & 0.2998 & 6.992  & 5.484  & 1.28x & 0.46x \\
+256 & 128 & 3.9523 & 0.2726 & 20.570 & 17.307 & 1.19x & 0.23x \\
+512 & 512 & 12.3290 & 0.2461 & 72.941 & 60.328 & 1.21x & 0.20x \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -655,8 +655,9 @@ The fused design improves the full-sequence \(S=16\) and \(S=64\) real-vector
 runs compared with the staged FPGA baseline. The legacy single-tile
 \texttt{real\_tinyllama\_tile} case is slower after fusion, which is treated as
 a small-run overhead/noise case rather than the representative regime. The
-larger real-vector \(S=16\) and \(S=64\) cases are more meaningful because they
-exercise the tiled full-sequence path.
+larger real-vector \(S=128\), \(S=256\), and \(S=512\) directories were
+generated with CUDA/FP16 from the cached TinyLlama model, CPU-sanity checked
+locally, and then timed and verified on the real U55C.
 
 \begin{table}[t]
 \centering
@@ -669,26 +670,48 @@ Case & \(S\) & CPU ms & Staged ms & Fused ms \\
 \texttt{real\_tinyllama\_tile} & tile & n/a & 0.258 & 0.635 \\
 \texttt{real\_tinyllama\_s16} & 16 & 0.0426 & 1.488 & 0.569 \\
 \texttt{real\_tinyllama\_s64} & 64 & 0.1523 & 3.094 & 2.004 \\
+\texttt{real\_tinyllama\_s128} & 128 & n/a & n/a & 6.816 \\
+\texttt{real\_tinyllama\_s256} & 256 & n/a & n/a & 17.192 \\
+\texttt{real\_tinyllama\_s512} & 512 & n/a & n/a & 55.329 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+The new larger real-vector directories have no staged FPGA, CPU, or GPU timing
+entries in the table because they were added after the main staged comparison
+run. Their purpose is to strengthen real-input coverage of the fused U55C path.
+Local CPU sanity checks reported zero tiled-versus-brute differences for both
+softmax probabilities and final \texttt{attn\_out}, with exported softmax-file
+maximum difference \(2.98\times10^{-8}\). During the first U55C run,
+\texttt{real\_tinyllama\_s128} exposed a verifier-only issue in masked scaled
+logits: values around \(-114388\) differed by \(0.0078125\), which exceeded the
+old fixed \(10^{-4}\) absolute tolerance but was only about \(6.8\times10^{-8}\)
+relative error. The host verifier now allows a conservative \(10^{-6}\)
+relative tolerance for scaled-logit comparisons while keeping softmax and
+attention-output checks on their existing absolute tolerances.
+Synthetic and real-vector timings were collected in separate hardware runs, so
+small differences at the same sequence length are interpreted as run-to-run
+host, XRT, and card variability rather than a systematic data-content effect.
+
 The synthetic sweep shows that total FPGA latency grows with sequence length,
 as expected from the \(S^2\) score matrix and the increasing number of tile
 launches. The fused path is consistently better than the staged FPGA baseline
-for synthetic tests because the pre-softmax chain is shorter. However, the
-CPU/fused-FPGA ratio remains below 1.0 for every tested sequence length, meaning
-the CPU baseline is faster for this isolated workload. At \(S=512\), the FPGA
-would need roughly a 5x end-to-end improvement to beat the measured CPU
-baseline. That level of improvement is unlikely to come from small HLS pragma
-tuning alone.
+for synthetic tests because the pre-softmax chain is shorter. However, the FPGA
+speedup over CPU remains below 1.0 for every tested sequence length, meaning
+the CPU baseline is faster for this isolated workload. The higher ratio at
+\(S=128\) is reported as measured and is
+interpreted as CPU baseline variability for this small one-head benchmark
+rather than a change in FPGA scaling, since FPGA launch count still grows with
+tile count. At \(S=512\), the FPGA would need roughly a 5x end-to-end
+improvement to beat the measured CPU baseline. That level of improvement is
+unlikely to come from small HLS pragma tuning alone.
 
 The measured GPU times are nearly flat across the synthetic sequence lengths in
 the table. This is partly because the benchmarked one-head problem is small
 relative to the GPU's available compute and library overheads. The GPU is not
 being saturated in the same way it would be for a full model or batched
-workload. Nevertheless, it provides a useful reference: for small dense tensor
-operations, optimized GPU software is a very strong baseline.
+workload. The GPU is substantially faster for these small, dense operations because
+PyTorch/CUDA launch overhead is small relative to the compute work.
 
 The comparison also highlights why the evaluation scope must be stated
 carefully. A full TinyLlama layer would compute all heads, apply output
@@ -715,7 +738,7 @@ user-kernel DSP count.
 
 \begin{table}[t]
 \centering
-\caption{Routed utilization for the fused Step 5 xclbin.}
+\caption{Routed utilization for the fused score-mask-scale xclbin.}
 \label{tab:util}
 \begin{tabular}{lrrr}
 \toprule
@@ -730,12 +753,15 @@ DSP & 409 & 9,024 & 4.53\% \\
 \end{tabular}
 \end{table}
 
+Figure~\ref{fig:utilization} shows the same routed utilization profile
+visually.
+
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\linewidth]{post_route_utilization.png}
-    \caption{Post-route utilization summary captured from the generated
-    reports. The fused baseline has significant remaining resources, but the
-    staged architecture still suffers from launch and memory-staging overhead.}
+    \includegraphics[width=\linewidth]{report_assets/post_route_utilization.png}
+    \caption{Post-route utilization for the fused design. Resource usage is
+    modest across all categories, indicating that the performance bottleneck
+    is orchestration overhead rather than compute capacity.}
     \label{fig:utilization}
 \end{figure}
 
@@ -767,17 +793,15 @@ datapath is too wide to route cleanly at the target clock.
 \subsection{Discussion of Bottlenecks}
 
 The primary lesson from the results is that kernel correctness and timing
-closure are not sufficient for end-to-end acceleration. At \(S=512\), the
-fused design still performs:
-512 score-mask-scale launches, 64 softmax launches, and 512 V launches, or
-1088 total launches.
+closure are not sufficient for end-to-end acceleration. At \(S=512\), the fused design still issues 512 score-mask-scale launches,
+64 softmax launches, and 512 V launches --- 1088 total.
 The host also assembles full rows, slices probability tiles, moves V chunks,
 and accumulates partial outputs. The U55C has substantial remaining resources,
 but the current orchestration exposes too much intermediate state to
 host-visible buffers and pays many launch/synchronization costs.
 
-Step 5 fusion helps because it removes one kernel launch and one raw-score HBM
-round trip from the pre-softmax path. It does not address the deeper issue that
+Score-mask-scale fusion helps because it removes one kernel launch and one
+raw-score HBM round trip from the pre-softmax path. It does not address the deeper issue that
 softmax and value accumulation remain separate staged passes. This explains why
 the fused design improves FPGA-to-FPGA comparisons but still does not beat the
 CPU baseline for the isolated one-head workload.
@@ -802,13 +826,13 @@ The current design also accelerates only one selected head. TinyLlama has 32
 query heads and 4 key/value heads. In the real model, multiple heads are
 computed as part of the same layer. An FPGA design that processes several heads
 or several Q chunks concurrently could use more DSPs and HBM bandwidth and
-would provide a more realistic throughput comparison. This project stops before
+would provide a more realistic throughput comparison. This work stops before
 that scale-out step so the one-head path can be verified carefully first.
 
 \subsection{Optimization Direction}
 
-The optimization checklist identifies three architectural improvements before
-minor clock or report-guidance tuning. First, full Q/K/V and intermediate
+Three architectural improvements are needed before minor clock tuning becomes
+relevant. First, full Q/K/V and intermediate
 buffers should remain resident on device so the host reads back only final
 attention output during normal operation. Second, launch count should be
 reduced by using larger-grain kernels that process all K chunks for one Q
@@ -825,19 +849,21 @@ first copy Q, K, and V to device memory once and read back only final attention
 output in the normal path. A launch-count reduction should then move from
 per-tile launches to one pre-softmax and one value-accumulation launch per Q
 chunk. Finally, online softmax should remove the need to store a full
-\(S\times S\) probability matrix. Each step should preserve the existing
-reference checks so that performance changes do not obscure correctness.
+\(S\times S\) probability matrix. Each step is validated against the same output references so correctness is
+not lost as performance improves.
 
 \subsection{Limitations}
 
-Several limitations should be stated explicitly. The design is not full
-TinyLlama inference and does not report model-level tokens per second. The
-real TinyLlama saved-vector coverage is limited to \(S=16\) and \(S=64\) in the
-verified master result, while larger \(S=128,256,512\) tests are synthetic. The
-GPU baseline was measured on a separate laptop rather than the U55C host
-machine. Finally, the FPGA implementation uses FP32 for softmax and V
-accumulation, which simplifies verification but is not necessarily the final
-numeric format for a production accelerator.
+The design is not full TinyLlama inference and does not report model-level
+tokens per second. The
+real TinyLlama saved-vector coverage now reaches \(S=512\), but it is still
+limited to one selected layer/head and saved prompt vectors rather than live
+decoder integration. The larger \(S=128,256,512\) real-vector cases also do not
+yet have staged FPGA, CPU, or GPU timing baselines in the results table. The GPU
+baseline was measured on a separate laptop rather than the U55C host machine.
+Finally, the FPGA implementation uses FP32 for softmax and V accumulation,
+which simplifies verification but is not necessarily the final numeric format
+for a production accelerator.
 
 Another limitation is that the design does not yet use a KV-cache-aware decode
 path. This matters because LLM inference has two phases. During prompt prefill,
@@ -851,83 +877,66 @@ integrated.
 
 \section{Conclusion}
 
-This project implemented and verified an isolated one-head transformer
-attention block on a Xilinx Alveo U55C FPGA. The final fused design computes
+This work implemented and verified an isolated one-head transformer attention
+block on a Xilinx Alveo U55C FPGA. The final fused design computes
 INT8 query-key scores, applies causal masking and dequantization scaling,
 performs full-row softmax, and computes \(\mathrm{softmax}(QK^T)V\) to produce
 FP32 one-head attention output. The design is verified through local reference
 checks, HLS simulation and synthesis, hardware emulation, and real U55C
 execution. Synthetic sequences up to \(S=512\) and TinyLlama-derived saved
-vectors at \(S=16\) and \(S=64\) pass final output verification.
+vectors at \(S=16,64,128,256,512\) pass final output verification.
 
-The performance results are honest: the FPGA implementation is correct and
-timing-clean, but it is not faster than the CPU or GPU baselines for the
-current isolated one-head workload. The fused pre-softmax kernel improves the
+The FPGA implementation is correct and timing-clean, but it is not faster than
+the CPU or GPU baselines for this isolated one-head workload. The fused pre-softmax kernel improves the
 staged FPGA baseline, yet the design remains dominated by many small kernel
-launches and HBM-visible intermediate transfers. Therefore, the project should
-be viewed as a validated hardware baseline and design study rather than a final
-high-performance LLM accelerator. The next step is to make the computation more
+launches and HBM-visible intermediate transfers. The design is best understood as a validated hardware baseline and design
+study rather than a final high-performance LLM accelerator. The next step is to make the computation more
 FPGA-native by keeping buffers resident, reducing launch count, fusing online
 softmax with V accumulation, and eventually scaling across multiple Q blocks or
 attention heads.
 
 \begin{thebibliography}{9}
 
-\bibitem{vaswani2017attention}
-A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones, A. N. Gomez,
-L. Kaiser, and I. Polosukhin, ``Attention is all you need,'' in
-\emph{Advances in Neural Information Processing Systems}, 2017. [Online].
-Available: \url{https://arxiv.org/abs/1706.03762}
+\bibitem{nielsen2015neural}
+M. A. Nielsen, \emph{Neural Networks and Deep Learning}. Determination Press,
+2015. [Online]. Available: \url{http://neuralnetworksanddeeplearning.com/}
 
-\bibitem{zhang2024tinyllama}
-P. Zhang, G. Zeng, T. Wang, and W. Lu, ``TinyLlama: An open-source small
-language model,'' arXiv:2401.02385, 2024. [Online]. Available:
-\url{https://arxiv.org/abs/2401.02385}
+\bibitem{alammar2018illustrated}
+J. Alammar, ``The illustrated transformer,'' 2018. [Online]. Available:
+\url{https://jalammar.github.io/illustrated-transformer/}
 
-\bibitem{xilinxu55c}
-AMD Xilinx, ``Alveo U55C data center accelerator card product brief,'' AMD
-Adaptive Computing Documentation, accessed 2026. [Online]. Available:
-\url{https://www.amd.com/content/dam/amd/en/documents/products/accelerators/alveo/u55c/alveo-u55c-product-brief.pdf}
-
-\bibitem{vitishls}
-AMD Xilinx, ``Vitis High-Level Synthesis User Guide,'' UG1399, 2022.
-[Online]. Available: \url{https://www.xilinx.com/support/documents/sw_manuals/xilinx2022_2/ug1399-vitis-hls.pdf}
-
-\bibitem{xrt}
-AMD Xilinx, ``Xilinx Runtime Library (XRT) documentation,'' 2022.
-[Online]. Available: \url{https://xilinx.github.io/XRT/2022.2/html/index.html}
-
-\bibitem{hbm}
-J. Kim and Y. Kim, ``High bandwidth memory (HBM): Memory solution for
-bandwidth-hungry processors,'' in \emph{IEEE Hot Chips Symposium}, 2014.
+\bibitem{leo2024math}
+C. Leo, ``The math behind transformers,'' \emph{Medium}, accessed 2026.
+[Online]. Available:
+\url{https://medium.com/@cristianleo120/the-math-behind-transformers-6d7710682a1f}
 
 \end{thebibliography}
 
 \section{Student Contributions}
 
-\textbf{Om} designed and implemented Track~A Steps~1 and~2. This included the
+\textbf{Om Girish Sheladia} designed and implemented Track~A Steps~1 and~2. This included the
 16-way unrolled INT8 score GEMM work, 64-bit packed memory I/O for the score
 path, and the fused causal-mask and score-scale kernel that removed an
 intermediate HBM round trip. Om also ran HLS synthesis and helped verify the
 early optimized score path on U55C hardware.
 
-\textbf{Samarth} designed and implemented Track~A Steps~3 through~5. This
+\textbf{Samarth Bangalore Sudharshan} designed and implemented Track~A Steps~3 through~5. This
 included the Python full-sequence tiling reference, full-row softmax support for
-\(S\leq512\), the XRT host tiling loop, Pass~1 host double buffering, and the
-fused score-mask-scale kernel used in the final frozen design. Samarth also
+\(S\leq512\), the XRT host tiling loop, pre-softmax host double buffering, and the
+fused score-mask-scale kernel used in the final verified design. Samarth also
 verified tiled synthetic runs on the real U55C for \(S=8,64,128,256,512\).
 
 \textbf{Rijul Wankhade} designed and implemented Track~B. Rijul added the
-\texttt{v\_weighted\_sum} HLS kernel for the \(\mathrm{softmax}@V\) stage,
+\texttt{v\_weighted\_sum} HLS kernel for the \(PV\) stage,
 integrated it into the host flow as the value-accumulation pass, and changed
 verification so the FPGA checks final one-head \texttt{attn\_out} rather than
 only attention weights. This completed the one-head attention output path.
 
-\textbf{Satyarth} implemented Track~C and Track~D. This included TinyLlama Q/K/V
+\textbf{Satyarth Guna Motupalli} implemented Track~C and Track~D. This included TinyLlama Q/K/V
 extraction through a PyTorch forward hook, INT8 symmetric quantization for Q and
-K, full-sequence real-vector export at \(S=16\) and \(S=64\), CPU and GPU
-baseline benchmarks, and the performance comparison tables and analysis used in
-this report. Satyarth also verified the complete path with real TinyLlama-derived
+K, full-sequence real-vector export through \(S=512\), CPU and GPU baseline
+benchmarks, and the performance comparison tables and analysis used in this
+report. Satyarth also verified the complete path with real TinyLlama-derived
 vectors on the U55C.
 
 \end{document}
