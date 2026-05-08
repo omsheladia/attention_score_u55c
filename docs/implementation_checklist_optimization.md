@@ -434,11 +434,11 @@ larger real TinyLlama-derived inputs, not only synthetic `--seq-len` data.
 
 ## What to do
 
-- [ ] Generate real TinyLlama vector directories:
+- [x] Generate real TinyLlama vector directories:
   - `sim/real_tinyllama_s128`
   - `sim/real_tinyllama_s256`
   - `sim/real_tinyllama_s512`
-- [ ] Verify exported Q/K/V shapes, scales, and metadata.
+- [x] Verify exported Q/K/V shapes, scales, and metadata.
 - [ ] Run CPU/GPU baselines for those directories.
 - [ ] Run FPGA optimized path for those directories.
 - [ ] Compare final `attn_out` against quantized-pipeline reference and

@@ -1,0 +1,7 @@
+query_row_count 8
+key_col_count 64
+query_pos_base 0
+key_pos_base 0
+q_scale 0.0525652058422565
+k_scale 0.0174089558422565
+total_scale 0.0001143881684184

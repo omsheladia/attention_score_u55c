@@ -1011,10 +1011,11 @@ host-side tiled scheduling bug was found and fixed:
 - After rebuilding only the host, real U55C `demo_sweep` passed:
   `S=8 0.322 ms`, `S=64 2.841 ms`, `S=128 5.119 ms`,
   `S=256 17.261 ms`, `S=512 53.920 ms`.
-- Current real-vector coverage remains limited to the saved directories present
-  in `sim/`: `real_tinyllama_tile`, `real_tinyllama_s16`, and
-  `real_tinyllama_s64`. The `S=512` demo sweep is synthetic unless a
-  `sim/real_tinyllama_s512/` directory is exported and verified.
+- Current real-vector coverage verified on the U55C remains limited to
+  `real_tinyllama_tile`, `real_tinyllama_s16`, and `real_tinyllama_s64`.
+  Larger directories `real_tinyllama_s128`, `real_tinyllama_s256`, and
+  `real_tinyllama_s512` are now generated and CPU-validated locally, but still
+  need real U55C vector-mode timing/verification.
 
 ## Best Next Step
 
@@ -1027,8 +1028,8 @@ Track A Step 5 is hardware-verified on the current
    making the FPGA path faster than CPU
 3. prioritize device-resident buffers, lower kernel launch count, and online
    softmax fused with V accumulation before minor HLS/clock tuning
-4. run larger real TinyLlama vector directories such as `S=128`, `S=256`, and
-   `S=512` if broader real-input coverage is needed
+4. run the larger real TinyLlama vector directories `S=128`, `S=256`, and
+   `S=512` on the real U55C if broader real-input coverage is needed
 
 ## After That
 
@@ -1063,6 +1064,16 @@ At the time of writing:
   comparison; see `docs/track_d_results.md`
 - `docs/implementation_checklist_optimization.md` captures the next performance
   work after the completed required checklist
+- `docs/attention_score_fpga_ieee_report.tex` is the current IEEE-style report
+  draft. It now includes the actual team names, compact tile-count and
+  platform/tools tables, routed-utilization percentages, and a final Student
+  Contributions section adapted from `docs/friends_edits/`.
+- Larger real TinyLlama vector directories were generated locally for
+  `sim/real_tinyllama_s128`, `sim/real_tinyllama_s256`, and
+  `sim/real_tinyllama_s512` using CUDA/FP16 from the cached TinyLlama model.
+  CPU reference sanity checks passed for all three with zero tiled-vs-brute
+  differences and exported softmax max difference `2.98023224e-08`; real U55C
+  vector-mode timing for these larger directories is still pending.
 
 Agents should avoid redoing exploration that this file already captures unless
 something materially changed.

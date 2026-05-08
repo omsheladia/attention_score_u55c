@@ -243,6 +243,16 @@ python model/export_real_vectors.py \
   --text "In a small laboratory, engineers compare attention kernels across hardware targets. The experiment records tokens, latency, and numerical accuracy for each sequence length before the final report is written. A second paragraph adds enough context for a longer TinyLlama prompt, describing how query, key, and value tensors move through the FPGA pipeline while software baselines measure the same attention head for validation."
 ```
 
+Larger real-vector directories have also been generated locally for:
+
+- `sim/real_tinyllama_s128`
+- `sim/real_tinyllama_s256`
+- `sim/real_tinyllama_s512`
+
+These larger directories passed CPU reference validation against their exported
+softmax and `attn_out` files. They still need real U55C vector-mode timing
+runs before they should be listed as hardware-verified results.
+
 Verified real U55C vector-mode results:
 
 | directory | S | total_chain ms | pass signal |

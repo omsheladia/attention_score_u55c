@@ -147,7 +147,10 @@ demo_real_vectors() {
   for d in \
     "${ATTENTION_SCORE_U55C_ROOT}/sim/real_tinyllama_tile" \
     "${ATTENTION_SCORE_U55C_ROOT}/sim/real_tinyllama_s16" \
-    "${ATTENTION_SCORE_U55C_ROOT}/sim/real_tinyllama_s64"
+    "${ATTENTION_SCORE_U55C_ROOT}/sim/real_tinyllama_s64" \
+    "${ATTENTION_SCORE_U55C_ROOT}/sim/real_tinyllama_s128" \
+    "${ATTENTION_SCORE_U55C_ROOT}/sim/real_tinyllama_s256" \
+    "${ATTENTION_SCORE_U55C_ROOT}/sim/real_tinyllama_s512"
   do
     echo "===== ${d} ====="
     "${ATTENTION_SCORE_U55C_HOST}" \
