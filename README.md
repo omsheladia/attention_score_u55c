@@ -218,9 +218,14 @@ Primary artifacts:
 - `docs/artifacts/u55c_fused/reports/PostRouteUtilization.xlsx`
 - `docs/artifacts/u55c_fused/vitis/attention_score_chain_xclbin_info.txt`
 - `docs/artifacts/u55c_fused/vitis/attention_score_chain_xclbin_link_summary.txt`
+- `docs/artifacts/u55c_fused/vitis/DeviceMap.png`
 - `docs/artifacts/u55c_fused/vitis/SystemDiagram.pdf`
 - `docs/artifacts/u55c_fused/vitis/PlatformDiagram.pdf`
 - `docs/artifacts/u55c_fused/guidance/`
+
+The detailed Vitis device map and platform/system diagrams are kept as linked
+evidence rather than embedded in the README body, because they are tool reports
+for inspection rather than the high-level design explanation.
 
 ## Key Limitations
 
